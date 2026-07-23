@@ -27,6 +27,11 @@ pub struct Cli {
     /// `bazel aquery` as the query expression.
     #[arg(value_name = "LABEL")]
     pub label: String,
+
+    /// Print every action we analyze (useful for debugging). Other parts of the
+    /// parsed action graph are omitted, as the checks don't use them.
+    #[arg(short, long)]
+    pub verbose: bool,
 }
 
 impl Cli {
@@ -44,6 +49,15 @@ impl Cli {
         let env = [("USER", user.as_str()), ("HOSTNAME", hostname.as_str())];
 
         let container = run_aquery(&self.configs, &self.label, &env)?;
+
+        // For debugging, dump every action we're about to analyze. We print only
+        // the actions; the other parts of the container aren't used by the checks.
+        if self.verbose {
+            println!("analyzing {} action(s):", container.actions.len());
+            for (i, action) in container.actions.iter().enumerate() {
+                println!("action {i}:\n{action:#?}");
+            }
+        }
 
         // The checks are pure: they return every violation they find. Collect
         // across all checks, then decide the exit status here.
