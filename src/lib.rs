@@ -50,6 +50,18 @@ pub fn run_aquery(configs: &[String], label: &str) -> Result<ActionGraphContaine
     let mut command = Command::new("bazel");
     command.arg("aquery");
 
+    // When Ahab itself is launched via `bazel run`, our working directory is the
+    // runfiles tree *inside* the bazel output base, and a nested `bazel` refuses
+    // to run from there. Bazel exports the original invocation directory so
+    // wrappers like this can recover it; prefer BUILD_WORKING_DIRECTORY (where
+    // the user ran `bazel run`), then BUILD_WORKSPACE_DIRECTORY (the workspace
+    // root). If neither is set (Ahab wasn't launched by Bazel), inherit the CWD.
+    if let Some(dir) = std::env::var_os("BUILD_WORKING_DIRECTORY")
+        .or_else(|| std::env::var_os("BUILD_WORKSPACE_DIRECTORY"))
+    {
+        command.current_dir(dir);
+    }
+
     // Forward each requested config.
     for config in configs {
         command.arg(format!("--config={config}"));
