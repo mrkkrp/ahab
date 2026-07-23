@@ -1,0 +1,6 @@
+module(name = "cc_hello_world", version = "0.1.0")
+
+bazel_dep(name = "rules_cc", version = "0.2.16")
+
+bazel_dep(name = "llvm", version = "0.6.9")
+register_toolchains("@llvm//toolchain:all")

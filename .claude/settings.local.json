@@ -1,0 +1,11 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(git config *)",
+      "Bash(bazel build *)",
+      "Bash(curl *)",
+      "Bash(python3 *)",
+      "Bash(bazel run *)"
+    ]
+  }
+}
