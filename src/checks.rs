@@ -8,7 +8,7 @@
 
 use analysis_v2_proto::analysis::{Action, ActionGraphContainer};
 
-use crate::reproducibility_spec::hardcoded;
+use crate::reproducibility_spec::{hardcoded, Conformance};
 
 /// The exact value of `PATH` that every action is required to use.
 pub(crate) const EXPECTED_PATH: &str = "/bin:/usr/bin:/usr/local/bin";
@@ -109,6 +109,24 @@ pub(crate) enum Violation {
         /// The base name of the program the action runs (its `argv[0]`).
         program: String,
     },
+    /// An action runs a program that is never reproducible, whatever its flags.
+    NeverReproducible {
+        action: ActionRef,
+        /// The base name of the program the action runs.
+        program: String,
+    },
+    /// An action runs a conditionally-reproducible program, but this invocation
+    /// does not meet the conditions: required flags are missing and/or breaking
+    /// flags are present. At least one of the two lists is non-empty.
+    ConditionalReproducibility {
+        action: ActionRef,
+        /// The base name of the program the action runs.
+        program: String,
+        /// Required flags absent from the invocation.
+        missing_required: Vec<String>,
+        /// Breaking flags present in the invocation.
+        present_breaking: Vec<String>,
+    },
 }
 
 impl Violation {
@@ -149,6 +167,29 @@ impl Violation {
                 "reproducibility unknown: {action} runs program {program:?}, which has no \
                  known reproducibility spec",
             ),
+            Violation::NeverReproducible { action, program } => format!(
+                "reproducibility violation: {action} runs program {program:?}, which is never \
+                 reproducible",
+            ),
+            Violation::ConditionalReproducibility {
+                action,
+                program,
+                missing_required,
+                present_breaking,
+            } => {
+                let mut reasons = Vec::new();
+                if !missing_required.is_empty() {
+                    reasons.push(format!("missing required flag(s) {missing_required:?}"));
+                }
+                if !present_breaking.is_empty() {
+                    reasons.push(format!("present breaking flag(s) {present_breaking:?}"));
+                }
+                format!(
+                    "reproducibility violation: {action} runs program {program:?} \
+                     non-reproducibly: {}",
+                    reasons.join("; "),
+                )
+            }
         }
     }
 }
@@ -343,13 +384,16 @@ pub(crate) fn check_absolute_paths(container: &ActionGraphContainer) -> Vec<Viol
 }
 
 /// Check each action's program against the hardcoded library of reproducibility
-/// specs. A program with no known spec is reported as a [`Violation::UnknownProgram`]:
-/// we cannot vouch for its reproducibility, and we err on the side of flagging
-/// rather than silently passing.
+/// specs.
 ///
 /// The program is taken to be the action's `argv[0]`, reduced to its base name
 /// (see [`hardcoded::program_name`]). Actions with no arguments have no program
-/// to attribute and are skipped.
+/// to attribute and are skipped. For each program:
+///
+/// * with no known spec, we report [`Violation::UnknownProgram`] — we cannot
+///   vouch for its reproducibility, so we err on the side of flagging; otherwise
+/// * we assess the actual invocation (`argv[1..]`) against the spec and, if it
+///   does not conform, report the corresponding reproducibility violation.
 pub(crate) fn check_reproducibility(container: &ActionGraphContainer) -> Vec<Violation> {
     let mut violations = Vec::new();
 
@@ -358,11 +402,36 @@ pub(crate) fn check_reproducibility(container: &ActionGraphContainer) -> Vec<Vio
             continue;
         };
         let program = hardcoded::program_name(executable);
-        if hardcoded::lookup(program).is_none() {
+
+        let Some(spec) = hardcoded::lookup(program) else {
             violations.push(Violation::UnknownProgram {
                 action: ActionRef::of(action),
                 program: program.to_owned(),
             });
+            continue;
+        };
+
+        // Assess the invocation against the spec: everything after argv[0].
+        let args = action.arguments.iter().skip(1).map(String::as_str);
+        match spec.assess(args) {
+            Conformance::Reproducible => {}
+            Conformance::NeverReproducible => {
+                violations.push(Violation::NeverReproducible {
+                    action: ActionRef::of(action),
+                    program: program.to_owned(),
+                });
+            }
+            Conformance::Conditional {
+                missing_required,
+                present_breaking,
+            } => {
+                violations.push(Violation::ConditionalReproducibility {
+                    action: ActionRef::of(action),
+                    program: program.to_owned(),
+                    missing_required: missing_required.into_iter().collect(),
+                    present_breaking: present_breaking.into_iter().collect(),
+                });
+            }
         }
     }
 
@@ -1073,5 +1142,61 @@ mod tests {
     #[test]
     fn empty_container_passes_reproducibility_check() {
         assert!(check_reproducibility(&container(vec![])).is_empty());
+    }
+
+    // Rendering of the conformance-failure variants. (The end-to-end path
+    // through `check_reproducibility` for a *known* program is exercised once the
+    // hardcoded library gains specs; the conformance logic itself is covered by
+    // the `reproducibility_spec` tests. Here we pin the rendered diagnostics.)
+
+    #[test]
+    fn renders_never_reproducible() {
+        let v = Violation::NeverReproducible {
+            action: ActionRef {
+                mnemonic: "Genrule".to_owned(),
+                target_id: 4,
+            },
+            program: "date".to_owned(),
+        };
+        let r = v.render();
+        assert!(r.contains("Genrule action for target_id 4"), "{r}");
+        assert!(r.contains(r#"program "date""#), "{r}");
+        assert!(r.contains("never"), "{r}");
+    }
+
+    #[test]
+    fn renders_conditional_with_both_reasons() {
+        let v = Violation::ConditionalReproducibility {
+            action: ActionRef {
+                mnemonic: "CppCompile".to_owned(),
+                target_id: 1,
+            },
+            program: "gcc".to_owned(),
+            missing_required: vec!["--deterministic".to_owned()],
+            present_breaking: vec!["--timestamp".to_owned()],
+        };
+        let r = v.render();
+        assert!(r.contains(r#"program "gcc""#), "{r}");
+        assert!(r.contains("missing required flag(s)"), "{r}");
+        assert!(r.contains("--deterministic"), "{r}");
+        assert!(r.contains("present breaking flag(s)"), "{r}");
+        assert!(r.contains("--timestamp"), "{r}");
+    }
+
+    #[test]
+    fn renders_conditional_with_only_missing_required() {
+        let v = Violation::ConditionalReproducibility {
+            action: ActionRef {
+                mnemonic: "A".to_owned(),
+                target_id: 1,
+            },
+            program: "gcc".to_owned(),
+            missing_required: vec!["--sorted".to_owned()],
+            present_breaking: vec![],
+        };
+        let r = v.render();
+        assert!(r.contains("missing required flag(s)"), "{r}");
+        // No breaking reason when the list is empty.
+        assert!(!r.contains("breaking"), "{r}");
     }
 }

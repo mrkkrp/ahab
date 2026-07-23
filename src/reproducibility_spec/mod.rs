@@ -82,6 +82,72 @@ impl ReproducibilitySpec {
     pub fn recognize(&self, arg: &str) -> Option<String> {
         (self.recognize)(arg)
     }
+
+    /// Assess whether a concrete invocation conforms to this spec.
+    ///
+    /// `args` are the arguments passed to the program (its `argv[1..]`, i.e.
+    /// *not* including the program itself). Each is mapped through
+    /// [`recognize`](Self::recognize) to the canonical option it represents;
+    /// unrecognized arguments are ignored. The verdict then follows the baseline
+    /// [`Reproducibility`]:
+    ///
+    /// * [`Always`](Reproducibility::Always) — always [`Conformance::Reproducible`].
+    /// * [`Never`](Reproducibility::Never) — always [`Conformance::NeverReproducible`].
+    /// * [`Sometimes`](Reproducibility::Sometimes) — reproducible iff every
+    ///   required flag is present and no breaking flag is; otherwise
+    ///   [`Conformance::Conditional`] naming the missing required and the
+    ///   present breaking flags.
+    pub fn assess<'a, I>(&self, args: I) -> Conformance
+    where
+        I: IntoIterator<Item = &'a str>,
+    {
+        match self.reproducibility {
+            Reproducibility::Always => Conformance::Reproducible,
+            Reproducibility::Never => Conformance::NeverReproducible,
+            Reproducibility::Sometimes => {
+                let present: BTreeSet<String> =
+                    args.into_iter().filter_map(|arg| self.recognize(arg)).collect();
+
+                let missing_required: BTreeSet<String> = self
+                    .required_flags
+                    .difference(&present)
+                    .cloned()
+                    .collect();
+                let present_breaking: BTreeSet<String> = self
+                    .breaking_flags
+                    .intersection(&present)
+                    .cloned()
+                    .collect();
+
+                if missing_required.is_empty() && present_breaking.is_empty() {
+                    Conformance::Reproducible
+                } else {
+                    Conformance::Conditional {
+                        missing_required,
+                        present_breaking,
+                    }
+                }
+            }
+        }
+    }
+}
+
+/// The verdict of assessing an invocation against a [`ReproducibilitySpec`].
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum Conformance {
+    /// The invocation is reproducible.
+    Reproducible,
+    /// The program is never reproducible, whatever the flags.
+    NeverReproducible,
+    /// The program is conditionally reproducible and this invocation does not
+    /// meet the conditions: some required flags are absent and/or some breaking
+    /// flags are present. At least one of the two sets is non-empty.
+    Conditional {
+        /// Required flags that are absent from the invocation.
+        missing_required: BTreeSet<String>,
+        /// Breaking flags that are present in the invocation.
+        present_breaking: BTreeSet<String>,
+    },
 }
 
 #[cfg(test)]
@@ -149,5 +215,90 @@ mod tests {
         let a = ReproducibilitySpec::new(Reproducibility::Never, ["--x"], ["--y"]);
         let b = ReproducibilitySpec::new(Reproducibility::Never, ["--x"], ["--y"]);
         assert_eq!(a, b);
+    }
+
+    /// Build a set from string literals, for terse assertions.
+    fn set(items: &[&str]) -> BTreeSet<String> {
+        items.iter().map(|s| (*s).to_owned()).collect()
+    }
+
+    #[test]
+    fn always_conforms_regardless_of_args() {
+        let spec = ReproducibilitySpec::new(Reproducibility::Always, ["--x"], ["--y"]);
+        assert_eq!(spec.assess(["--y"]), Conformance::Reproducible);
+        assert_eq!(spec.assess([] as [&str; 0]), Conformance::Reproducible);
+    }
+
+    #[test]
+    fn never_is_always_non_reproducible() {
+        let spec = ReproducibilitySpec::new(Reproducibility::Never, [] as [&str; 0], [] as [&str; 0]);
+        assert_eq!(spec.assess(["--anything"]), Conformance::NeverReproducible);
+    }
+
+    #[test]
+    fn sometimes_conforms_when_required_present_and_no_breaking() {
+        let spec = ReproducibilitySpec::new(
+            Reproducibility::Sometimes,
+            ["--deterministic"],
+            ["-O"],
+        )
+        .with_recognizer(recognize_sample);
+        // Required flag present, breaking flag absent.
+        assert_eq!(
+            spec.assess(["--deterministic", "input.c"]),
+            Conformance::Reproducible
+        );
+    }
+
+    #[test]
+    fn sometimes_reports_missing_required_flags() {
+        let spec = ReproducibilitySpec::new(
+            Reproducibility::Sometimes,
+            ["--deterministic", "--sorted"],
+            [] as [&str; 0],
+        )
+        .with_recognizer(recognize_sample);
+        assert_eq!(
+            spec.assess(["--sorted"]),
+            Conformance::Conditional {
+                missing_required: set(&["--deterministic"]),
+                present_breaking: set(&[]),
+            }
+        );
+    }
+
+    #[test]
+    fn sometimes_reports_present_breaking_flags() {
+        let spec = ReproducibilitySpec::new(
+            Reproducibility::Sometimes,
+            [] as [&str; 0],
+            ["-O", "--timestamp"],
+        )
+        .with_recognizer(recognize_sample);
+        // -O2 is recognized as -O (a breaking flag); --timestamp is absent.
+        assert_eq!(
+            spec.assess(["-O2", "input.c"]),
+            Conformance::Conditional {
+                missing_required: set(&[]),
+                present_breaking: set(&["-O"]),
+            }
+        );
+    }
+
+    #[test]
+    fn sometimes_reports_both_kinds_at_once() {
+        let spec = ReproducibilitySpec::new(
+            Reproducibility::Sometimes,
+            ["--deterministic"],
+            ["--timestamp"],
+        )
+        .with_recognizer(recognize_sample);
+        assert_eq!(
+            spec.assess(["--timestamp"]),
+            Conformance::Conditional {
+                missing_required: set(&["--deterministic"]),
+                present_breaking: set(&["--timestamp"]),
+            }
+        );
     }
 }
