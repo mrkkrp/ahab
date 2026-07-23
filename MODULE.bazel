@@ -1,0 +1,78 @@
+module(
+    name = "ahab",
+    version = "0.1.0",
+)
+
+###############################################################################
+# Core deps
+###############################################################################
+
+bazel_dep(name = "platforms", version = "1.1.0")
+bazel_dep(name = "rules_rust", version = "0.71.3")
+bazel_dep(name = "rules_rust_prost", version = "0.71.3")
+bazel_dep(name = "rules_proto", version = "7.1.0")
+bazel_dep(name = "protobuf", version = "35.1")
+
+###############################################################################
+# Rust toolchain
+###############################################################################
+
+rust = use_extension("@rules_rust//rust:extensions.bzl", "rust")
+rust.toolchain(
+    edition = "2024",
+    versions = ["1.86.0"],
+)
+use_repo(rust, "rust_toolchains")
+register_toolchains("@rust_toolchains//:all")
+
+###############################################################################
+# Third-party crate dependencies
+###############################################################################
+
+crate = use_extension("@rules_rust//crate_universe:extensions.bzl", "crate")
+crate.spec(
+    package = "clap",
+    features = ["derive"],
+    version = "4",
+)
+crate.spec(
+    package = "anyhow",
+    version = "1",
+)
+crate.spec(
+    package = "prost",
+    version = "0.13",
+)
+crate.spec(
+    package = "prost-types",
+    version = "0.13",
+)
+crate.spec(
+    package = "protoc-gen-prost",
+    version = "0.4",
+)
+crate.annotation(
+    crate = "protoc-gen-prost",
+    gen_binaries = ["protoc-gen-prost"],
+)
+
+# rust_prost_toolchain requires tonic to be configured whenever any tonic
+# attribute is set, and tonic_plugin_flag has a non-empty default — so a
+# prost-only toolchain isn't possible and we must supply tonic too, even though
+# aquery decoding never uses gRPC.
+crate.spec(
+    package = "tonic",
+    version = "0.12",
+)
+crate.spec(
+    package = "protoc-gen-tonic",
+    version = "0.4",
+)
+crate.annotation(
+    crate = "protoc-gen-tonic",
+    gen_binaries = ["protoc-gen-tonic"],
+)
+crate.from_specs()
+use_repo(crate, "crates")
+
+register_toolchains("//proto:prost_toolchain")

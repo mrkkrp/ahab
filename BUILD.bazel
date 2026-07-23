@@ -1,0 +1,25 @@
+load("@rules_rust//rust:defs.bzl", "rust_binary", "rust_library")
+
+package(default_visibility = ["//visibility:public"])
+
+rust_library(
+    name = "ahab_lib",
+    srcs = ["src/lib.rs"],
+    crate_name = "ahab",
+    deps = [
+        "//proto:analysis_v2_rs_proto",
+        "@crates//:prost",
+        "@crates//:anyhow",
+        "@crates//:clap",
+    ],
+)
+
+rust_binary(
+    name = "ahab",
+    srcs = ["src/main.rs"],
+    deps = [
+        ":ahab_lib",
+        "@crates//:anyhow",
+        "@crates//:clap",
+    ],
+)

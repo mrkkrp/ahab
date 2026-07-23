@@ -1,0 +1,56 @@
+load("@rules_proto//proto:defs.bzl", "proto_library")
+load("@rules_rust//rust:defs.bzl", "rust_library_group")
+load("@rules_rust_prost//:defs.bzl", "rust_prost_library", "rust_prost_toolchain")
+
+# Vendored Bazel protos. analysis_v2.proto is copied verbatim from
+# src/main/protobuf/analysis_v2.proto in the Bazel source tree; build.proto is a
+# minimal stub (see its header comment). Both live under src/main/protobuf/ so
+# that analysis_v2.proto's `import "src/main/protobuf/build.proto"` resolves
+# without editing the vendored file, given strip_import_prefix below.
+
+proto_library(
+    name = "build_proto",
+    srcs = ["src/main/protobuf/build.proto"],
+    strip_import_prefix = "/proto",
+)
+
+proto_library(
+    name = "analysis_v2_proto",
+    srcs = ["src/main/protobuf/analysis_v2.proto"],
+    strip_import_prefix = "/proto",
+    deps = [":build_proto"],
+)
+
+rust_prost_library(
+    name = "analysis_v2_rs_proto",
+    proto = ":analysis_v2_proto",
+    visibility = ["//visibility:public"],
+)
+
+rust_library_group(
+    name = "prost_runtime",
+    deps = ["@crates//:prost"],
+)
+
+rust_library_group(
+    name = "tonic_runtime",
+    deps = [
+        ":prost_runtime",
+        "@crates//:tonic",
+    ],
+)
+
+rust_prost_toolchain(
+    name = "prost_toolchain_impl",
+    prost_plugin = "@crates//:protoc-gen-prost__protoc-gen-prost",
+    prost_runtime = ":prost_runtime",
+    prost_types = "@crates//:prost-types",
+    tonic_plugin = "@crates//:protoc-gen-tonic__protoc-gen-tonic",
+    tonic_runtime = ":tonic_runtime",
+)
+
+toolchain(
+    name = "prost_toolchain",
+    toolchain = ":prost_toolchain_impl",
+    toolchain_type = "@rules_rust_prost//:toolchain_type",
+)

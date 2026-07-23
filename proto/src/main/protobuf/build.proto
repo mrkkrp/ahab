@@ -1,0 +1,35 @@
+// Minimal vendored stub of Bazel's src/main/protobuf/build.proto.
+//
+// The full upstream build.proto (package blaze_query) is large and itself
+// imports stardoc_output.proto. Ahab only needs analysis_v2.proto's
+// ActionGraphContainer, which does NOT transitively reference any blaze_query
+// type: the only reference to blaze_query.Target lives in ConfiguredTarget /
+// CqueryResult, which are not reachable from ActionGraphContainer.
+//
+// analysis_v2.proto nonetheless `import`s this file and mentions
+// blaze_query.Target, so we vendor just enough of it (the Target message) for
+// the import to resolve and analysis_v2.proto to compile unchanged. If Ahab
+// ever needs the real cquery messages, replace this stub with the full
+// upstream build.proto (and stardoc_output.proto).
+
+syntax = "proto2";
+
+package blaze_query;
+
+option java_package = "com.google.devtools.build.lib.query2.proto.proto2api";
+option java_outer_classname = "Build";
+
+// Stub of blaze_query.Target. The upstream message is a oneof of Rule /
+// SourceFile / GeneratedFile / PackageGroup / EnvironmentGroup. We keep only
+// the discriminator field so the type exists and analysis_v2.proto compiles.
+message Target {
+  enum Discriminator {
+    RULE = 1;
+    SOURCE_FILE = 2;
+    GENERATED_FILE = 3;
+    PACKAGE_GROUP = 4;
+    ENVIRONMENT_GROUP = 5;
+  }
+
+  required Discriminator type = 1;
+}
