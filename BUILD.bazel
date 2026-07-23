@@ -1,10 +1,15 @@
-load("@rules_rust//rust:defs.bzl", "rust_binary", "rust_library")
+load("@rules_rust//rust:defs.bzl", "rust_binary", "rust_library", "rust_test")
 
 package(default_visibility = ["//visibility:public"])
 
 rust_library(
     name = "ahab_lib",
-    srcs = ["src/lib.rs"],
+    srcs = [
+        "src/aquery.rs",
+        "src/checks.rs",
+        "src/cli.rs",
+        "src/lib.rs",
+    ],
     crate_name = "ahab",
     deps = [
         "//proto:analysis_v2_rs_proto",
@@ -19,6 +24,20 @@ rust_binary(
     srcs = ["src/main.rs"],
     deps = [
         ":ahab_lib",
+        "@crates//:anyhow",
+        "@crates//:clap",
+    ],
+)
+
+# Unit tests for the hermeticity checks. Compiling into the `ahab_lib` crate
+# (like `cargo test`) lets the #[cfg(test)] module reach the crate's private
+# items (check_environment_leaks, check_path, EXPECTED_PATH, random_token).
+rust_test(
+    name = "ahab_lib_test",
+    crate = ":ahab_lib",
+    deps = [
+        "//proto:analysis_v2_rs_proto",
+        "@crates//:prost",
         "@crates//:anyhow",
         "@crates//:clap",
     ],
