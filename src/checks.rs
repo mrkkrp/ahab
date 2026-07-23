@@ -16,7 +16,7 @@ pub(crate) const EXPECTED_PATH: &str = "/bin:/usr/bin:/usr/local/bin";
 /// The identity of the action responsible for a violation, captured so a
 /// violation is self-contained and can be reported without the original
 /// container. Corresponds to an [`Action`]'s `mnemonic` and `target_id`.
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub(crate) struct ActionRef {
     /// The action's mnemonic (e.g. `CppCompile`). May be empty.
     pub mnemonic: String,
@@ -46,7 +46,7 @@ impl std::fmt::Display for ActionRef {
 }
 
 /// Which piece of the invoking environment a leaked sentinel stood in for.
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub(crate) enum EnvSource {
     User,
     Hostname,
@@ -63,7 +63,7 @@ impl EnvSource {
 }
 
 /// Where in an action a leaked sentinel was found.
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub(crate) enum LeakSite {
     /// The sentinel appeared inside a command-line argument.
     Argument { value: String },
@@ -73,7 +73,7 @@ pub(crate) enum LeakSite {
 
 /// A single hermeticity violation, as a structured value recording everything
 /// the check observed. Use [`Violation::render`] to pretty-print it.
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub(crate) enum Violation {
     /// A sentinel (the value Ahab injected for USER or HOSTNAME) leaked into an
     /// action.

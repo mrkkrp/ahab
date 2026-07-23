@@ -7,6 +7,7 @@ use crate::aquery::{random_token, run_aquery};
 use crate::checks::{
     check_absolute_paths, check_environment_leaks, check_path, check_reproducibility, Violation,
 };
+use crate::melville;
 
 /// Command-line interface for Ahab.
 #[derive(Debug, Parser)]
@@ -32,6 +33,10 @@ pub struct Cli {
     /// parsed action graph are omitted, as the checks don't use them.
     #[arg(short, long)]
     pub verbose: bool,
+
+    /// Suppress the Moby-Dick quote appended to the violation report.
+    #[arg(long = "shut-up")]
+    pub shut_up: bool,
 }
 
 impl Cli {
@@ -67,7 +72,7 @@ impl Cli {
         violations.extend(check_reproducibility(&container));
 
         if !violations.is_empty() {
-            bail!("{}", report_violations(&violations));
+            bail!("{}", report_violations(&violations, !self.shut_up));
         }
 
         println!("All hermeticity checks passed.");
@@ -76,8 +81,9 @@ impl Cli {
 }
 
 /// Format one or more violations into a numbered, human-readable report. The
-/// caller guarantees `violations` is non-empty.
-fn report_violations(violations: &[Violation]) -> String {
+/// caller guarantees `violations` is non-empty. When `quote` is set, a Moby-Dick
+/// line is appended as a sign-off; `--shut-up` clears it.
+fn report_violations(violations: &[Violation], quote: bool) -> String {
     let count = violations.len();
     let noun = if count == 1 { "violation" } else { "violations" };
 
@@ -86,6 +92,13 @@ fn report_violations(violations: &[Violation]) -> String {
     let mut report = format!("found {count} hermeticity {noun}:");
     for (i, v) in violations.iter().enumerate() {
         report.push_str(&format!("\n  {}. {}", i + 1, v.render()));
+    }
+
+    // Sign off with a displeased line from the novel, chosen deterministically
+    // from the violations so the same problems always draw the same quote —
+    // unless the caller asked us to keep quiet.
+    if quote {
+        report.push_str(&format!("\n\n  {}", melville::quote_for(&violations)));
     }
     report
 }
@@ -107,21 +120,55 @@ mod tests {
 
     #[test]
     fn single_violation_uses_singular_noun_and_is_numbered() {
-        let report = report_violations(&[bad_path("CppCompile", 1, "/bin")]);
+        let report = report_violations(&[bad_path("CppCompile", 1, "/bin")], true);
         assert!(report.starts_with("found 1 hermeticity violation:\n"), "{report}");
         assert!(report.contains("\n  1. "), "{report}");
     }
 
     #[test]
     fn multiple_violations_are_pluralized_and_numbered() {
-        let report = report_violations(&[
-            bad_path("CppCompile", 1, "/bin"),
-            bad_path("Genrule", 2, "/usr/bin"),
-        ]);
+        let report = report_violations(
+            &[
+                bad_path("CppCompile", 1, "/bin"),
+                bad_path("Genrule", 2, "/usr/bin"),
+            ],
+            true,
+        );
         assert!(report.starts_with("found 2 hermeticity violations:\n"), "{report}");
         // Each violation appears on its own numbered line.
         assert!(report.contains("\n  1. "), "{report}");
         assert!(report.contains("\n  2. "), "{report}");
-        assert_eq!(report.lines().count(), 3);
+        // Header + two numbered lines + blank separator + Ahab quote.
+        assert_eq!(report.lines().count(), 5);
+    }
+
+    #[test]
+    fn report_ends_with_a_melville_quote() {
+        let violations = [bad_path("CppCompile", 1, "/bin")];
+        let report = report_violations(&violations, true);
+        let quote = melville::quote_for(&&violations[..]);
+        assert!(report.ends_with(&format!("\n\n  {quote}")), "{report}");
+    }
+
+    #[test]
+    fn quote_is_stable_for_the_same_violations() {
+        let violations = [bad_path("CppCompile", 1, "/bin")];
+        assert_eq!(
+            report_violations(&violations, true),
+            report_violations(&violations, true)
+        );
+    }
+
+    #[test]
+    fn shut_up_suppresses_the_quote() {
+        let violations = [bad_path("CppCompile", 1, "/bin")];
+        let report = report_violations(&violations, false);
+        // The violations are still reported...
+        assert!(report.starts_with("found 1 hermeticity violation:\n"), "{report}");
+        assert!(report.contains("\n  1. "), "{report}");
+        // ...but no quote and no sign-off separator are appended.
+        assert!(!report.contains("  — "), "{report}");
+        let quote = melville::quote_for(&&violations[..]);
+        assert!(!report.contains(quote), "{report}");
     }
 }

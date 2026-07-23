@@ -10,10 +10,12 @@
 //! - [`aquery`] — running `bazel aquery`/`info` and decoding the action graph.
 //! - [`checks`] — the pure hermeticity checks over a decoded action graph.
 //! - [`reproducibility_spec`] — modelling a program's reproducibility.
+//! - `melville` — Captain Ahab quotes appended to violation reports.
 
 mod aquery;
 mod checks;
 mod cli;
+mod melville;
 pub mod reproducibility_spec;
 
 pub use cli::Cli;
