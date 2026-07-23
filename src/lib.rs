@@ -5,14 +5,16 @@
 //! `analysis.ActionGraphContainer`, and run a series of hermeticity checks over
 //! the actions Bazel plans to execute.
 //!
-//! The crate is split into three modules:
+//! The crate is split into these modules:
 //! - [`cli`] — the [`Cli`] parser and the top-level orchestration.
 //! - [`aquery`] — running `bazel aquery`/`info` and decoding the action graph.
 //! - [`checks`] — the pure hermeticity checks over a decoded action graph.
+//! - [`reproducibility_spec`] — modelling a program's reproducibility.
 
 mod aquery;
 mod checks;
 mod cli;
+pub mod reproducibility_spec;
 
 pub use cli::Cli;
 
