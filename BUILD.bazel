@@ -9,7 +9,8 @@ rust_library(
         "src/checks.rs",
         "src/cli.rs",
         "src/lib.rs",
-        "src/reproducibility_spec.rs",
+        "src/reproducibility_spec/hardcoded.rs",
+        "src/reproducibility_spec/mod.rs",
     ],
     crate_name = "ahab",
     deps = [

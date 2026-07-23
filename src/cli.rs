@@ -4,7 +4,9 @@ use anyhow::{bail, Result};
 use clap::Parser;
 
 use crate::aquery::{random_token, run_aquery};
-use crate::checks::{check_absolute_paths, check_environment_leaks, check_path, Violation};
+use crate::checks::{
+    check_absolute_paths, check_environment_leaks, check_path, check_reproducibility, Violation,
+};
 
 /// Command-line interface for Ahab.
 #[derive(Debug, Parser)]
@@ -48,6 +50,7 @@ impl Cli {
         let mut violations = check_environment_leaks(&container, &user, &hostname);
         violations.extend(check_path(&container));
         violations.extend(check_absolute_paths(&container));
+        violations.extend(check_reproducibility(&container));
 
         if !violations.is_empty() {
             bail!("{}", report_violations(&violations));

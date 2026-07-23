@@ -9,6 +9,8 @@
 
 use std::collections::BTreeSet;
 
+pub mod hardcoded;
+
 /// When a program behaves reproducibly.
 ///
 /// This is the *baseline* disposition of the program, before considering the

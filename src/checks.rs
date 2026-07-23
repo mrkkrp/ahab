@@ -8,6 +8,8 @@
 
 use analysis_v2_proto::analysis::{Action, ActionGraphContainer};
 
+use crate::reproducibility_spec::hardcoded;
+
 /// The exact value of `PATH` that every action is required to use.
 pub(crate) const EXPECTED_PATH: &str = "/bin:/usr/bin:/usr/local/bin";
 
@@ -99,6 +101,14 @@ pub(crate) enum Violation {
         /// Where in the action it appeared, including the full surrounding text.
         site: LeakSite,
     },
+    /// An action runs a program for which we have no reproducibility spec, so we
+    /// cannot vouch for the action's reproducibility. Reported conservatively —
+    /// an unknown program is treated as a problem, not a pass.
+    UnknownProgram {
+        action: ActionRef,
+        /// The base name of the program the action runs (its `argv[0]`).
+        program: String,
+    },
 }
 
 impl Violation {
@@ -135,6 +145,10 @@ impl Violation {
                      in environment variable {key:?} (value {value:?})",
                 ),
             },
+            Violation::UnknownProgram { action, program } => format!(
+                "reproducibility unknown: {action} runs program {program:?}, which has no \
+                 known reproducibility spec",
+            ),
         }
     }
 }
@@ -322,6 +336,33 @@ pub(crate) fn check_absolute_paths(container: &ActionGraphContainer) -> Vec<Viol
                     },
                 });
             }
+        }
+    }
+
+    violations
+}
+
+/// Check each action's program against the hardcoded library of reproducibility
+/// specs. A program with no known spec is reported as a [`Violation::UnknownProgram`]:
+/// we cannot vouch for its reproducibility, and we err on the side of flagging
+/// rather than silently passing.
+///
+/// The program is taken to be the action's `argv[0]`, reduced to its base name
+/// (see [`hardcoded::program_name`]). Actions with no arguments have no program
+/// to attribute and are skipped.
+pub(crate) fn check_reproducibility(container: &ActionGraphContainer) -> Vec<Violation> {
+    let mut violations = Vec::new();
+
+    for action in &container.actions {
+        let Some(executable) = action.arguments.first() else {
+            continue;
+        };
+        let program = hardcoded::program_name(executable);
+        if hardcoded::lookup(program).is_none() {
+            violations.push(Violation::UnknownProgram {
+                action: ActionRef::of(action),
+                program: program.to_owned(),
+            });
         }
     }
 
@@ -975,5 +1016,62 @@ mod tests {
     #[test]
     fn empty_container_passes_absolute_path_check() {
         assert!(check_absolute_paths(&container(vec![])).is_empty());
+    }
+
+    // ---- check_reproducibility ----
+
+    /// Assert that `v` is a [`Violation::UnknownProgram`] for the given action
+    /// and program name.
+    #[track_caller]
+    fn assert_unknown_program(v: &Violation, mnemonic: &str, target_id: u32, program: &str) {
+        match v {
+            Violation::UnknownProgram {
+                action,
+                program: got_program,
+            } => {
+                assert_eq!(action.mnemonic, mnemonic);
+                assert_eq!(action.target_id, target_id);
+                assert_eq!(got_program, program);
+            }
+            other => panic!("expected UnknownProgram, got {other:?}"),
+        }
+    }
+
+    #[test]
+    fn unknown_program_is_flagged_by_its_base_name() {
+        // With an empty spec library every program is unknown, and the reported
+        // program is argv[0] reduced to its base name.
+        let c = container(vec![action_with_args(
+            "CppCompile",
+            1,
+            &["/usr/bin/gcc", "-c", "foo.c"],
+        )]);
+        let found = check_reproducibility(&c);
+        assert_eq!(found.len(), 1);
+        assert_unknown_program(&found[0], "CppCompile", 1, "gcc");
+    }
+
+    #[test]
+    fn actions_without_arguments_have_no_program_to_check() {
+        // No argv[0] -> nothing to attribute a program to -> skipped.
+        let c = container(vec![action_with_env("A", 1, &[("HOME", "/tmp")])]);
+        assert!(check_reproducibility(&c).is_empty());
+    }
+
+    #[test]
+    fn each_action_with_an_unknown_program_is_reported() {
+        let c = container(vec![
+            action_with_args("A", 1, &["/usr/bin/gcc"]),
+            action_with_args("B", 2, &["clang"]),
+        ]);
+        let found = check_reproducibility(&c);
+        assert_eq!(found.len(), 2);
+        assert_unknown_program(&found[0], "A", 1, "gcc");
+        assert_unknown_program(&found[1], "B", 2, "clang");
+    }
+
+    #[test]
+    fn empty_container_passes_reproducibility_check() {
+        assert!(check_reproducibility(&container(vec![])).is_empty());
     }
 }
