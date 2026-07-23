@@ -14,7 +14,8 @@
       "Bash(bazel query *)",
       "Bash(./bazel-bin/ahab --help)",
       "Bash(bazel help *)",
-      "Bash(bazel cquery *)"
+      "Bash(bazel cquery *)",
+      "Bash(bazel info *)"
     ]
   }
 }
