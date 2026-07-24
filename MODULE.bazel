@@ -14,6 +14,17 @@ bazel_dep(name = "rules_proto", version = "7.1.0")
 bazel_dep(name = "protobuf", version = "35.1")
 
 ###############################################################################
+# Hermetic C/C++ toolchain
+###############################################################################
+
+# Rust linking shells out to a C/C++ compiler, so without a registered cc
+# toolchain Bazel falls back to whatever cc/ld happen to be on the host. The
+# llvm module provides a zero-sysroot, fully hermetic LLVM-based cc toolchain.
+
+bazel_dep(name = "llvm", version = "0.8.14")
+register_toolchains("@llvm//toolchain:all")
+
+###############################################################################
 # Rust toolchain
 ###############################################################################
 
