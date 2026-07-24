@@ -343,18 +343,33 @@ fn absolute_paths(text: &str) -> Vec<String> {
     paths
 }
 
+/// Absolute paths that are allowed to appear in an action and must not be
+/// reported as hermeticity violations. `/dev/null` is a portable, always-present
+/// special file (used as a sink or an empty input); referencing it does not make
+/// a build non-hermetic.
+const ALLOWED_ABSOLUTE_PATHS: &[&str] = &["/dev/null"];
+
+/// Whether an extracted absolute path is exempt from the absolute-path check.
+fn is_allowed_absolute_path(path: &str) -> bool {
+    ALLOWED_ABSOLUTE_PATHS.contains(&path)
+}
+
 /// Find every absolute path (a `/`-rooted run) referenced in an action's
 /// `arguments` or in the value of any of its `environment_variables`, and return
 /// one [`Violation`] per path found.
 ///
 /// The environment variable literally named `PATH` is skipped: it is expected to
-/// hold absolute paths and is governed separately by [`check_path`].
+/// hold absolute paths and is governed separately by [`check_path`]. Paths in
+/// [`ALLOWED_ABSOLUTE_PATHS`] (such as `/dev/null`) are also skipped.
 pub(crate) fn check_absolute_paths(container: &ActionGraphContainer) -> Vec<Violation> {
     let mut violations = Vec::new();
 
     for action in &container.actions {
         for arg in &action.arguments {
             for path in absolute_paths(arg) {
+                if is_allowed_absolute_path(&path) {
+                    continue;
+                }
                 violations.push(Violation::AbsolutePath {
                     action: ActionRef::of(action),
                     path,
@@ -368,6 +383,9 @@ pub(crate) fn check_absolute_paths(container: &ActionGraphContainer) -> Vec<Viol
                 continue;
             }
             for path in absolute_paths(&kv.value) {
+                if is_allowed_absolute_path(&path) {
+                    continue;
+                }
                 violations.push(Violation::AbsolutePath {
                     action: ActionRef::of(action),
                     path,
@@ -1085,6 +1103,37 @@ mod tests {
     #[test]
     fn empty_container_passes_absolute_path_check() {
         assert!(check_absolute_paths(&container(vec![])).is_empty());
+    }
+
+    #[test]
+    fn dev_null_is_allowed_in_argument() {
+        // /dev/null is a portable special file, not a hermeticity leak.
+        let c = container(vec![action_with_args("A", 1, &["-o", "/dev/null"])]);
+        assert!(check_absolute_paths(&c).is_empty());
+    }
+
+    #[test]
+    fn dev_null_is_allowed_in_env_value() {
+        let c = container(vec![action_with_env("A", 1, &[("OUT", "/dev/null")])]);
+        assert!(check_absolute_paths(&c).is_empty());
+    }
+
+    #[test]
+    fn dev_null_exemption_does_not_suppress_other_paths() {
+        // Only the exact /dev/null run is exempt; a real path in the same list
+        // is still reported. /dev/urandom is not on the allow-list.
+        let c = container(vec![action_with_args("A", 1, &["/dev/null:/opt/bin"])]);
+        let found = check_absolute_paths(&c);
+        assert_eq!(found.len(), 1);
+        assert_abs_path(
+            &found[0],
+            "A",
+            1,
+            "/opt/bin",
+            LeakSite::Argument {
+                value: "/dev/null:/opt/bin".to_owned(),
+            },
+        );
     }
 
     // ---- check_reproducibility ----
