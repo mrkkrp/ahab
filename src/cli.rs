@@ -23,9 +23,6 @@ pub struct Cli {
     pub configs: Vec<String>,
 
     /// The Bazel label or wildcard to query (e.g. `//foo:bar` or `//...`).
-    ///
-    /// In this first approximation it is an opaque string forwarded to
-    /// `bazel aquery` as the query expression.
     #[arg(value_name = "LABEL")]
     pub label: String,
 
