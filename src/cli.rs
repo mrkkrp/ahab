@@ -4,9 +4,7 @@ use anyhow::{bail, Result};
 use clap::Parser;
 
 use crate::aquery::{random_token, run_aquery};
-use crate::checks::{
-    check_absolute_paths, check_environment_leaks, check_path, check_reproducibility, Violation,
-};
+use crate::checks::{check_all, Violation};
 use crate::melville;
 
 /// Command-line interface for Ahab.
@@ -61,12 +59,9 @@ impl Cli {
             }
         }
 
-        // The checks are pure: they return every violation they find. Collect
-        // across all checks, then decide the exit status here.
-        let mut violations = check_environment_leaks(&container, &user, &hostname);
-        violations.extend(check_path(&container));
-        violations.extend(check_absolute_paths(&container));
-        violations.extend(check_reproducibility(&container));
+        // The checks are pure: they return every violation they find, in a
+        // deterministic order regardless of how Bazel ordered the actions.
+        let violations = check_all(&container, &user, &hostname);
 
         if !violations.is_empty() {
             bail!("{}", report_violations(&violations, !self.shut_up));
@@ -109,7 +104,7 @@ mod tests {
         Violation::BadPath {
             action: ActionRef {
                 mnemonic: mnemonic.to_owned(),
-                target_id,
+                target: format!("//test:t{target_id}"),
             },
             actual: actual.to_owned(),
         }

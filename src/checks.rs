@@ -6,6 +6,8 @@
 //! non-empty result means (for Ahab, a non-zero exit). Collecting *all*
 //! violations rather than bailing on the first gives callers a complete report.
 
+use std::collections::HashMap;
+
 use analysis_v2_proto::analysis::{Action, ActionGraphContainer};
 
 use crate::param_files::{analyzable_strings, expanded_command_line, ArgSource, Sourced};
@@ -14,40 +16,55 @@ use crate::reproducibility_spec::{hardcoded, program_id::ProgramId, Conformance}
 /// The exact value of `PATH` that every action is required to use.
 pub(crate) const EXPECTED_PATH: &str = "/bin:/usr/bin:/usr/local/bin";
 
-/// The identity of the action responsible for a violation, captured so a
-/// violation is self-contained and can be reported without the original
-/// container. Corresponds to an [`Action`]'s `mnemonic` and `target_id`.
-#[derive(Debug, Clone, PartialEq, Eq, Hash)]
+/// The identity of the action responsible for a violation.
+#[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub(crate) struct ActionRef {
     /// The action's mnemonic (e.g. `CppCompile`). May be empty.
     pub mnemonic: String,
-    /// The id of the target responsible for the action.
-    pub target_id: u32,
+    /// The label of the target responsible for the action, e.g. `//foo:bar`.
+    pub target: String,
 }
 
 impl ActionRef {
-    fn of(action: &Action) -> Self {
+    /// Capture the action's identity, resolving its `target_id` through
+    /// `targets`. An id the dump does not describe yields a placeholder rather
+    /// than a number that would be meaningless outside this run.
+    fn of(action: &Action, targets: &HashMap<u32, &str>) -> Self {
         ActionRef {
             mnemonic: action.mnemonic.clone(),
-            target_id: action.target_id,
+            target: targets
+                .get(&action.target_id)
+                .map_or_else(|| "<unknown target>".to_owned(), |label| (*label).to_owned()),
         }
     }
 }
 
 impl std::fmt::Display for ActionRef {
     /// Render the action using its mnemonic when present, falling back to just
-    /// the target id otherwise.
+    /// the target otherwise.
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         if self.mnemonic.is_empty() {
-            write!(f, "action for target_id {}", self.target_id)
+            write!(f, "action for target {}", self.target)
         } else {
-            write!(f, "{} action for target_id {}", self.mnemonic, self.target_id)
+            write!(f, "{} action for target {}", self.mnemonic, self.target)
         }
     }
 }
 
+/// Index a container's targets by the id its actions refer to them by.
+///
+/// The mapping is valid only for this container, which is the whole reason it
+/// has to be applied before a violation leaves the analysis — see [`ActionRef`].
+fn target_labels(container: &ActionGraphContainer) -> HashMap<u32, &str> {
+    container
+        .targets
+        .iter()
+        .map(|target| (target.id, target.label.as_str()))
+        .collect()
+}
+
 /// Which piece of the invoking environment a leaked sentinel stood in for.
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub(crate) enum EnvSource {
     User,
     Hostname,
@@ -64,7 +81,7 @@ impl EnvSource {
 }
 
 /// Where in an action something Ahab flagged was found.
-#[derive(Debug, Clone, PartialEq, Eq, Hash)]
+#[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub(crate) enum LeakSite {
     /// Inside a command-line argument.
     Argument { value: String },
@@ -103,7 +120,7 @@ impl LeakSite {
 /// another's conditions, so the spec applied to an action is not always the one
 /// written against the program it runs. Recording which it was keeps a
 /// reproducibility verdict traceable to the entry that produced it.
-#[derive(Debug, Clone, PartialEq, Eq, Hash)]
+#[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub(crate) enum SpecSource {
     /// The program the action runs has a spec of its own.
     Own,
@@ -137,7 +154,7 @@ impl SpecSource {
 
 /// A single hermeticity violation, as a structured value recording everything
 /// the check observed. Use [`Violation::render`] to pretty-print it.
-#[derive(Debug, Clone, PartialEq, Eq, Hash)]
+#[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub(crate) enum Violation {
     /// A sentinel (the value Ahab injected for USER or HOSTNAME) leaked into an
     /// action.
@@ -289,6 +306,21 @@ impl std::fmt::Display for Violation {
     }
 }
 
+/// Run every check over `container` and return all violations found, in a
+/// deterministic order.
+pub(crate) fn check_all(
+    container: &ActionGraphContainer,
+    user: &str,
+    hostname: &str,
+) -> Vec<Violation> {
+    let mut violations = check_environment_leaks(container, user, hostname);
+    violations.extend(check_path(container));
+    violations.extend(check_absolute_paths(container));
+    violations.extend(check_reproducibility(container));
+    violations.sort();
+    violations
+}
+
 /// Find every place where a sentinel (the values Ahab passed as USER and
 /// HOSTNAME) leaks into an action's command line, into one of its param files,
 /// or into the value of any of its `environment_variables`, and return one
@@ -299,6 +331,7 @@ pub(crate) fn check_environment_leaks(
     hostname: &str,
 ) -> Vec<Violation> {
     let mut violations = Vec::new();
+    let targets = target_labels(container);
 
     for action in &container.actions {
         // Param files are scanned alongside the command line: a sentinel is just
@@ -309,7 +342,7 @@ pub(crate) fn check_environment_leaks(
             for sourced in &scanned {
                 if sourced.value.contains(sentinel) {
                     violations.push(Violation::EnvironmentLeak {
-                        action: ActionRef::of(action),
+                        action: ActionRef::of(action, &targets),
                         source,
                         sentinel: sentinel.to_owned(),
                         site: LeakSite::of(*sourced),
@@ -320,7 +353,7 @@ pub(crate) fn check_environment_leaks(
             for kv in &action.environment_variables {
                 if kv.value.contains(sentinel) {
                     violations.push(Violation::EnvironmentLeak {
-                        action: ActionRef::of(action),
+                        action: ActionRef::of(action, &targets),
                         source,
                         sentinel: sentinel.to_owned(),
                         site: LeakSite::EnvVar {
@@ -340,12 +373,13 @@ pub(crate) fn check_environment_leaks(
 /// and return one [`Violation`] per deviation.
 pub(crate) fn check_path(container: &ActionGraphContainer) -> Vec<Violation> {
     let mut violations = Vec::new();
+    let targets = target_labels(container);
 
     for action in &container.actions {
         for kv in &action.environment_variables {
             if kv.key == "PATH" && kv.value != EXPECTED_PATH {
                 violations.push(Violation::BadPath {
-                    action: ActionRef::of(action),
+                    action: ActionRef::of(action, &targets),
                     actual: kv.value.clone(),
                 });
             }
@@ -455,6 +489,7 @@ fn is_allowed_absolute_path(path: &str) -> bool {
 /// [`ALLOWED_ABSOLUTE_PATHS`] (such as `/dev/null`) are also skipped.
 pub(crate) fn check_absolute_paths(container: &ActionGraphContainer) -> Vec<Violation> {
     let mut violations = Vec::new();
+    let targets = target_labels(container);
 
     for action in &container.actions {
         // Spilling a command line into a param file must not launder an absolute
@@ -465,7 +500,7 @@ pub(crate) fn check_absolute_paths(container: &ActionGraphContainer) -> Vec<Viol
                     continue;
                 }
                 violations.push(Violation::AbsolutePath {
-                    action: ActionRef::of(action),
+                    action: ActionRef::of(action, &targets),
                     path,
                     site: LeakSite::of(sourced),
                 });
@@ -481,7 +516,7 @@ pub(crate) fn check_absolute_paths(container: &ActionGraphContainer) -> Vec<Viol
                     continue;
                 }
                 violations.push(Violation::AbsolutePath {
-                    action: ActionRef::of(action),
+                    action: ActionRef::of(action, &targets),
                     path,
                     site: LeakSite::EnvVar {
                         key: kv.key.clone(),
@@ -515,6 +550,7 @@ pub(crate) fn check_absolute_paths(container: &ActionGraphContainer) -> Vec<Viol
 /// in a param file the command line references.
 pub(crate) fn check_reproducibility(container: &ActionGraphContainer) -> Vec<Violation> {
     let mut violations = Vec::new();
+    let targets = target_labels(container);
 
     for action in &container.actions {
         let command_line = expanded_command_line(action);
@@ -525,7 +561,7 @@ pub(crate) fn check_reproducibility(container: &ActionGraphContainer) -> Vec<Vio
 
         let Some((carrier, spec)) = hardcoded::lookup(&program) else {
             violations.push(Violation::UnknownProgram {
-                action: ActionRef::of(action),
+                action: ActionRef::of(action, &targets),
                 program,
             });
             continue;
@@ -540,7 +576,7 @@ pub(crate) fn check_reproducibility(container: &ActionGraphContainer) -> Vec<Vio
             Conformance::Reproducible => {}
             Conformance::NeverReproducible => {
                 violations.push(Violation::NeverReproducible {
-                    action: ActionRef::of(action),
+                    action: ActionRef::of(action, &targets),
                     program,
                     spec_source,
                 });
@@ -550,7 +586,7 @@ pub(crate) fn check_reproducibility(container: &ActionGraphContainer) -> Vec<Vio
                 present_breaking,
             } => {
                 violations.push(Violation::ConditionalReproducibility {
-                    action: ActionRef::of(action),
+                    action: ActionRef::of(action, &targets),
                     program,
                     spec_source,
                     missing_required: missing_required.into_iter().collect(),
@@ -625,10 +661,30 @@ mod tests {
 
     /// Wrap a list of actions in an [`ActionGraphContainer`].
     fn container(actions: Vec<Action>) -> ActionGraphContainer {
+        // Describe every target the actions refer to, as a real dump would, so
+        // the fixtures exercise label resolution rather than sidestep it.
+        let mut ids: Vec<u32> = actions.iter().map(|a| a.target_id).collect();
+        ids.sort_unstable();
+        ids.dedup();
+        let targets = ids
+            .into_iter()
+            .map(|id| analysis_v2_proto::analysis::Target {
+                id,
+                label: test_label(id),
+                ..Default::default()
+            })
+            .collect();
+
         ActionGraphContainer {
             actions,
+            targets,
             ..Default::default()
         }
+    }
+
+    /// The label [`container`] gives the target with this id.
+    fn test_label(target_id: u32) -> String {
+        format!("//test:t{target_id}")
     }
 
     /// Run [`check_environment_leaks`] with both real sentinels.
@@ -649,7 +705,7 @@ mod tests {
                 site: got_site,
             } => {
                 assert_eq!(action.mnemonic, mnemonic);
-                assert_eq!(action.target_id, target_id);
+                assert_eq!(action.target, test_label(target_id));
                 assert_eq!(*got_source, source);
                 assert_eq!(got_sentinel, sentinel);
                 assert_eq!(*got_site, site);
@@ -668,7 +724,7 @@ mod tests {
                 actual: got_actual,
             } => {
                 assert_eq!(action.mnemonic, mnemonic);
-                assert_eq!(action.target_id, target_id);
+                assert_eq!(action.target, test_label(target_id));
                 assert_eq!(got_actual, actual);
             }
             other => panic!("expected BadPath, got {other:?}"),
@@ -930,12 +986,12 @@ mod tests {
         let v = Violation::BadPath {
             action: ActionRef {
                 mnemonic: "CppCompile".to_owned(),
-                target_id: 3,
+                target: test_label(3),
             },
             actual: "/bin".to_owned(),
         };
         let rendered = v.render();
-        assert!(rendered.contains("CppCompile action for target_id 3"), "{rendered}");
+        assert!(rendered.contains("CppCompile action for target //test:t3"), "{rendered}");
         assert!(rendered.contains(r#"sets PATH to "/bin""#), "{rendered}");
         assert!(rendered.contains(EXPECTED_PATH), "{rendered}");
     }
@@ -1108,7 +1164,7 @@ mod tests {
                 site: got_site,
             } => {
                 assert_eq!(action.mnemonic, mnemonic);
-                assert_eq!(action.target_id, target_id);
+                assert_eq!(action.target, test_label(target_id));
                 assert_eq!(got_path, path);
                 assert_eq!(*got_site, site);
             }
@@ -1276,7 +1332,7 @@ mod tests {
                 program: got_program,
             } => {
                 assert_eq!(action.mnemonic, mnemonic);
-                assert_eq!(action.target_id, target_id);
+                assert_eq!(action.target, test_label(target_id));
                 assert_eq!(got_program, program);
             }
             other => panic!("expected UnknownProgram, got {other:?}"),
@@ -1366,6 +1422,106 @@ mod tests {
     #[test]
     fn empty_container_passes_reproducibility_check() {
         assert!(check_reproducibility(&container(vec![])).is_empty());
+    }
+
+    // ---- deterministic ordering ----
+
+    /// A container exercising every check at once, with enough actions for the
+    /// order they arrive in to matter.
+    fn mixed_actions() -> Vec<Action> {
+        vec![
+            action_with_args("CppCompile", 3, &["/usr/bin/gcc", "-I/opt/include"]),
+            action_with_env("Genrule", 1, &[("HOME", &format!("/home/{USER_SENTINEL}"))]),
+            action_with_args("Rustc", 2, &["rustc", "--sysroot=/opt/rust"]),
+            action_with_env("Genrule", 5, &[("PATH", "/usr/local/bin")]),
+            action_with_args("CppLink", 4, &["/usr/bin/ld", "-L/opt/lib"]),
+            action_with_env("Rustc", 2, &[("HOSTNAME", HOST_SENTINEL)]),
+            action_with_param_files(
+                "CppCompile",
+                6,
+                &["clang", "@out/foo.params"],
+                &[("out/foo.params", &["-L/opt/other"])],
+            ),
+        ]
+    }
+
+    #[test]
+    fn violation_order_does_not_depend_on_action_order() {
+        // The property that matters: Bazel may enumerate the action graph in any
+        // order, and the report must not change because of it.
+        let forward = check_all(&container(mixed_actions()), USER_SENTINEL, HOST_SENTINEL);
+
+        let mut reversed = mixed_actions();
+        reversed.reverse();
+        let reversed = check_all(&container(reversed), USER_SENTINEL, HOST_SENTINEL);
+
+        assert!(!forward.is_empty(), "the fixture must produce violations");
+        assert_eq!(forward, reversed);
+    }
+
+    #[test]
+    fn violation_order_is_stable_across_every_rotation_of_the_actions() {
+        // Reversing alone could pass by luck; every rotation must agree too.
+        let expected = check_all(&container(mixed_actions()), USER_SENTINEL, HOST_SENTINEL);
+
+        let actions = mixed_actions();
+        for split in 0..actions.len() {
+            let mut rotated = actions.clone();
+            rotated.rotate_left(split);
+            assert_eq!(
+                check_all(&container(rotated), USER_SENTINEL, HOST_SENTINEL),
+                expected,
+                "rotating the actions by {split} changed the report",
+            );
+        }
+    }
+
+    #[test]
+    fn sorting_is_a_total_order_over_violation_contents() {
+        // A stable sort would leave ties in arrival order, which is exactly what
+        // is not trusted. Any two violations that compare equal must be equal in
+        // every field, so their order cannot be observed.
+        let violations = check_all(&container(mixed_actions()), USER_SENTINEL, HOST_SENTINEL);
+        for pair in violations.windows(2) {
+            if pair[0].cmp(&pair[1]) == std::cmp::Ordering::Equal {
+                assert_eq!(pair[0], pair[1], "tied violations must be identical");
+            }
+        }
+    }
+
+    #[test]
+    fn the_report_groups_violations_by_kind() {
+        // Sorting by content orders by variant, so the report keeps the shape it
+        // had when the checks were simply run in sequence.
+        let violations = check_all(&container(mixed_actions()), USER_SENTINEL, HOST_SENTINEL);
+        let kind = |v: &Violation| match v {
+            Violation::EnvironmentLeak { .. } => 0,
+            Violation::BadPath { .. } => 1,
+            Violation::AbsolutePath { .. } => 2,
+            Violation::UnknownProgram { .. } => 3,
+            Violation::NeverReproducible { .. } => 4,
+            Violation::ConditionalReproducibility { .. } => 5,
+        };
+        let kinds: Vec<u8> = violations.iter().map(kind).collect();
+        let mut sorted = kinds.clone();
+        sorted.sort_unstable();
+        assert_eq!(kinds, sorted, "violations are not grouped by kind");
+    }
+
+    #[test]
+    fn check_all_finds_what_the_individual_checks_find() {
+        // Ordering must not drop or duplicate anything.
+        let c = container(mixed_actions());
+        let mut individually = check_environment_leaks(&c, USER_SENTINEL, HOST_SENTINEL);
+        individually.extend(check_path(&c));
+        individually.extend(check_absolute_paths(&c));
+        individually.extend(check_reproducibility(&c));
+
+        let combined = check_all(&c, USER_SENTINEL, HOST_SENTINEL);
+        assert_eq!(combined.len(), individually.len());
+
+        individually.sort();
+        assert_eq!(combined, individually);
     }
 
     // ---- param files as first-class sources ----
@@ -1471,7 +1627,7 @@ mod tests {
         let v = Violation::AbsolutePath {
             action: ActionRef {
                 mnemonic: "CppLink".to_owned(),
-                target_id: 1,
+                target: test_label(1),
             },
             path: "/opt/lib".to_owned(),
             site: LeakSite::ParamFile {
@@ -1494,13 +1650,13 @@ mod tests {
         let v = Violation::NeverReproducible {
             action: ActionRef {
                 mnemonic: "Genrule".to_owned(),
-                target_id: 4,
+                target: test_label(4),
             },
             program: ProgramId::of("date"),
             spec_source: SpecSource::Own,
         };
         let r = v.render();
-        assert!(r.contains("Genrule action for target_id 4"), "{r}");
+        assert!(r.contains("Genrule action for target //test:t4"), "{r}");
         assert!(r.contains(r#"program "date""#), "{r}");
         assert!(r.contains("never"), "{r}");
         // A program judged by its own spec says nothing about synonyms.
@@ -1513,7 +1669,7 @@ mod tests {
         let v = Violation::NeverReproducible {
             action: ActionRef {
                 mnemonic: "CppCompile".to_owned(),
-                target_id: 1,
+                target: test_label(1),
             },
             program: ProgramId::extension("llvm", "llvm_toolchain_minimal", "bin/clang++"),
             spec_source: SpecSource::Synonym(clang),
@@ -1548,7 +1704,7 @@ mod tests {
         let v = Violation::UnknownProgram {
             action: ActionRef {
                 mnemonic: "Rustc".to_owned(),
-                target_id: 1,
+                target: test_label(1),
             },
             program: ProgramId::of(
                 "bazel-out/k8-opt-exec/bin/external/rules_rust+/util/process_wrapper/process_wrapper",
@@ -1567,7 +1723,7 @@ mod tests {
         let v = Violation::ConditionalReproducibility {
             action: ActionRef {
                 mnemonic: "CppCompile".to_owned(),
-                target_id: 1,
+                target: test_label(1),
             },
             program: ProgramId::of("gcc"),
             spec_source: SpecSource::Own,
@@ -1587,7 +1743,7 @@ mod tests {
         let v = Violation::ConditionalReproducibility {
             action: ActionRef {
                 mnemonic: "A".to_owned(),
-                target_id: 1,
+                target: test_label(1),
             },
             program: ProgramId::of("gcc"),
             spec_source: SpecSource::Own,
