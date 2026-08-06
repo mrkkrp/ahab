@@ -97,6 +97,44 @@ impl LeakSite {
     }
 }
 
+/// Which program's spec judged an action.
+///
+/// The library lets one program declare that it is reproducible under exactly
+/// another's conditions, so the spec applied to an action is not always the one
+/// written against the program it runs. Recording which it was keeps a
+/// reproducibility verdict traceable to the entry that produced it.
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
+pub(crate) enum SpecSource {
+    /// The program the action runs has a spec of its own.
+    Own,
+    /// The program has no spec of its own; this one answered for it, reached by
+    /// following synonyms through the library.
+    Synonym(ProgramId),
+}
+
+impl SpecSource {
+    /// Classify the program that carried the spec against the one that was
+    /// looked up. Equal ids mean the program answered for itself.
+    fn of(program: &ProgramId, carrier: &ProgramId) -> SpecSource {
+        if program == carrier {
+            SpecSource::Own
+        } else {
+            SpecSource::Synonym(carrier.clone())
+        }
+    }
+
+    /// A parenthetical naming the program whose spec was applied, empty when
+    /// that is the program itself — repeating it would only add noise.
+    fn attribution(&self) -> String {
+        match self {
+            SpecSource::Own => String::new(),
+            SpecSource::Synonym(carrier) => {
+                format!(" (spec from synonym {:?})", carrier.to_string())
+            }
+        }
+    }
+}
+
 /// A single hermeticity violation, as a structured value recording everything
 /// the check observed. Use [`Violation::render`] to pretty-print it.
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
@@ -140,6 +178,8 @@ pub(crate) enum Violation {
         action: ActionRef,
         /// The program the action runs.
         program: ProgramId,
+        /// Which program's spec produced this verdict.
+        spec_source: SpecSource,
     },
     /// An action runs a conditionally-reproducible program, but this invocation
     /// does not meet the conditions: required flags are missing and/or breaking
@@ -148,6 +188,8 @@ pub(crate) enum Violation {
         action: ActionRef,
         /// The program the action runs.
         program: ProgramId,
+        /// Which program's spec produced this verdict.
+        spec_source: SpecSource,
         /// Required flags absent from the invocation.
         missing_required: Vec<String>,
         /// Breaking flags present in the invocation.
@@ -205,14 +247,20 @@ impl Violation {
                  known reproducibility spec",
                 program.to_string(),
             ),
-            Violation::NeverReproducible { action, program } => format!(
-                "reproducibility violation: {action} runs program {:?}, which is never \
+            Violation::NeverReproducible {
+                action,
+                program,
+                spec_source,
+            } => format!(
+                "reproducibility violation: {action} runs program {:?}{}, which is never \
                  reproducible",
                 program.to_string(),
+                spec_source.attribution(),
             ),
             Violation::ConditionalReproducibility {
                 action,
                 program,
+                spec_source,
                 missing_required,
                 present_breaking,
             } => {
@@ -224,9 +272,10 @@ impl Violation {
                     reasons.push(format!("present breaking flag(s) {present_breaking:?}"));
                 }
                 format!(
-                    "reproducibility violation: {action} runs program {:?} \
+                    "reproducibility violation: {action} runs program {:?}{} \
                      non-reproducibly: {}",
                     program.to_string(),
+                    spec_source.attribution(),
                     reasons.join("; "),
                 )
             }
@@ -457,7 +506,9 @@ pub(crate) fn check_absolute_paths(container: &ActionGraphContainer) -> Vec<Viol
 /// * with no known spec, we report [`Violation::UnknownProgram`] — we cannot
 ///   vouch for its reproducibility, so we err on the side of flagging; otherwise
 /// * we assess the actual invocation (`argv[1..]`) against the spec and, if it
-///   does not conform, report the corresponding reproducibility violation.
+///   does not conform, report the corresponding reproducibility violation,
+///   noting via [`SpecSource`] whether the spec was the program's own or reached
+///   through a synonym.
 ///
 /// The invocation is assessed against the *expanded* command line, so a flag
 /// that breaks reproducibility is caught whether it sits on the command line or
@@ -472,13 +523,16 @@ pub(crate) fn check_reproducibility(container: &ActionGraphContainer) -> Vec<Vio
         };
         let program = ProgramId::of(executable.value);
 
-        let Some(spec) = hardcoded::lookup(&program) else {
+        let Some((carrier, spec)) = hardcoded::lookup(&program) else {
             violations.push(Violation::UnknownProgram {
                 action: ActionRef::of(action),
                 program,
             });
             continue;
         };
+        // The spec may have come from a synonym rather than the program itself;
+        // record which, so the verdict stays traceable to the entry behind it.
+        let spec_source = SpecSource::of(&program, carrier);
 
         // Assess the invocation against the spec: everything after argv[0].
         let args = command_line.iter().skip(1).map(|sourced| sourced.value);
@@ -488,6 +542,7 @@ pub(crate) fn check_reproducibility(container: &ActionGraphContainer) -> Vec<Vio
                 violations.push(Violation::NeverReproducible {
                     action: ActionRef::of(action),
                     program,
+                    spec_source,
                 });
             }
             Conformance::Conditional {
@@ -497,6 +552,7 @@ pub(crate) fn check_reproducibility(container: &ActionGraphContainer) -> Vec<Vio
                 violations.push(Violation::ConditionalReproducibility {
                     action: ActionRef::of(action),
                     program,
+                    spec_source,
                     missing_required: missing_required.into_iter().collect(),
                     present_breaking: present_breaking.into_iter().collect(),
                 });
@@ -1441,11 +1497,48 @@ mod tests {
                 target_id: 4,
             },
             program: ProgramId::of("date"),
+            spec_source: SpecSource::Own,
         };
         let r = v.render();
         assert!(r.contains("Genrule action for target_id 4"), "{r}");
         assert!(r.contains(r#"program "date""#), "{r}");
         assert!(r.contains("never"), "{r}");
+        // A program judged by its own spec says nothing about synonyms.
+        assert!(!r.contains("synonym"), "{r}");
+    }
+
+    #[test]
+    fn renders_the_synonym_that_provided_the_spec() {
+        let clang = ProgramId::extension("llvm", "llvm_toolchain_minimal", "bin/clang");
+        let v = Violation::NeverReproducible {
+            action: ActionRef {
+                mnemonic: "CppCompile".to_owned(),
+                target_id: 1,
+            },
+            program: ProgramId::extension("llvm", "llvm_toolchain_minimal", "bin/clang++"),
+            spec_source: SpecSource::Synonym(clang),
+        };
+        let r = v.render();
+        // Both the program that ran and the one whose spec judged it.
+        assert!(
+            r.contains(r#"program "@llvm+llvm_toolchain_minimal//bin/clang++""#),
+            "{r}"
+        );
+        assert!(
+            r.contains(r#"spec from synonym "@llvm+llvm_toolchain_minimal//bin/clang""#),
+            "{r}"
+        );
+    }
+
+    #[test]
+    fn spec_source_distinguishes_own_from_synonym() {
+        let clang = ProgramId::extension("llvm", "llvm_toolchain_minimal", "bin/clang");
+        let clangxx = ProgramId::extension("llvm", "llvm_toolchain_minimal", "bin/clang++");
+        assert_eq!(SpecSource::of(&clang, &clang), SpecSource::Own);
+        assert_eq!(
+            SpecSource::of(&clangxx, &clang),
+            SpecSource::Synonym(clang.clone())
+        );
     }
 
     #[test]
@@ -1477,6 +1570,7 @@ mod tests {
                 target_id: 1,
             },
             program: ProgramId::of("gcc"),
+            spec_source: SpecSource::Own,
             missing_required: vec!["--deterministic".to_owned()],
             present_breaking: vec!["--timestamp".to_owned()],
         };
@@ -1496,6 +1590,7 @@ mod tests {
                 target_id: 1,
             },
             program: ProgramId::of("gcc"),
+            spec_source: SpecSource::Own,
             missing_required: vec!["--sorted".to_owned()],
             present_breaking: vec![],
         };
