@@ -8,7 +8,7 @@
 
 use analysis_v2_proto::analysis::{Action, ActionGraphContainer};
 
-use crate::reproducibility_spec::{hardcoded, Conformance};
+use crate::reproducibility_spec::{hardcoded, program_id::ProgramId, Conformance};
 
 /// The exact value of `PATH` that every action is required to use.
 pub(crate) const EXPECTED_PATH: &str = "/bin:/usr/bin:/usr/local/bin";
@@ -106,22 +106,22 @@ pub(crate) enum Violation {
     /// an unknown program is treated as a problem, not a pass.
     UnknownProgram {
         action: ActionRef,
-        /// The base name of the program the action runs (its `argv[0]`).
-        program: String,
+        /// The program the action runs, normalized from its `argv[0]`.
+        program: ProgramId,
     },
     /// An action runs a program that is never reproducible, whatever its flags.
     NeverReproducible {
         action: ActionRef,
-        /// The base name of the program the action runs.
-        program: String,
+        /// The program the action runs.
+        program: ProgramId,
     },
     /// An action runs a conditionally-reproducible program, but this invocation
     /// does not meet the conditions: required flags are missing and/or breaking
     /// flags are present. At least one of the two lists is non-empty.
     ConditionalReproducibility {
         action: ActionRef,
-        /// The base name of the program the action runs.
-        program: String,
+        /// The program the action runs.
+        program: ProgramId,
         /// Required flags absent from the invocation.
         missing_required: Vec<String>,
         /// Breaking flags present in the invocation.
@@ -163,13 +163,17 @@ impl Violation {
                      in environment variable {key:?} (value {value:?})",
                 ),
             },
+            // Programs render through their `Display` (`@rules_rust//util/…`)
+            // rather than their `Debug`, then quote that as a whole.
             Violation::UnknownProgram { action, program } => format!(
-                "reproducibility unknown: {action} runs program {program:?}, which has no \
+                "reproducibility unknown: {action} runs program {:?}, which has no \
                  known reproducibility spec",
+                program.to_string(),
             ),
             Violation::NeverReproducible { action, program } => format!(
-                "reproducibility violation: {action} runs program {program:?}, which is never \
+                "reproducibility violation: {action} runs program {:?}, which is never \
                  reproducible",
+                program.to_string(),
             ),
             Violation::ConditionalReproducibility {
                 action,
@@ -185,8 +189,9 @@ impl Violation {
                     reasons.push(format!("present breaking flag(s) {present_breaking:?}"));
                 }
                 format!(
-                    "reproducibility violation: {action} runs program {program:?} \
+                    "reproducibility violation: {action} runs program {:?} \
                      non-reproducibly: {}",
+                    program.to_string(),
                     reasons.join("; "),
                 )
             }
@@ -404,9 +409,10 @@ pub(crate) fn check_absolute_paths(container: &ActionGraphContainer) -> Vec<Viol
 /// Check each action's program against the hardcoded library of reproducibility
 /// specs.
 ///
-/// The program is taken to be the action's `argv[0]`, reduced to its base name
-/// (see [`hardcoded::program_name`]). Actions with no arguments have no program
-/// to attribute and are skipped. For each program:
+/// The program is identified from the action's `argv[0]` by
+/// [`ProgramId::of`], which normalizes away the parts of an exec path that vary
+/// between builds. Actions with no arguments have no program to attribute and
+/// are skipped. For each program:
 ///
 /// * with no known spec, we report [`Violation::UnknownProgram`] — we cannot
 ///   vouch for its reproducibility, so we err on the side of flagging; otherwise
@@ -419,12 +425,12 @@ pub(crate) fn check_reproducibility(container: &ActionGraphContainer) -> Vec<Vio
         let Some(executable) = action.arguments.first() else {
             continue;
         };
-        let program = hardcoded::program_name(executable);
+        let program = ProgramId::of(executable);
 
-        let Some(spec) = hardcoded::lookup(program) else {
+        let Some(spec) = hardcoded::lookup(&program) else {
             violations.push(Violation::UnknownProgram {
                 action: ActionRef::of(action),
-                program: program.to_owned(),
+                program,
             });
             continue;
         };
@@ -436,7 +442,7 @@ pub(crate) fn check_reproducibility(container: &ActionGraphContainer) -> Vec<Vio
             Conformance::NeverReproducible => {
                 violations.push(Violation::NeverReproducible {
                     action: ActionRef::of(action),
-                    program: program.to_owned(),
+                    program,
                 });
             }
             Conformance::Conditional {
@@ -445,7 +451,7 @@ pub(crate) fn check_reproducibility(container: &ActionGraphContainer) -> Vec<Vio
             } => {
                 violations.push(Violation::ConditionalReproducibility {
                     action: ActionRef::of(action),
-                    program: program.to_owned(),
+                    program,
                     missing_required: missing_required.into_iter().collect(),
                     present_breaking: present_breaking.into_iter().collect(),
                 });
@@ -459,6 +465,7 @@ pub(crate) fn check_reproducibility(container: &ActionGraphContainer) -> Vec<Vio
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::reproducibility_spec::program_id::Origin;
     use analysis_v2_proto::analysis::KeyValuePair;
 
     // Fixed, human-readable stand-ins for the values Ahab injects as USER and
@@ -1139,9 +1146,9 @@ mod tests {
     // ---- check_reproducibility ----
 
     /// Assert that `v` is a [`Violation::UnknownProgram`] for the given action
-    /// and program name.
+    /// and program. The program is compared structurally, not by its rendering.
     #[track_caller]
-    fn assert_unknown_program(v: &Violation, mnemonic: &str, target_id: u32, program: &str) {
+    fn assert_unknown_program(v: &Violation, mnemonic: &str, target_id: u32, program: &ProgramId) {
         match v {
             Violation::UnknownProgram {
                 action,
@@ -1156,9 +1163,10 @@ mod tests {
     }
 
     #[test]
-    fn unknown_program_is_flagged_by_its_base_name() {
+    fn unknown_program_is_flagged_by_its_normalized_identity() {
         // With an empty spec library every program is unknown, and the reported
-        // program is argv[0] reduced to its base name.
+        // program is argv[0] as a rendered ProgramId. An absolute path is a
+        // system tool, so it is reported verbatim.
         let c = container(vec![action_with_args(
             "CppCompile",
             1,
@@ -1166,7 +1174,53 @@ mod tests {
         )]);
         let found = check_reproducibility(&c);
         assert_eq!(found.len(), 1);
-        assert_unknown_program(&found[0], "CppCompile", 1, "gcc");
+        assert_unknown_program(&found[0], "CppCompile", 1, &ProgramId::of("/usr/bin/gcc"));
+    }
+
+    #[test]
+    fn unknown_program_identity_is_normalized_for_build_outputs() {
+        // The configuration prefix and the canonical repository name are
+        // stripped, so the violation carries the program's identity rather than
+        // the exec path it happened to be invoked by.
+        let c = container(vec![action_with_args(
+            "Rustc",
+            1,
+            &["bazel-out/k8-opt-exec/bin/external/rules_rust+/util/process_wrapper/process_wrapper"],
+        )]);
+        let found = check_reproducibility(&c);
+        assert_eq!(found.len(), 1);
+        assert_unknown_program(
+            &found[0],
+            "Rustc",
+            1,
+            &ProgramId {
+                origin: Origin::Module {
+                    name: "rules_rust".to_owned(),
+                    extension: None,
+                },
+                path: "util/process_wrapper/process_wrapper".to_owned(),
+            },
+        );
+    }
+
+    #[test]
+    fn violations_retain_the_programs_structure() {
+        // Violations keep a ProgramId, so later analysis can interrogate the
+        // origin instead of re-parsing a rendered string.
+        let c = container(vec![action_with_args(
+            "Rustc",
+            1,
+            &["external/rules_rust++crate+crates__anyhow-1.0.104/_bs.out_dir"],
+        )]);
+        let found = check_reproducibility(&c);
+        match &found[0] {
+            Violation::UnknownProgram { program, .. } => {
+                assert_eq!(program.origin.module(), Some("rules_rust"));
+                assert_eq!(program.origin.extension(), Some("crate"));
+                assert_eq!(program.path, "_bs.out_dir");
+            }
+            other => panic!("expected UnknownProgram, got {other:?}"),
+        }
     }
 
     #[test]
@@ -1184,8 +1238,8 @@ mod tests {
         ]);
         let found = check_reproducibility(&c);
         assert_eq!(found.len(), 2);
-        assert_unknown_program(&found[0], "A", 1, "gcc");
-        assert_unknown_program(&found[1], "B", 2, "clang");
+        assert_unknown_program(&found[0], "A", 1, &ProgramId::of("/usr/bin/gcc"));
+        assert_unknown_program(&found[1], "B", 2, &ProgramId::of("clang"));
     }
 
     #[test]
@@ -1205,12 +1259,33 @@ mod tests {
                 mnemonic: "Genrule".to_owned(),
                 target_id: 4,
             },
-            program: "date".to_owned(),
+            program: ProgramId::of("date"),
         };
         let r = v.render();
         assert!(r.contains("Genrule action for target_id 4"), "{r}");
         assert!(r.contains(r#"program "date""#), "{r}");
         assert!(r.contains("never"), "{r}");
+    }
+
+    #[test]
+    fn renders_the_program_through_display_not_debug() {
+        // The variants hold a structured ProgramId; rendering must go through
+        // its Display, not dump the struct.
+        let v = Violation::UnknownProgram {
+            action: ActionRef {
+                mnemonic: "Rustc".to_owned(),
+                target_id: 1,
+            },
+            program: ProgramId::of(
+                "bazel-out/k8-opt-exec/bin/external/rules_rust+/util/process_wrapper/process_wrapper",
+            ),
+        };
+        let r = v.render();
+        assert!(
+            r.contains(r#"program "@rules_rust//util/process_wrapper/process_wrapper""#),
+            "{r}"
+        );
+        assert!(!r.contains("Origin"), "{r}");
     }
 
     #[test]
@@ -1220,7 +1295,7 @@ mod tests {
                 mnemonic: "CppCompile".to_owned(),
                 target_id: 1,
             },
-            program: "gcc".to_owned(),
+            program: ProgramId::of("gcc"),
             missing_required: vec!["--deterministic".to_owned()],
             present_breaking: vec!["--timestamp".to_owned()],
         };
@@ -1239,7 +1314,7 @@ mod tests {
                 mnemonic: "A".to_owned(),
                 target_id: 1,
             },
-            program: "gcc".to_owned(),
+            program: ProgramId::of("gcc"),
             missing_required: vec!["--sorted".to_owned()],
             present_breaking: vec![],
         };

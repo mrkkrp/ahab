@@ -6,10 +6,15 @@
 //! reason about actions more precisely than the syntactic checks in
 //! [`crate::checks`]: rather than only spotting suspicious strings, it can ask
 //! "given this program and these arguments, is the action reproducible?".
+//!
+//! The library is keyed by [`program_id::ProgramId`], which turns an action's
+//! `argv[0]` into an identifier stable across compilation modes, Bazel versions
+//! and dependency updates.
 
 use std::collections::BTreeSet;
 
 pub mod hardcoded;
+pub mod program_id;
 
 /// When a program behaves reproducibly.
 ///
