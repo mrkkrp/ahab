@@ -4,6 +4,8 @@ use anyhow::{bail, Result};
 use clap::Parser;
 
 use crate::aquery::{random_token, run_aquery};
+use std::collections::BTreeMap;
+
 use crate::checks::{check_all, Violation};
 use crate::melville;
 
@@ -73,17 +75,44 @@ impl Cli {
 }
 
 /// Format one or more violations into a numbered, human-readable report. The
-/// caller guarantees `violations` is non-empty. When `quote` is set, a Moby-Dick
-/// line is appended as a sign-off; `--shut-up` clears it.
-fn report_violations(violations: &[Violation], quote: bool) -> String {
-    let count = violations.len();
-    let noun = if count == 1 { "violation" } else { "violations" };
+/// caller guarantees `violations` is non-empty. Each distinct violation is
+/// listed once, prefixed with `×N` when it occurred more than once. When `quote`
+/// is set, a Moby-Dick line is appended as a sign-off; `--shut-up` clears it.
+fn report_violations(violations: &BTreeMap<Violation, usize>, quote: bool) -> String {
+    let distinct = violations.len();
+    let occurrences: usize = violations.values().sum();
+    let noun = if distinct == 1 {
+        "violation"
+    } else {
+        "violations"
+    };
+
+    // Identical violations are collapsed, so say how many were found *and* how
+    // many times they occurred — but only when those differ, since on a report
+    // with no repeats the second number would just be noise.
+    let mut report = if distinct == occurrences {
+        format!("found {distinct} hermeticity {noun}:")
+    } else {
+        format!("found {distinct} distinct hermeticity {noun} ({occurrences} occurrences):")
+    };
 
     // We collect every violation across all checks, so report them all as a
-    // numbered list rather than stopping at the first.
-    let mut report = format!("found {count} hermeticity {noun}:");
-    for (i, v) in violations.iter().enumerate() {
-        report.push_str(&format!("\n  {}. {}", i + 1, v.render()));
+    // numbered list rather than stopping at the first. The multiplicity goes
+    // immediately after the number rather than at the end of the line: a
+    // violation quotes the offending argument, which routinely runs to hundreds
+    // of characters, and a trailing marker would be invisible.
+    for (i, (violation, count)) in violations.iter().enumerate() {
+        let multiplicity = if *count == 1 {
+            String::new()
+        } else {
+            format!("×{count} ")
+        };
+        report.push_str(&format!(
+            "\n  {}. {}{}",
+            i + 1,
+            multiplicity,
+            violation.render()
+        ));
     }
 
     // Sign off with a displeased line from the novel, chosen deterministically
@@ -110,9 +139,13 @@ mod tests {
         }
     }
 
+    fn once<const N: usize>(violations: [Violation; N]) -> BTreeMap<Violation, usize> {
+        violations.into_iter().map(|v| (v, 1)).collect()
+    }
+
     #[test]
     fn single_violation_uses_singular_noun_and_is_numbered() {
-        let report = report_violations(&[bad_path("CppCompile", 1, "/bin")], true);
+        let report = report_violations(&once([bad_path("CppCompile", 1, "/bin")]), true);
         assert!(report.starts_with("found 1 hermeticity violation:\n"), "{report}");
         assert!(report.contains("\n  1. "), "{report}");
     }
@@ -120,10 +153,10 @@ mod tests {
     #[test]
     fn multiple_violations_are_pluralized_and_numbered() {
         let report = report_violations(
-            &[
+            &once([
                 bad_path("CppCompile", 1, "/bin"),
                 bad_path("Genrule", 2, "/usr/bin"),
-            ],
+            ]),
             true,
         );
         assert!(report.starts_with("found 2 hermeticity violations:\n"), "{report}");
@@ -135,16 +168,54 @@ mod tests {
     }
 
     #[test]
+    fn a_violation_occurring_once_carries_no_multiplicity_marker() {
+        let report = report_violations(&once([bad_path("CppCompile", 1, "/bin")]), false);
+        assert!(!report.contains('×'), "{report}");
+        // With no repeats the occurrence count would only be noise.
+        assert!(!report.contains("occurrences"), "{report}");
+    }
+
+    #[test]
+    fn a_repeated_violation_is_listed_once_with_its_count() {
+        let violations: BTreeMap<Violation, usize> =
+            [(bad_path("CppCompile", 1, "/bin"), 342)].into_iter().collect();
+        let report = report_violations(&violations, false);
+
+        // One numbered line, carrying the multiplicity.
+        assert!(
+            report.starts_with("found 1 distinct hermeticity violation (342 occurrences):\n"),
+            "{report}",
+        );
+        assert!(report.contains("\n  1. ×342 hermeticity violation:"), "{report}");
+        assert!(!report.contains("\n  2. "), "{report}");
+    }
+
+    #[test]
+    fn the_header_totals_occurrences_across_distinct_violations() {
+        let violations: BTreeMap<Violation, usize> = [
+            (bad_path("CppCompile", 1, "/bin"), 3),
+            (bad_path("Genrule", 2, "/usr/bin"), 4),
+        ]
+        .into_iter()
+        .collect();
+        let report = report_violations(&violations, false);
+        assert!(
+            report.starts_with("found 2 distinct hermeticity violations (7 occurrences):\n"),
+            "{report}",
+        );
+    }
+
+    #[test]
     fn report_ends_with_a_melville_quote() {
-        let violations = [bad_path("CppCompile", 1, "/bin")];
+        let violations = once([bad_path("CppCompile", 1, "/bin")]);
         let report = report_violations(&violations, true);
-        let quote = melville::quote_for(&&violations[..]);
+        let quote = melville::quote_for(&violations);
         assert!(report.ends_with(&format!("\n\n  {quote}")), "{report}");
     }
 
     #[test]
     fn quote_is_stable_for_the_same_violations() {
-        let violations = [bad_path("CppCompile", 1, "/bin")];
+        let violations = once([bad_path("CppCompile", 1, "/bin")]);
         assert_eq!(
             report_violations(&violations, true),
             report_violations(&violations, true)
@@ -153,14 +224,14 @@ mod tests {
 
     #[test]
     fn shut_up_suppresses_the_quote() {
-        let violations = [bad_path("CppCompile", 1, "/bin")];
+        let violations = once([bad_path("CppCompile", 1, "/bin")]);
         let report = report_violations(&violations, false);
         // The violations are still reported...
         assert!(report.starts_with("found 1 hermeticity violation:\n"), "{report}");
         assert!(report.contains("\n  1. "), "{report}");
         // ...but no quote and no sign-off separator are appended.
         assert!(!report.contains("  — "), "{report}");
-        let quote = melville::quote_for(&&violations[..]);
+        let quote = melville::quote_for(&violations);
         assert!(!report.contains(quote), "{report}");
     }
 }

@@ -6,7 +6,7 @@
 //! non-empty result means (for Ahab, a non-zero exit). Collecting *all*
 //! violations rather than bailing on the first gives callers a complete report.
 
-use std::collections::HashMap;
+use std::collections::{BTreeMap, HashMap};
 
 use analysis_v2_proto::analysis::{Action, ActionGraphContainer};
 
@@ -306,19 +306,23 @@ impl std::fmt::Display for Violation {
     }
 }
 
-/// Run every check over `container` and return all violations found, in a
-/// deterministic order.
+/// Run every check over `container` and return the distinct violations found,
+/// each with the number of times it occurred, in a deterministic order.
 pub(crate) fn check_all(
     container: &ActionGraphContainer,
     user: &str,
     hostname: &str,
-) -> Vec<Violation> {
+) -> BTreeMap<Violation, usize> {
     let mut violations = check_environment_leaks(container, user, hostname);
     violations.extend(check_path(container));
     violations.extend(check_absolute_paths(container));
     violations.extend(check_reproducibility(container));
-    violations.sort();
-    violations
+
+    let mut counted = BTreeMap::new();
+    for violation in violations {
+        *counted.entry(violation).or_insert(0) += 1;
+    }
+    counted
 }
 
 /// Find every place where a sentinel (the values Ahab passed as USER and
@@ -1477,21 +1481,8 @@ mod tests {
     }
 
     #[test]
-    fn sorting_is_a_total_order_over_violation_contents() {
-        // A stable sort would leave ties in arrival order, which is exactly what
-        // is not trusted. Any two violations that compare equal must be equal in
-        // every field, so their order cannot be observed.
-        let violations = check_all(&container(mixed_actions()), USER_SENTINEL, HOST_SENTINEL);
-        for pair in violations.windows(2) {
-            if pair[0].cmp(&pair[1]) == std::cmp::Ordering::Equal {
-                assert_eq!(pair[0], pair[1], "tied violations must be identical");
-            }
-        }
-    }
-
-    #[test]
     fn the_report_groups_violations_by_kind() {
-        // Sorting by content orders by variant, so the report keeps the shape it
+        // Keying by content orders by variant, so the report keeps the shape it
         // had when the checks were simply run in sequence.
         let violations = check_all(&container(mixed_actions()), USER_SENTINEL, HOST_SENTINEL);
         let kind = |v: &Violation| match v {
@@ -1502,15 +1493,15 @@ mod tests {
             Violation::NeverReproducible { .. } => 4,
             Violation::ConditionalReproducibility { .. } => 5,
         };
-        let kinds: Vec<u8> = violations.iter().map(kind).collect();
+        let kinds: Vec<u8> = violations.keys().map(kind).collect();
         let mut sorted = kinds.clone();
         sorted.sort_unstable();
         assert_eq!(kinds, sorted, "violations are not grouped by kind");
     }
 
     #[test]
-    fn check_all_finds_what_the_individual_checks_find() {
-        // Ordering must not drop or duplicate anything.
+    fn check_all_accounts_for_everything_the_individual_checks_find() {
+        // Collapsing must lose nothing: the counts have to add back up.
         let c = container(mixed_actions());
         let mut individually = check_environment_leaks(&c, USER_SENTINEL, HOST_SENTINEL);
         individually.extend(check_path(&c));
@@ -1518,10 +1509,70 @@ mod tests {
         individually.extend(check_reproducibility(&c));
 
         let combined = check_all(&c, USER_SENTINEL, HOST_SENTINEL);
-        assert_eq!(combined.len(), individually.len());
+        assert_eq!(
+            combined.values().sum::<usize>(),
+            individually.len(),
+            "occurrences do not add up to what the checks found",
+        );
 
+        // And every distinct violation is present, exactly once as a key.
         individually.sort();
-        assert_eq!(combined, individually);
+        individually.dedup();
+        let keys: Vec<Violation> = combined.keys().cloned().collect();
+        assert_eq!(keys, individually);
+    }
+
+    /// Two actions of one target, same mnemonic, with the same flaw — the shape
+    /// that makes a real report 60% repeats.
+    fn sibling_actions() -> Vec<Action> {
+        vec![
+            action_with_args("CppCompile", 1, &["clang", "-I/opt/include", "a.c"]),
+            action_with_args("CppCompile", 1, &["clang", "-I/opt/include", "b.c"]),
+            action_with_args("CppCompile", 1, &["clang", "-I/opt/include", "c.c"]),
+        ]
+    }
+
+    #[test]
+    fn identical_violations_are_counted_rather_than_repeated() {
+        let violations = check_all(&container(sibling_actions()), USER_SENTINEL, HOST_SENTINEL);
+
+        // `-I/opt/include` is byte-identical across the three actions, and an
+        // ActionRef names a target and mnemonic, not an individual action.
+        let absolute = violations
+            .iter()
+            .find(|(v, _)| matches!(v, Violation::AbsolutePath { .. }))
+            .expect("the fixture must produce an absolute-path violation");
+        assert_eq!(*absolute.1, 3);
+
+        // Same for the program, which all three actions share.
+        let unknown = violations
+            .iter()
+            .find(|(v, _)| matches!(v, Violation::UnknownProgram { .. }))
+            .expect("the fixture must produce an unknown-program violation");
+        assert_eq!(*unknown.1, 3);
+
+        // Three actions, three violations each, but only two distinct ones.
+        assert_eq!(violations.len(), 2);
+        assert_eq!(violations.values().sum::<usize>(), 6);
+    }
+
+    #[test]
+    fn counts_distinguish_otherwise_identical_results() {
+        // The reason multiplicity is kept: the same flaw on one action and on
+        // three is not the same finding, and the results must not compare equal.
+        let one = check_all(
+            &container(sibling_actions()[..1].to_vec()),
+            USER_SENTINEL,
+            HOST_SENTINEL,
+        );
+        let three = check_all(&container(sibling_actions()), USER_SENTINEL, HOST_SENTINEL);
+
+        assert_eq!(
+            one.keys().collect::<Vec<_>>(),
+            three.keys().collect::<Vec<_>>(),
+            "the fixtures must differ only in multiplicity",
+        );
+        assert_ne!(one, three);
     }
 
     // ---- param files as first-class sources ----
