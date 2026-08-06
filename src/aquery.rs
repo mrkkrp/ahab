@@ -131,6 +131,12 @@ pub fn run_aquery(
     // Ask for the action graph as a binary protobuf ActionGraphContainer.
     command.arg("--output=proto");
 
+    // Long command lines are spilled into param files, and the proto's
+    // `param_files` field is populated only when explicitly requested. Without
+    // this the arguments of exactly the largest actions would be invisible to
+    // the checks — see `crate::param_files`.
+    command.arg("--include_param_files");
+
     // The query expression (label or wildcard) comes last.
     command.arg(label);
 

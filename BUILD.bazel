@@ -10,6 +10,7 @@ rust_library(
         "src/cli.rs",
         "src/lib.rs",
         "src/melville.rs",
+        "src/param_files.rs",
         "src/reproducibility_spec/hardcoded.rs",
         "src/reproducibility_spec/mod.rs",
         "src/reproducibility_spec/program_id.rs",

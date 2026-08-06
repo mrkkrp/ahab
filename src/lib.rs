@@ -9,6 +9,7 @@
 //! - [`cli`] — the [`Cli`] parser and the top-level orchestration.
 //! - [`aquery`] — running `bazel aquery`/`info` and decoding the action graph.
 //! - [`checks`] — the pure hermeticity checks over a decoded action graph.
+//! - `param_files` — expanding an action's param files into its command line.
 //! - [`reproducibility_spec`] — modelling a program's reproducibility.
 //! - `melville` — Captain Ahab quotes appended to violation reports.
 
@@ -16,6 +17,7 @@ mod aquery;
 mod checks;
 mod cli;
 mod melville;
+mod param_files;
 pub mod reproducibility_spec;
 
 pub use cli::Cli;

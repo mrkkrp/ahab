@@ -8,6 +8,7 @@
 
 use analysis_v2_proto::analysis::{Action, ActionGraphContainer};
 
+use crate::param_files::{analyzable_strings, expanded_command_line, ArgSource, Sourced};
 use crate::reproducibility_spec::{hardcoded, program_id::ProgramId, Conformance};
 
 /// The exact value of `PATH` that every action is required to use.
@@ -62,13 +63,38 @@ impl EnvSource {
     }
 }
 
-/// Where in an action a leaked sentinel was found.
+/// Where in an action something Ahab flagged was found.
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub(crate) enum LeakSite {
-    /// The sentinel appeared inside a command-line argument.
+    /// Inside a command-line argument.
     Argument { value: String },
-    /// The sentinel appeared inside the value of an environment variable.
+    /// Inside a line of one of the action's param files. Reported separately
+    /// from [`LeakSite::Argument`] because the argument the action actually
+    /// carries is only a reference to the file, so quoting it would not show the
+    /// offending text.
+    ParamFile {
+        /// The exec path of the param file.
+        exec_path: String,
+        /// The line of the file the finding was in.
+        value: String,
+    },
+    /// Inside the value of an environment variable.
     EnvVar { key: String, value: String },
+}
+
+impl LeakSite {
+    /// Build the site for a string the checks scanned, from its provenance.
+    fn of(sourced: Sourced<'_>) -> LeakSite {
+        match sourced.source {
+            ArgSource::CommandLine => LeakSite::Argument {
+                value: sourced.value.to_owned(),
+            },
+            ArgSource::ParamFile(exec_path) => LeakSite::ParamFile {
+                exec_path: exec_path.to_owned(),
+                value: sourced.value.to_owned(),
+            },
+        }
+    }
 }
 
 /// A single hermeticity violation, as a structured value recording everything
@@ -144,6 +170,11 @@ impl Violation {
                      (found sentinel {sentinel:?} in argument {value:?})",
                     source = source.as_str(),
                 ),
+                LeakSite::ParamFile { exec_path, value } => format!(
+                    "hermeticity violation: {source} leaked into param file {exec_path:?} \
+                     of {action} (found sentinel {sentinel:?} in line {value:?})",
+                    source = source.as_str(),
+                ),
                 LeakSite::EnvVar { key, value } => format!(
                     "hermeticity violation: {source} leaked into environment variable \
                      {key:?} of {action} (found sentinel {sentinel:?} in value {value:?})",
@@ -157,6 +188,10 @@ impl Violation {
                 LeakSite::Argument { value } => format!(
                     "hermeticity violation: {action} references absolute path {path:?} \
                      in argument {value:?}",
+                ),
+                LeakSite::ParamFile { exec_path, value } => format!(
+                    "hermeticity violation: {action} references absolute path {path:?} \
+                     in param file {exec_path:?} (line {value:?})",
                 ),
                 LeakSite::EnvVar { key, value } => format!(
                     "hermeticity violation: {action} references absolute path {path:?} \
@@ -206,8 +241,9 @@ impl std::fmt::Display for Violation {
 }
 
 /// Find every place where a sentinel (the values Ahab passed as USER and
-/// HOSTNAME) leaks into an action's `arguments` or into the value of any of its
-/// `environment_variables`, and return one [`Violation`] per leak.
+/// HOSTNAME) leaks into an action's command line, into one of its param files,
+/// or into the value of any of its `environment_variables`, and return one
+/// [`Violation`] per leak.
 pub(crate) fn check_environment_leaks(
     container: &ActionGraphContainer,
     user: &str,
@@ -216,16 +252,18 @@ pub(crate) fn check_environment_leaks(
     let mut violations = Vec::new();
 
     for action in &container.actions {
+        // Param files are scanned alongside the command line: a sentinel is just
+        // as leaked when it sits in a spilled argument list.
+        let scanned = analyzable_strings(action);
+
         for (sentinel, source) in [(user, EnvSource::User), (hostname, EnvSource::Hostname)] {
-            for arg in &action.arguments {
-                if arg.contains(sentinel) {
+            for sourced in &scanned {
+                if sourced.value.contains(sentinel) {
                     violations.push(Violation::EnvironmentLeak {
                         action: ActionRef::of(action),
                         source,
                         sentinel: sentinel.to_owned(),
-                        site: LeakSite::Argument {
-                            value: arg.clone(),
-                        },
+                        site: LeakSite::of(*sourced),
                     });
                 }
             }
@@ -359,9 +397,9 @@ fn is_allowed_absolute_path(path: &str) -> bool {
     ALLOWED_ABSOLUTE_PATHS.contains(&path)
 }
 
-/// Find every absolute path (a `/`-rooted run) referenced in an action's
-/// `arguments` or in the value of any of its `environment_variables`, and return
-/// one [`Violation`] per path found.
+/// Find every absolute path (a `/`-rooted run) referenced in an action's command
+/// line, in one of its param files, or in the value of any of its
+/// `environment_variables`, and return one [`Violation`] per path found.
 ///
 /// The environment variable literally named `PATH` is skipped: it is expected to
 /// hold absolute paths and is governed separately by [`check_path`]. Paths in
@@ -370,15 +408,17 @@ pub(crate) fn check_absolute_paths(container: &ActionGraphContainer) -> Vec<Viol
     let mut violations = Vec::new();
 
     for action in &container.actions {
-        for arg in &action.arguments {
-            for path in absolute_paths(arg) {
+        // Spilling a command line into a param file must not launder an absolute
+        // path out of the report, so both are scanned.
+        for sourced in analyzable_strings(action) {
+            for path in absolute_paths(sourced.value) {
                 if is_allowed_absolute_path(&path) {
                     continue;
                 }
                 violations.push(Violation::AbsolutePath {
                     action: ActionRef::of(action),
                     path,
-                    site: LeakSite::Argument { value: arg.clone() },
+                    site: LeakSite::of(sourced),
                 });
             }
         }
@@ -418,14 +458,19 @@ pub(crate) fn check_absolute_paths(container: &ActionGraphContainer) -> Vec<Viol
 ///   vouch for its reproducibility, so we err on the side of flagging; otherwise
 /// * we assess the actual invocation (`argv[1..]`) against the spec and, if it
 ///   does not conform, report the corresponding reproducibility violation.
+///
+/// The invocation is assessed against the *expanded* command line, so a flag
+/// that breaks reproducibility is caught whether it sits on the command line or
+/// in a param file the command line references.
 pub(crate) fn check_reproducibility(container: &ActionGraphContainer) -> Vec<Violation> {
     let mut violations = Vec::new();
 
     for action in &container.actions {
-        let Some(executable) = action.arguments.first() else {
+        let command_line = expanded_command_line(action);
+        let Some(executable) = command_line.first() else {
             continue;
         };
-        let program = ProgramId::of(executable);
+        let program = ProgramId::of(executable.value);
 
         let Some(spec) = hardcoded::lookup(&program) else {
             violations.push(Violation::UnknownProgram {
@@ -436,7 +481,7 @@ pub(crate) fn check_reproducibility(container: &ActionGraphContainer) -> Vec<Vio
         };
 
         // Assess the invocation against the spec: everything after argv[0].
-        let args = action.arguments.iter().skip(1).map(String::as_str);
+        let args = command_line.iter().skip(1).map(|sourced| sourced.value);
         match spec.assess(args) {
             Conformance::Reproducible => {}
             Conformance::NeverReproducible => {
@@ -499,6 +544,26 @@ mod tests {
             target_id,
             arguments: args.iter().map(|a| (*a).to_owned()).collect(),
             ..Default::default()
+        }
+    }
+
+    /// Build an [`Action`] with command-line arguments and param files, each
+    /// given as `(exec_path, lines)`.
+    fn action_with_param_files(
+        mnemonic: &str,
+        target_id: u32,
+        args: &[&str],
+        param_files: &[(&str, &[&str])],
+    ) -> Action {
+        Action {
+            param_files: param_files
+                .iter()
+                .map(|(exec_path, lines)| analysis_v2_proto::analysis::ParamFile {
+                    exec_path: (*exec_path).to_owned(),
+                    arguments: lines.iter().map(|l| (*l).to_owned()).collect(),
+                })
+                .collect(),
+            ..action_with_args(mnemonic, target_id, args)
         }
     }
 
@@ -1245,6 +1310,122 @@ mod tests {
     #[test]
     fn empty_container_passes_reproducibility_check() {
         assert!(check_reproducibility(&container(vec![])).is_empty());
+    }
+
+    // ---- param files as first-class sources ----
+
+    #[test]
+    fn sentinels_leaking_into_a_param_file_are_found() {
+        // The command line holds only a reference, so a check reading `arguments`
+        // alone would see nothing wrong here.
+        let c = container(vec![action_with_param_files(
+            "CppLink",
+            1,
+            &["clang", "@out/foo.params"],
+            &[(
+                "out/foo.params",
+                &["-o", &format!("/home/{USER_SENTINEL}/out.o")],
+            )],
+        )]);
+        let found = leaks(&c);
+        assert_eq!(found.len(), 1, "{found:?}");
+        match &found[0] {
+            Violation::EnvironmentLeak { site, source, .. } => {
+                assert_eq!(*source, EnvSource::User);
+                assert_eq!(
+                    *site,
+                    LeakSite::ParamFile {
+                        exec_path: "out/foo.params".to_owned(),
+                        value: format!("/home/{USER_SENTINEL}/out.o"),
+                    }
+                );
+            }
+            other => panic!("expected EnvironmentLeak, got {other:?}"),
+        }
+    }
+
+    #[test]
+    fn absolute_paths_inside_a_param_file_are_found() {
+        let c = container(vec![action_with_param_files(
+            "CppLink",
+            1,
+            &["clang", "@out/foo.params"],
+            &[("out/foo.params", &["-L/opt/lib"])],
+        )]);
+        let found = check_absolute_paths(&c);
+        assert_eq!(found.len(), 1, "{found:?}");
+        match &found[0] {
+            Violation::AbsolutePath { path, site, .. } => {
+                assert_eq!(path, "/opt/lib");
+                assert_eq!(
+                    *site,
+                    LeakSite::ParamFile {
+                        exec_path: "out/foo.params".to_owned(),
+                        value: "-L/opt/lib".to_owned(),
+                    }
+                );
+            }
+            other => panic!("expected AbsolutePath, got {other:?}"),
+        }
+    }
+
+    #[test]
+    fn unreferenced_param_files_are_still_scanned() {
+        // A C++ module map is never spliced into the command line, but an
+        // absolute path inside it is still a leak.
+        let c = container(vec![action_with_param_files(
+            "CppCompile",
+            1,
+            &["clang", "-fmodule-map-file=out/m.cppmap"],
+            &[("out/m.cppmap", &["umbrella \"/usr/include\""])],
+        )]);
+        let found = check_absolute_paths(&c);
+        assert_eq!(found.len(), 1, "{found:?}");
+    }
+
+    #[test]
+    fn a_param_file_is_scanned_once_per_action() {
+        // Two references to one file must not double-report its contents.
+        let c = container(vec![action_with_param_files(
+            "CppLink",
+            1,
+            &["clang", "@out/foo.params", "@out/foo.params"],
+            &[("out/foo.params", &["-L/opt/lib"])],
+        )]);
+        assert_eq!(check_absolute_paths(&c).len(), 1);
+    }
+
+    #[test]
+    fn the_program_is_identified_through_an_expanded_command_line() {
+        // argv[0] is never itself a param file reference, but expansion must not
+        // disturb it.
+        let c = container(vec![action_with_param_files(
+            "CppLink",
+            1,
+            &["/usr/bin/clang", "@out/foo.params"],
+            &[("out/foo.params", &["-O2"])],
+        )]);
+        let found = check_reproducibility(&c);
+        assert_eq!(found.len(), 1);
+        assert_unknown_program(&found[0], "CppLink", 1, &ProgramId::of("/usr/bin/clang"));
+    }
+
+    #[test]
+    fn renders_a_leak_sited_in_a_param_file() {
+        let v = Violation::AbsolutePath {
+            action: ActionRef {
+                mnemonic: "CppLink".to_owned(),
+                target_id: 1,
+            },
+            path: "/opt/lib".to_owned(),
+            site: LeakSite::ParamFile {
+                exec_path: "out/foo.params".to_owned(),
+                value: "-L/opt/lib".to_owned(),
+            },
+        };
+        let r = v.render();
+        assert!(r.contains(r#"param file "out/foo.params""#), "{r}");
+        assert!(r.contains(r#"line "-L/opt/lib""#), "{r}");
     }
 
     // Rendering of the conformance-failure variants. (The end-to-end path
