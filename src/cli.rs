@@ -70,7 +70,9 @@ impl Cli {
         let violations = check_all(&container, &user, &hostname);
 
         if let Some(path) = &self.write_json {
-            write_json(path, &violations)?;
+            let path =
+                resolve_output_path(path, invocation_dir().as_deref());
+            write_json(&path, &violations)?;
         }
 
         if !violations.is_empty() {
@@ -79,6 +81,23 @@ impl Cli {
 
         println!("All hermeticity checks passed.");
         Ok(())
+    }
+}
+
+/// The directory the user ran Ahab from, when Bazel told us.
+///
+/// Under `bazel run` the process starts in the runfiles tree inside the
+/// output base, not where the command was typed. Bazel exports the real
+/// invocation directory for exactly this reason.
+fn invocation_dir() -> Option<PathBuf> {
+    std::env::var_os("BUILD_WORKING_DIRECTORY").map(PathBuf::from)
+}
+
+/// Resolve a path the user gave us against the directory they gave it in.
+fn resolve_output_path(path: &Path, base: Option<&Path>) -> PathBuf {
+    match base {
+        Some(base) if path.is_relative() => base.join(path),
+        _ => path.to_path_buf(),
     }
 }
 
@@ -206,6 +225,40 @@ mod tests {
         let text =
             std::fs::read_to_string(&path).expect("file should exist");
         serde_json::from_str(&text).expect("output should be valid JSON")
+    }
+
+    #[test]
+    fn a_relative_output_path_lands_where_the_user_ran_ahab() {
+        // Under `bazel run` the working directory is the runfiles tree, so
+        // a relative path would otherwise be written somewhere nobody looks.
+        assert_eq!(
+            resolve_output_path(
+                Path::new("out.json"),
+                Some(Path::new("/home/mark/project")),
+            ),
+            PathBuf::from("/home/mark/project/out.json"),
+        );
+    }
+
+    #[test]
+    fn an_absolute_output_path_is_left_alone() {
+        assert_eq!(
+            resolve_output_path(
+                Path::new("/tmp/out.json"),
+                Some(Path::new("/home/mark/project")),
+            ),
+            PathBuf::from("/tmp/out.json"),
+        );
+    }
+
+    #[test]
+    fn without_an_invocation_directory_the_path_is_used_as_given() {
+        // Not launched by `bazel run`, so the working directory is already
+        // the user's own and resolving against anything would be wrong.
+        assert_eq!(
+            resolve_output_path(Path::new("out.json"), None),
+            PathBuf::from("out.json"),
+        );
     }
 
     #[test]
