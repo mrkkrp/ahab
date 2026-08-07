@@ -114,43 +114,34 @@ impl LeakSite {
     }
 }
 
-/// Which program's spec judged an action.
+/// A parenthetical describing how the analysis reached the program it
+/// judged: the wrappers it was found behind, outermost first, and the
+/// synonym whose spec answered for it. Empty when the action ran the
+/// program directly and it had a spec of its own.
 ///
-/// The library lets one program declare that it is reproducible under
-/// exactly another's conditions, so the spec applied to an action is not
-/// always the one written against the program it runs. Recording which it
-/// was keeps a reproducibility verdict traceable to the entry that produced
-/// it.
-#[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Hash)]
-pub(crate) enum SpecSource {
-    /// The program the action runs has a spec of its own.
-    Own,
-    /// The program has no spec of its own; this one answered for it,
-    /// reached by following synonyms through the library.
-    Synonym(ProgramId),
-}
-
-impl SpecSource {
-    /// Classify the program that carried the spec against the one that was
-    /// looked up. Equal ids mean the program answered for itself.
-    fn of(program: &ProgramId, carrier: &ProgramId) -> SpecSource {
-        if program == carrier {
-            SpecSource::Own
-        } else {
-            SpecSource::Synonym(carrier.clone())
-        }
+/// Without the wrappers a verdict about a wrapped command would read as a
+/// claim about the action's own `argv[0]`, which is not what ran. Without
+/// the synonym a verdict would not say that it rests on two programs being
+/// declared alike.
+fn provenance(
+    wrappers: &[ProgramId],
+    synonym: Option<&ProgramId>,
+) -> String {
+    let mut parts = Vec::new();
+    if !wrappers.is_empty() {
+        let names: Vec<String> = wrappers
+            .iter()
+            .map(|w| format!("{w:?}", w = w.to_string()))
+            .collect();
+        parts.push(format!("wrapped by {}", names.join(", then ")));
     }
-
-    /// A parenthetical naming the program whose spec was applied, empty
-    /// when that is the program itself.
-    fn attribution(&self) -> String {
-        match self {
-            SpecSource::Own => String::new(),
-            SpecSource::Synonym(carrier) => {
-                format!(" (spec from synonym {:?})", carrier.to_string())
-            }
-        }
+    if let Some(synonym) = synonym {
+        parts.push(format!("spec from synonym {:?}", synonym.to_string()));
     }
+    if parts.is_empty() {
+        return String::new();
+    }
+    format!(" ({})", parts.join(", "))
 }
 
 /// A single hermeticity violation, as a structured value recording
@@ -192,6 +183,9 @@ pub(crate) enum Violation {
         action: ActionRef,
         /// The program the action runs.
         program: ProgramId,
+        /// Wrappers passed through to reach it, outermost first. Empty when
+        /// the action ran the program directly.
+        wrappers: Vec<ProgramId>,
     },
     /// An action runs a program for which we have no reproducibility spec,
     /// so we cannot vouch for the action's reproducibility. Reported
@@ -201,6 +195,9 @@ pub(crate) enum Violation {
         action: ActionRef,
         /// The program the action runs.
         program: ProgramId,
+        /// Wrappers passed through to reach it, outermost first. Empty when
+        /// the action ran the program directly.
+        wrappers: Vec<ProgramId>,
     },
     /// An action runs a program that is never reproducible, whatever its
     /// flags.
@@ -208,8 +205,12 @@ pub(crate) enum Violation {
         action: ActionRef,
         /// The program the action runs.
         program: ProgramId,
-        /// Which program's spec produced this verdict.
-        spec_source: SpecSource,
+        /// Wrappers passed through to reach it, outermost first. Empty when
+        /// the action ran the program directly.
+        wrappers: Vec<ProgramId>,
+        /// The synonym whose spec produced this verdict, if it was not the
+        /// program's own.
+        synonym: Option<ProgramId>,
     },
     /// An action runs a conditionally-reproducible program, but this
     /// invocation does not meet the conditions: required flags are missing
@@ -219,8 +220,12 @@ pub(crate) enum Violation {
         action: ActionRef,
         /// The program the action runs.
         program: ProgramId,
-        /// Which program's spec produced this verdict.
-        spec_source: SpecSource,
+        /// Wrappers passed through to reach it, outermost first. Empty when
+        /// the action ran the program directly.
+        wrappers: Vec<ProgramId>,
+        /// The synonym whose spec produced this verdict, if it was not the
+        /// program's own.
+        synonym: Option<ProgramId>,
         /// Required flags absent from the invocation.
         missing_required: Vec<String>,
         /// Breaking flags present in the invocation.
@@ -274,30 +279,42 @@ impl Violation {
             // Programs render through their `Display`
             // (`@rules_rust//util/…`) rather than their `Debug`, then quote
             // that as a whole.
-            Violation::SystemProgram { action, program } => format!(
-                "hermeticity violation: {action} runs program {:?}, which comes \
+            Violation::SystemProgram {
+                action,
+                program,
+                wrappers,
+            } => format!(
+                "hermeticity violation: {action} runs program {:?}{}, which comes \
                  from outside the build",
                 program.to_string(),
+                provenance(wrappers, None),
             ),
-            Violation::UnknownProgram { action, program } => format!(
-                "reproducibility unknown: {action} runs program {:?}, which has no \
+            Violation::UnknownProgram {
+                action,
+                program,
+                wrappers,
+            } => format!(
+                "reproducibility unknown: {action} runs program {:?}{}, which has no \
                  known reproducibility spec",
                 program.to_string(),
+                provenance(wrappers, None),
             ),
             Violation::NeverReproducible {
                 action,
                 program,
-                spec_source,
+                wrappers,
+                synonym,
             } => format!(
                 "reproducibility violation: {action} runs program {:?}{}, which is never \
                  reproducible",
                 program.to_string(),
-                spec_source.attribution(),
+                provenance(wrappers, synonym.as_ref()),
             ),
             Violation::ConditionalReproducibility {
                 action,
                 program,
-                spec_source,
+                wrappers,
+                synonym,
                 missing_required,
                 present_breaking,
             } => {
@@ -316,7 +333,7 @@ impl Violation {
                     "reproducibility violation: {action} runs program {:?}{} \
                      non-reproducibly: {}",
                     program.to_string(),
-                    spec_source.attribution(),
+                    provenance(wrappers, synonym.as_ref()),
                     reasons.join("; "),
                 )
             }
@@ -583,36 +600,46 @@ pub(crate) fn check_reproducibility(
 
     for action in &container.actions {
         let command_line = expanded_command_line(action);
-        let Some(executable) = command_line.first() else {
+        let Some((executable, args)) = command_line.split_first() else {
             continue;
         };
-        let program = ProgramId::of(executable.value);
 
-        if program.origin == Origin::System {
+        let resolved = hardcoded::resolve(
+            ProgramId::of(executable.value),
+            args.iter().map(|sourced| sourced.value).collect(),
+        );
+        let action_ref = || ActionRef::of(action, &targets);
+        let wrappers = resolved.wrappers.clone();
+
+        // A tool from outside the build is a hermeticity failure outright,
+        // so it is reported as such rather than as a program we happen to
+        // lack a spec for. No spec could make it acceptable.
+        if resolved.program.origin == Origin::System {
             violations.push(Violation::SystemProgram {
-                action: ActionRef::of(action, &targets),
-                program,
+                action: action_ref(),
+                program: resolved.program,
+                wrappers,
             });
             continue;
         }
 
-        let Some((carrier, spec)) = hardcoded::lookup(&program) else {
+        let synonym = resolved.synonym().cloned();
+        let Some((_, spec)) = resolved.spec else {
             violations.push(Violation::UnknownProgram {
-                action: ActionRef::of(action, &targets),
-                program,
+                action: action_ref(),
+                program: resolved.program,
+                wrappers,
             });
             continue;
         };
-        let spec_source = SpecSource::of(&program, carrier);
-
-        let args = command_line.iter().skip(1).map(|sourced| sourced.value);
-        match spec.assess(args) {
+        match spec.assess(resolved.args.iter().copied()) {
             Conformance::Reproducible => {}
             Conformance::NeverReproducible => {
                 violations.push(Violation::NeverReproducible {
-                    action: ActionRef::of(action, &targets),
-                    program,
-                    spec_source,
+                    action: action_ref(),
+                    program: resolved.program,
+                    wrappers,
+                    synonym,
                 });
             }
             Conformance::Conditional {
@@ -620,9 +647,10 @@ pub(crate) fn check_reproducibility(
                 present_breaking,
             } => {
                 violations.push(Violation::ConditionalReproducibility {
-                    action: ActionRef::of(action, &targets),
-                    program,
-                    spec_source,
+                    action: action_ref(),
+                    program: resolved.program,
+                    wrappers,
+                    synonym,
                     missing_required: missing_required
                         .into_iter()
                         .collect(),
@@ -1307,6 +1335,7 @@ mod tests {
             Violation::UnknownProgram {
                 action,
                 program: got_program,
+                ..
             } => {
                 assert_eq!(action.mnemonic, mnemonic);
                 assert_eq!(action.target, test_label(target_id));
@@ -1353,7 +1382,41 @@ mod tests {
                     target: test_label(1),
                 },
                 program: ProgramId::of("/bin/bash"),
+                wrappers: Vec::new(),
             }
+        );
+    }
+
+    #[test]
+    fn renders_the_wrappers_a_program_was_reached_through() {
+        let v = Violation::UnknownProgram {
+            action: ActionRef {
+                mnemonic: "Rustc".to_owned(),
+                target: test_label(1),
+            },
+            program: ProgramId::extension(
+                "rules_rust",
+                "rust",
+                "rust_toolchain/bin/rustc",
+            ),
+            wrappers: vec![ProgramId::module(
+                "rules_rust",
+                "util/process_wrapper/process_wrapper",
+            )],
+        };
+        let r = v.render();
+        // The verdict is about the wrapped command, and says so.
+        assert!(
+            r.contains(
+                r#"program "@rules_rust+rust//rust_toolchain/bin/rustc""#
+            ),
+            "{r}"
+        );
+        assert!(
+            r.contains(
+                r#"wrapped by "@rules_rust//util/process_wrapper/process_wrapper""#
+            ),
+            "{r}"
         );
     }
 
@@ -1439,6 +1502,7 @@ mod tests {
                 target: test_label(1),
             },
             program: ProgramId::of("/bin/bash"),
+            wrappers: Vec::new(),
         };
         let r = v.render();
         assert!(r.contains(r#"program "/bin/bash""#), "{r}");
@@ -1819,7 +1883,8 @@ mod tests {
                 target: test_label(4),
             },
             program: ProgramId::of("date"),
-            spec_source: SpecSource::Own,
+            wrappers: Vec::new(),
+            synonym: None,
         };
         let r = v.render();
         assert!(r.contains("Genrule action for target //test:t4"), "{r}");
@@ -1846,7 +1911,8 @@ mod tests {
                 "llvm_toolchain_minimal",
                 "bin/clang++",
             ),
-            spec_source: SpecSource::Synonym(clang),
+            wrappers: Vec::new(),
+            synonym: Some(clang),
         };
         let r = v.render();
         // Both the program that ran and the one whose spec judged it.
@@ -1863,25 +1929,6 @@ mod tests {
     }
 
     #[test]
-    fn spec_source_distinguishes_own_from_synonym() {
-        let clang = ProgramId::extension(
-            "llvm",
-            "llvm_toolchain_minimal",
-            "bin/clang",
-        );
-        let clangxx = ProgramId::extension(
-            "llvm",
-            "llvm_toolchain_minimal",
-            "bin/clang++",
-        );
-        assert_eq!(SpecSource::of(&clang, &clang), SpecSource::Own);
-        assert_eq!(
-            SpecSource::of(&clangxx, &clang),
-            SpecSource::Synonym(clang.clone())
-        );
-    }
-
-    #[test]
     fn renders_the_program_through_display_not_debug() {
         // The variants hold a structured ProgramId; rendering must go through
         // its Display, not dump the struct.
@@ -1893,6 +1940,7 @@ mod tests {
             program: ProgramId::of(
                 "bazel-out/k8-opt-exec/bin/external/rules_rust+/util/process_wrapper/process_wrapper",
             ),
+            wrappers: Vec::new(),
         };
         let r = v.render();
         assert!(
@@ -1910,7 +1958,8 @@ mod tests {
                 target: test_label(1),
             },
             program: ProgramId::of("gcc"),
-            spec_source: SpecSource::Own,
+            wrappers: Vec::new(),
+            synonym: None,
             missing_required: vec!["--deterministic".to_owned()],
             present_breaking: vec!["--timestamp".to_owned()],
         };
@@ -1930,7 +1979,8 @@ mod tests {
                 target: test_label(1),
             },
             program: ProgramId::of("gcc"),
-            spec_source: SpecSource::Own,
+            wrappers: Vec::new(),
+            synonym: None,
             missing_required: vec!["--sorted".to_owned()],
             present_breaking: vec![],
         };
