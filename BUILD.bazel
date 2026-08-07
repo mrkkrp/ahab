@@ -30,6 +30,8 @@ rust_library(
         "@crates//:prost",
         "@crates//:anyhow",
         "@crates//:clap",
+        "@crates//:serde",
+        "@crates//:serde_json",
     ],
 )
 
@@ -51,6 +53,8 @@ rust_test(
         "@crates//:prost",
         "@crates//:anyhow",
         "@crates//:clap",
+        "@crates//:serde",
+        "@crates//:serde_json",
     ],
 )
 

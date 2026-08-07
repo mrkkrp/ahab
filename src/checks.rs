@@ -3,6 +3,7 @@
 use std::collections::{BTreeMap, HashMap};
 
 use analysis_v2_proto::analysis::{Action, ActionGraphContainer};
+use serde::Serialize;
 
 use crate::param_files::{
     ArgSource, Sourced, analyzable_strings, expanded_command_line,
@@ -16,7 +17,7 @@ use crate::reproducibility_spec::{
 pub(crate) const EXPECTED_PATH: &str = "/bin:/usr/bin:/usr/local/bin";
 
 /// The identity of the action responsible for a violation.
-#[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Hash)]
+#[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Hash, Serialize)]
 pub(crate) struct ActionRef {
     /// The action's mnemonic (e.g. `CppCompile`). May be empty.
     pub mnemonic: String,
@@ -64,7 +65,10 @@ fn target_labels(container: &ActionGraphContainer) -> HashMap<u32, &str> {
 }
 
 /// Which piece of the invoking environment a leaked sentinel stood in for.
-#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
+#[derive(
+    Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash, Serialize,
+)]
+#[serde(rename_all = "snake_case")]
 pub(crate) enum EnvSource {
     User,
     Hostname,
@@ -81,7 +85,8 @@ impl EnvSource {
 }
 
 /// Where in an action something Ahab flagged was found.
-#[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Hash)]
+#[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Hash, Serialize)]
+#[serde(tag = "location", rename_all = "snake_case")]
 pub(crate) enum LeakSite {
     /// Inside a command-line argument.
     Argument { value: String },
@@ -147,7 +152,8 @@ fn provenance(
 /// A single hermeticity violation, as a structured value recording
 /// everything the check observed. Use [`Violation::render`] to pretty-print
 /// it.
-#[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Hash)]
+#[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Hash, Serialize)]
+#[serde(tag = "kind", rename_all = "snake_case")]
 pub(crate) enum Violation {
     /// A sentinel leaked into an action.
     EnvironmentLeak {

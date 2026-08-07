@@ -51,6 +51,15 @@ crate.spec(
     version = "1",
 )
 crate.spec(
+    package = "serde",
+    features = ["derive"],
+    version = "1",
+)
+crate.spec(
+    package = "serde_json",
+    version = "1",
+)
+crate.spec(
     package = "prost",
     version = "0.13",
 )

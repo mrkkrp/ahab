@@ -1,10 +1,13 @@
 //! Command-line interface and top-level orchestration for Ahab.
 
-use anyhow::{Result, bail};
+use std::collections::BTreeMap;
+use std::path::{Path, PathBuf};
+
+use anyhow::{Context, Result, bail};
 use clap::Parser;
+use serde::Serialize;
 
 use crate::aquery::{random_token, run_aquery};
-use std::collections::BTreeMap;
 
 use crate::checks::{Violation, check_all};
 use crate::melville;
@@ -34,6 +37,11 @@ pub struct Cli {
     /// Suppress the Moby-Dick quote appended to the violation report.
     #[arg(long = "shut-up")]
     pub shut_up: bool,
+
+    /// Write the violations to this file as JSON, while still printing the
+    /// usual output on the screen.
+    #[arg(long = "write-json", value_name = "FILENAME")]
+    pub write_json: Option<PathBuf>,
 }
 
 impl Cli {
@@ -61,6 +69,10 @@ impl Cli {
         // deterministic order regardless of how Bazel ordered the actions.
         let violations = check_all(&container, &user, &hostname);
 
+        if let Some(path) = &self.write_json {
+            write_json(path, &violations)?;
+        }
+
         if !violations.is_empty() {
             bail!("{}", report_violations(&violations, !self.shut_up));
         }
@@ -68,6 +80,52 @@ impl Cli {
         println!("All hermeticity checks passed.");
         Ok(())
     }
+}
+
+/// One violation as it appears in the JSON report: the violation's own
+/// fields, plus how many times it occurred.
+#[derive(Debug, Serialize)]
+struct CountedViolation<'a> {
+    /// How many times this exact violation occurred.
+    count: usize,
+    /// The violation itself.
+    violation: &'a Violation,
+}
+
+/// The whole JSON document.
+///
+/// An object with a named field rather than a bare array, so that later
+/// additions—a schema version, the label queried, a summary—do not change
+/// the type of the top-level value and break every consumer.
+#[derive(Debug, Serialize)]
+struct JsonReport<'a> {
+    /// Distinct violations, in the same order as the printed report.
+    violations: Vec<CountedViolation<'a>>,
+}
+
+/// Write `violations` to `path` as indented JSON, replacing any existing
+/// file.
+fn write_json(
+    path: &Path,
+    violations: &BTreeMap<Violation, usize>,
+) -> Result<()> {
+    let report = JsonReport {
+        violations: violations
+            .iter()
+            .map(|(violation, count)| CountedViolation {
+                count: *count,
+                violation,
+            })
+            .collect(),
+    };
+
+    let mut json = serde_json::to_string_pretty(&report)
+        .context("failed to serialize violations as JSON")?;
+    json.push('\n');
+
+    std::fs::write(path, json).with_context(|| {
+        format!("failed to write JSON report to {}", path.display())
+    })
 }
 
 /// Format one or more violations into a numbered, human-readable report.
@@ -118,7 +176,7 @@ fn report_violations(
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::checks::{ActionRef, Violation};
+    use crate::checks::{ActionRef, LeakSite, Violation};
 
     fn bad_path(mnemonic: &str, target_id: u32, actual: &str) -> Violation {
         Violation::BadPath {
@@ -128,6 +186,118 @@ mod tests {
             },
             actual: actual.to_owned(),
         }
+    }
+
+    /// A scratch file path, under the directory Bazel gives the test.
+    fn scratch(name: &str) -> PathBuf {
+        let dir = std::env::var("TEST_TMPDIR")
+            .map(PathBuf::from)
+            .unwrap_or_else(|_| std::env::temp_dir());
+        dir.join(name)
+    }
+
+    /// Write `violations` to a scratch file and parse it back.
+    fn round_trip(
+        name: &str,
+        violations: &BTreeMap<Violation, usize>,
+    ) -> serde_json::Value {
+        let path = scratch(name);
+        write_json(&path, violations).expect("write should succeed");
+        let text =
+            std::fs::read_to_string(&path).expect("file should exist");
+        serde_json::from_str(&text).expect("output should be valid JSON")
+    }
+
+    #[test]
+    fn json_report_carries_each_violation_with_its_count() {
+        let violations: BTreeMap<Violation, usize> = [
+            (bad_path("CppCompile", 1, "/bin"), 342),
+            (bad_path("Genrule", 2, "/usr/bin"), 1),
+        ]
+        .into_iter()
+        .collect();
+        let json = round_trip("counts.json", &violations);
+
+        let listed = json["violations"].as_array().unwrap();
+        assert_eq!(listed.len(), 2);
+        assert_eq!(listed[0]["count"], 342);
+        assert_eq!(listed[0]["violation"]["kind"], "bad_path");
+        assert_eq!(listed[0]["violation"]["actual"], "/bin");
+        assert_eq!(listed[1]["count"], 1);
+    }
+
+    #[test]
+    fn a_leak_site_names_its_kind_without_repeating_the_field() {
+        // The field is already `site`, so the tag inside says which kind of
+        // location it is; `"site": {"site": ...}` reads as a mistake.
+        let violations = once([Violation::AbsolutePath {
+            action: ActionRef {
+                mnemonic: "CppCompile".to_owned(),
+                target: "//test:t1".to_owned(),
+            },
+            path: "/usr/include".to_owned(),
+            site: LeakSite::Argument {
+                value: "-I/usr/include".to_owned(),
+            },
+        }]);
+        let json = round_trip("site.json", &violations);
+
+        let site = &json["violations"][0]["violation"]["site"];
+        assert_eq!(site["location"], "argument");
+        assert_eq!(site["value"], "-I/usr/include");
+        assert!(site.get("site").is_none(), "{site}");
+    }
+
+    #[test]
+    fn json_report_preserves_the_order_of_the_printed_report() {
+        // Same order as the text report, so the two can be read together
+        // and a diff between runs means a real change.
+        let violations = once([
+            bad_path("Genrule", 2, "/usr/bin"),
+            bad_path("CppCompile", 1, "/bin"),
+        ]);
+        let json = round_trip("order.json", &violations);
+
+        let listed: Vec<&str> = json["violations"]
+            .as_array()
+            .unwrap()
+            .iter()
+            .map(|v| v["violation"]["action"]["mnemonic"].as_str().unwrap())
+            .collect();
+        let printed = report_violations(&violations, false);
+        assert_eq!(listed, ["CppCompile", "Genrule"]);
+        assert!(
+            printed.find("CppCompile").unwrap()
+                < printed.find("Genrule").unwrap()
+        );
+    }
+
+    #[test]
+    fn json_report_is_written_even_when_nothing_was_found() {
+        // A consumer must be able to tell "ran, found nothing" from "never
+        // ran", so the file is written either way.
+        let json = round_trip("empty.json", &BTreeMap::new());
+        assert_eq!(json["violations"].as_array().unwrap().len(), 0);
+    }
+
+    #[test]
+    fn json_report_overwrites_an_existing_file() {
+        let path = scratch("overwrite.json");
+        std::fs::write(&path, "PREEXISTING GARBAGE").unwrap();
+        write_json(&path, &BTreeMap::new()).expect("write should succeed");
+        let text = std::fs::read_to_string(&path).unwrap();
+        assert!(!text.contains("GARBAGE"), "{text}");
+        assert!(text.starts_with('{'), "{text}");
+    }
+
+    #[test]
+    fn json_report_is_indented_and_newline_terminated() {
+        let violations = once([bad_path("CppCompile", 1, "/bin")]);
+        let path = scratch("indent.json");
+        write_json(&path, &violations).expect("write should succeed");
+        let text = std::fs::read_to_string(&path).unwrap();
+        assert!(text.contains("\n  \"violations\""), "{text}");
+        assert!(text.ends_with('\n'), "{text:?}");
     }
 
     fn once<const N: usize>(
