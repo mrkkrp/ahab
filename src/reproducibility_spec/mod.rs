@@ -1,18 +1,22 @@
-//! Modelling *reproducibility*: whether a program (a tool invoked by a
-//! build action) behaves deterministically, and the exact conditions that
-//! affect it.
+//! Modeling *reproducibility*: whether a program (a tool invoked by a build
+//! action) behaves deterministically, and the exact conditions that affect
+//! it.
 
-use std::collections::BTreeSet;
+use std::collections::{BTreeMap, BTreeSet};
+use std::fmt;
+use std::sync::Arc;
 
-pub mod hardcoded;
+use serde::{Deserialize, Serialize};
+
+pub mod library;
 pub mod program_id;
 
 /// When a program behaves reproducibly.
 ///
 /// This is the baseline disposition of the program, before considering
 /// the specific flags it was invoked with (see [`ReproducibilitySpec`]).
-#[allow(dead_code)]
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
 pub enum Reproducibility {
     /// The program is always reproducible, regardless of how it is invoked.
     Always,
@@ -23,9 +27,12 @@ pub enum Reproducibility {
     Sometimes,
 }
 
+/// How a program's raw arguments are read as canonical options.
+pub type Recognize = Arc<dyn Fn(&str) -> Option<String> + Send + Sync>;
+
 /// A description of one program's reproducibility and the conditions
 /// affecting it.
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Clone)]
 pub struct ReproducibilitySpec {
     /// The baseline reproducibility of the program.
     pub reproducibility: Reproducibility,
@@ -35,17 +42,44 @@ pub struct ReproducibilitySpec {
     pub breaking_flags: BTreeSet<String>,
     /// Map a raw argument to the canonical option it represents, or `None`
     /// if it is not recognized as an option of this program.
-    pub recognize: fn(&str) -> Option<String>,
+    pub recognize: Recognize,
 }
 
-/// Builders for writing a spec in [`hardcoded::entries`].
-#[allow(dead_code)]
+impl fmt::Debug for ReproducibilitySpec {
+    /// A function cannot be shown, so it is named rather than printed.
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        f.debug_struct("ReproducibilitySpec")
+            .field("reproducibility", &self.reproducibility)
+            .field("required_flags", &self.required_flags)
+            .field("breaking_flags", &self.breaking_flags)
+            .field("recognize", &"<function>")
+            .finish()
+    }
+}
+
+impl PartialEq for ReproducibilitySpec {
+    /// Compares what a spec says, not how it reads arguments.
+    ///
+    /// Two functions cannot be compared, and comparing them by identity
+    /// would make every independently-built spec unequal to every other,
+    /// which is useless. So the recognizer is excluded: specs that agree on
+    /// disposition and flags are equal even if they read arguments
+    /// differently.
+    fn eq(&self, other: &Self) -> bool {
+        self.reproducibility == other.reproducibility
+            && self.required_flags == other.required_flags
+            && self.breaking_flags == other.breaking_flags
+    }
+}
+
+impl Eq for ReproducibilitySpec {}
+
 impl ReproducibilitySpec {
     /// Construct a spec from a baseline disposition and the two flag sets,
     /// taking any iterables of strings.
     ///
-    /// The `recognize` predicate defaults to taking every argument at face
-    /// value—each one is its own canonical form.
+    /// The recognizer defaults to the identity—every argument stands for
+    /// itself.
     pub fn new<R, B>(
         reproducibility: Reproducibility,
         required_flags: R,
@@ -67,23 +101,39 @@ impl ReproducibilitySpec {
                 .into_iter()
                 .map(Into::into)
                 .collect(),
-            recognize: |arg| Some(arg.to_owned()),
+            recognize: Arc::new(|arg: &str| Some(arg.to_owned())),
         }
     }
 
-    /// Set the `recognize` predicate, returning the updated spec.
+    /// Set the recognizer, returning the updated spec.
+    #[allow(dead_code)]
     pub fn with_recognizer(
         mut self,
         recognize: fn(&str) -> Option<String>,
     ) -> Self {
-        self.recognize = recognize;
+        self.recognize = Arc::new(recognize);
+        self
+    }
+
+    /// Lift a translation map into a recognizer, returning the updated spec.
+    pub fn with_translations(
+        mut self,
+        translations: BTreeMap<String, String>,
+    ) -> Self {
+        self.recognize = Arc::new(move |arg: &str| {
+            Some(
+                translations
+                    .get(arg)
+                    .cloned()
+                    .unwrap_or_else(|| arg.to_owned()),
+            )
+        });
         self
     }
 }
 
 impl ReproducibilitySpec {
-    /// Apply the `recognize` predicate to `arg`, yielding the canonical
-    /// option it represents, if any.
+    /// The canonical option `arg` stands for, if it is recognized at all.
     pub fn recognize(&self, arg: &str) -> Option<String> {
         (self.recognize)(arg)
     }
@@ -151,21 +201,6 @@ pub enum Conformance {
 mod tests {
     use super::*;
 
-    /// A tiny recognizer for exercising the predicate: strips any `=value`
-    /// and normalizes `-O<n>` to `-O`.
-    fn recognize_sample(arg: &str) -> Option<String> {
-        let head = arg.split('=').next().unwrap_or(arg);
-        if let Some(rest) = head.strip_prefix("-O") {
-            if rest.chars().all(|c| c.is_ascii_digit()) {
-                return Some("-O".to_owned());
-            }
-        }
-        if head.starts_with("--") {
-            return Some(head.to_owned());
-        }
-        None
-    }
-
     #[test]
     fn new_collects_flag_sets_and_dedups() {
         let spec = ReproducibilitySpec::new(
@@ -227,23 +262,43 @@ mod tests {
     }
 
     #[test]
-    fn custom_recognizer_normalizes_arguments() {
+    fn a_translation_maps_an_argument_to_another_option() {
+        // A compiler whose optimization levels all count as one option.
         let spec = ReproducibilitySpec::new(
             Reproducibility::Sometimes,
-            ["--deterministic"],
+            [] as [&str; 0],
             ["-O"],
         )
-        .with_recognizer(recognize_sample);
+        .with_translations(translations([
+            ("-O1", "-O"),
+            ("-O2", "-O"),
+            ("-O3", "-O"),
+        ]));
 
-        // `=value` is stripped down to the canonical option.
-        assert_eq!(
-            spec.recognize("--sysroot=/opt/x"),
-            Some("--sysroot".to_owned())
-        );
-        // `-O2` normalizes to `-O`.
         assert_eq!(spec.recognize("-O2"), Some("-O".to_owned()));
-        // Unrecognized arguments yield None.
-        assert_eq!(spec.recognize("input.c"), None);
+        // Anything untranslated still stands for itself.
+        assert_eq!(spec.recognize("input.c"), Some("input.c".to_owned()));
+    }
+
+    #[test]
+    fn translations_decide_whether_a_flag_counts_as_present() {
+        let spec = ReproducibilitySpec::new(
+            Reproducibility::Sometimes,
+            [] as [&str; 0],
+            ["-O"],
+        )
+        .with_translations(translations([("-O2", "-O")]));
+
+        // `-O2` is the breaking flag `-O` under another name.
+        assert_eq!(
+            spec.assess(["-O2", "input.c"]),
+            Conformance::Conditional {
+                missing_required: set(&[]),
+                present_breaking: set(&["-O"]),
+            }
+        );
+        // `-O9` was not translated, so it is not `-O`.
+        assert_eq!(spec.assess(["-O9"]), Conformance::Reproducible);
     }
 
     #[test]
@@ -259,6 +314,16 @@ mod tests {
             ["--y"],
         );
         assert_eq!(a, b);
+    }
+
+    /// Build a translation map from string pairs, for terse assertions.
+    fn translations<const N: usize>(
+        pairs: [(&str, &str); N],
+    ) -> BTreeMap<String, String> {
+        pairs
+            .into_iter()
+            .map(|(from, to)| (from.to_owned(), to.to_owned()))
+            .collect()
     }
 
     /// Build a set from string literals, for terse assertions.
@@ -296,8 +361,7 @@ mod tests {
             Reproducibility::Sometimes,
             ["--deterministic"],
             ["-O"],
-        )
-        .with_recognizer(recognize_sample);
+        );
         // Required flag present, breaking flag absent.
         assert_eq!(
             spec.assess(["--deterministic", "input.c"]),
@@ -311,8 +375,7 @@ mod tests {
             Reproducibility::Sometimes,
             ["--deterministic", "--sorted"],
             [] as [&str; 0],
-        )
-        .with_recognizer(recognize_sample);
+        );
         assert_eq!(
             spec.assess(["--sorted"]),
             Conformance::Conditional {
@@ -329,8 +392,9 @@ mod tests {
             [] as [&str; 0],
             ["-O", "--timestamp"],
         )
-        .with_recognizer(recognize_sample);
-        // -O2 is recognized as -O (a breaking flag); --timestamp is absent.
+        .with_translations(translations([("-O2", "-O")]));
+        // -O2 translates to -O, a breaking flag; --timestamp is absent, so
+        // only the one that is present is reported.
         assert_eq!(
             spec.assess(["-O2", "input.c"]),
             Conformance::Conditional {
@@ -346,8 +410,7 @@ mod tests {
             Reproducibility::Sometimes,
             ["--deterministic"],
             ["--timestamp"],
-        )
-        .with_recognizer(recognize_sample);
+        );
         assert_eq!(
             spec.assess(["--timestamp"]),
             Conformance::Conditional {

@@ -21,7 +21,7 @@ rust_library(
         "src/melville.rs",
         "src/param_files.rs",
         "src/terminal_color.rs",
-        "src/reproducibility_spec/hardcoded.rs",
+        "src/reproducibility_spec/library.rs",
         "src/reproducibility_spec/mod.rs",
         "src/reproducibility_spec/program_id.rs",
     ],

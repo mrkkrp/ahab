@@ -13,6 +13,8 @@ use crate::aquery::{random_token, run_aquery};
 
 use crate::checks::{Violation, check_all};
 use crate::melville;
+use crate::reproducibility_spec::library::{Entry, Library, parse_entries};
+use crate::reproducibility_spec::program_id::ProgramId;
 use crate::terminal_color::Palette;
 
 /// Command-line interface for Ahab.
@@ -65,6 +67,15 @@ pub struct Cli {
     /// Otherwise prints a diff to stderr and exits 1.
     #[arg(long = "expect-json", value_name = "FILENAME")]
     pub expect_json: Option<PathBuf>,
+
+    /// Load additional reproducibility specs from a JSON file. May be
+    /// repeated.
+    ///
+    /// These take precedence over Ahab's built-in knowledge, so a project
+    /// can describe its own tools and correct what Ahab believes about
+    /// anyone else's. A file given later overrides one given earlier.
+    #[arg(long = "repro-specs", value_name = "FILENAME")]
+    pub repro_specs: Vec<PathBuf>,
 }
 
 impl Cli {
@@ -98,7 +109,14 @@ impl Cli {
 
         // The checks are pure: they return every violation they find, in a
         // deterministic order regardless of how Bazel ordered the actions.
-        let violations = check_all(&container, &user, &hostname);
+        let mut library = Library::builtin();
+        for path in &self.repro_specs {
+            let path =
+                resolve_output_path(path, invocation_dir().as_deref());
+            library.extend(read_specs(&path)?);
+        }
+
+        let violations = check_all(&container, &user, &hostname, &library);
 
         if let Some(path) = &self.write_json {
             let path =
@@ -190,6 +208,15 @@ struct CountedViolation {
 struct JsonReport {
     /// Distinct violations, in the same order as the printed report.
     violations: Vec<CountedViolation>,
+}
+
+/// Read user-defined library entries from `path`.
+fn read_specs(path: &Path) -> Result<Vec<(ProgramId, Entry)>> {
+    let text = std::fs::read_to_string(path).with_context(|| {
+        format!("failed to read specs from {}", path.display())
+    })?;
+    parse_entries(&text)
+        .map_err(|why| anyhow::anyhow!("{}: {why}", path.display()))
 }
 
 /// Read a report written earlier by [`write_json`].
@@ -317,6 +344,8 @@ fn report_violations(
 mod tests {
     use super::*;
     use crate::checks::{ActionRef, EnvSource, LeakSite, Violation};
+    use crate::reproducibility_spec::Reproducibility;
+    use crate::reproducibility_spec::library::Transition;
     use crate::reproducibility_spec::program_id::ProgramId;
 
     fn bad_path(mnemonic: &str, target_id: u32, actual: &str) -> Violation {
@@ -505,6 +534,223 @@ mod tests {
         assert_eq!(signed(&d, '+').lines().count(), 1, "{d}");
         assert!(signed(&d, '-').contains("rules_haskell"), "{d}");
         assert!(signed(&d, '+').contains("rules_rust"), "{d}");
+    }
+
+    /// Write `text` to a scratch file and read library entries from it.
+    fn specs_from(
+        name: &str,
+        text: &str,
+    ) -> Result<Vec<(ProgramId, Entry)>> {
+        let path = scratch(name);
+        std::fs::write(&path, text).unwrap();
+        read_specs(&path)
+    }
+
+    #[test]
+    fn a_file_names_programs_the_way_a_report_does() {
+        let specs = specs_from(
+            "specs.json",
+            r#"{"programs": {
+                 "@rules_rust//util/pw": {
+                   "spec": {
+                     "reproducibility": "sometimes",
+                     "required_flags": ["--deterministic"],
+                     "breaking_flags": ["-O"],
+                     "recognize": {"-O2": "-O"}
+                   }
+                 }
+               }}"#,
+        )
+        .expect("should load");
+
+        assert_eq!(specs.len(), 1);
+        let (program, entry) = &specs[0];
+        assert_eq!(*program, ProgramId::module("rules_rust", "util/pw"));
+        let Entry::Spec(spec) = entry else {
+            panic!("expected a spec, got {entry:?}");
+        };
+        assert_eq!(spec.reproducibility, Reproducibility::Sometimes);
+        assert!(spec.required_flags.contains("--deterministic"));
+        assert_eq!(spec.recognize("-O2"), Some("-O".to_owned()));
+    }
+
+    #[test]
+    fn a_file_can_declare_a_synonym() {
+        let specs = specs_from(
+            "synonym.json",
+            r#"{"programs": {
+                 "@llvm+t//bin/clang++": {"same_as": "@llvm+t//bin/clang"}
+               }}"#,
+        )
+        .expect("should load");
+
+        assert_eq!(
+            specs[0].1,
+            Entry::SameAs(ProgramId::extension("llvm", "t", "bin/clang")),
+        );
+    }
+
+    #[test]
+    fn a_file_can_declare_a_wrapper() {
+        let specs = specs_from(
+            "wrapper.json",
+            r#"{"programs": {
+                 "@my_rules//tools/wrap": {
+                   "wraps": {"after_separator": "--"}
+                 }
+               }}"#,
+        )
+        .expect("should load");
+
+        let Entry::Wraps(transition) = &specs[0].1 else {
+            panic!("expected a wrapper, got {:?}", specs[0].1);
+        };
+        assert_eq!(
+            *transition,
+            Transition::AfterSeparator {
+                separator: "--".to_owned(),
+            },
+        );
+    }
+
+    #[test]
+    fn a_user_declared_wrapper_unwraps_like_a_built_in_one() {
+        // The point of letting a file say this: a project's own wrapper is
+        // invisible to Ahab until someone can describe it.
+        let mut library = Library::default();
+        library.extend(
+            specs_from(
+                "unwrap.json",
+                r#"{"programs": {
+                     "@my_rules//tools/wrap": {
+                       "wraps": {"after_separator": "--"}
+                     },
+                     "@llvm+t//bin/clang": {
+                       "spec": {"reproducibility": "never"}
+                     }
+                   }}"#,
+            )
+            .expect("should load"),
+        );
+
+        let resolved = library.resolve(
+            ProgramId::module("my_rules", "tools/wrap"),
+            vec!["--quiet", "--", "external/llvm++t+r/bin/clang", "-c"],
+        );
+        assert_eq!(
+            resolved.program,
+            ProgramId::extension("llvm", "t", "bin/clang"),
+        );
+        assert_eq!(resolved.args, vec!["-c"]);
+        assert_eq!(
+            resolved.wrappers,
+            vec![ProgramId::module("my_rules", "tools/wrap")],
+        );
+        assert!(resolved.spec.is_some());
+    }
+
+    #[test]
+    fn the_flag_sets_and_translations_may_be_left_out() {
+        let specs = specs_from(
+            "minimal.json",
+            r#"{"programs": {
+                 "//tools/gen": {"spec": {"reproducibility": "never"}}
+               }}"#,
+        )
+        .expect("should load");
+
+        let Entry::Spec(spec) = &specs[0].1 else {
+            panic!("expected a spec");
+        };
+        assert!(spec.required_flags.is_empty());
+        assert!(spec.breaking_flags.is_empty());
+        // No translations means every argument stands for itself.
+        assert_eq!(
+            spec.recognize("--anything"),
+            Some("--anything".to_owned())
+        );
+    }
+
+    #[test]
+    fn a_user_entry_takes_precedence_over_a_built_in_one() {
+        // The built-in library treats process_wrapper as a wrapper; a
+        // project may know better about its own build.
+        let pw = ProgramId::module(
+            "rules_rust",
+            "util/process_wrapper/process_wrapper",
+        );
+        let mut library = Library::builtin();
+        assert!(
+            library.resolve(pw.clone(), vec!["--", "x"]).program != pw,
+            "the built-in entry should unwrap",
+        );
+
+        library.extend(
+            specs_from(
+                "override.json",
+                r#"{"programs": {
+                     "@rules_rust//util/process_wrapper/process_wrapper": {
+                       "spec": {"reproducibility": "always"}
+                     }
+                   }}"#,
+            )
+            .expect("should load"),
+        );
+
+        let resolved = library.resolve(pw.clone(), vec!["--", "x"]);
+        assert_eq!(resolved.program, pw, "the user entry should win");
+        assert!(resolved.spec.is_some());
+        assert!(resolved.wrappers.is_empty());
+    }
+
+    #[test]
+    fn a_later_file_overrides_an_earlier_one() {
+        let mut library = Library::default();
+        for (name, disposition) in
+            [("first.json", "never"), ("second.json", "always")]
+        {
+            let text = format!(
+                r#"{{"programs": {{"//t": {{"spec": {{"reproducibility": "{disposition}"}}}}}}}}"#
+            );
+            library.extend(specs_from(name, &text).expect("should load"));
+        }
+
+        let resolved = library.resolve(ProgramId::main("t"), vec![]);
+        let (_, spec) = resolved.spec.expect("should have a spec");
+        assert_eq!(spec.reproducibility, Reproducibility::Always);
+    }
+
+    #[test]
+    fn a_bad_program_name_says_which_file_and_which_program() {
+        let message = specs_from(
+            "bad-program.json",
+            r#"{"programs": {"@rules_rust": {"spec":
+                 {"reproducibility": "never"}}}}"#,
+        )
+        .unwrap_err()
+        .to_string();
+        assert!(message.contains("bad-program.json"), "{message}");
+        assert!(message.contains("@rules_rust"), "{message}");
+        assert!(message.contains("names a repository"), "{message}");
+    }
+
+    #[test]
+    fn a_bad_synonym_target_says_which_program_declared_it() {
+        let message = specs_from(
+            "bad-synonym.json",
+            r#"{"programs": {"//a": {"same_as": "@nope"}}}"#,
+        )
+        .unwrap_err()
+        .to_string();
+        assert!(message.contains("//a: same_as"), "{message}");
+    }
+
+    #[test]
+    fn a_file_that_is_not_a_spec_file_says_so() {
+        let message = specs_from("not-specs.json", r#"{"violations": []}"#)
+            .unwrap_err()
+            .to_string();
+        assert!(message.contains("not-specs.json"), "{message}");
     }
 
     #[test]
