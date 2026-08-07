@@ -1,11 +1,14 @@
 //! Command-line interface and top-level orchestration for Ahab.
 
 use std::collections::BTreeMap;
+use std::io::IsTerminal;
 use std::path::{Path, PathBuf};
+use std::process::ExitCode;
 
 use anyhow::{Context, Result, bail};
 use clap::Parser;
 use serde::{Deserialize, Serialize};
+use similar::TextDiff;
 
 use crate::aquery::{random_token, run_aquery};
 
@@ -54,17 +57,26 @@ pub struct Cli {
     /// are ignored—except `--shut-up`, which still suppresses the quote.
     #[arg(long = "explain-json", value_name = "FILENAME")]
     pub explain_json: Option<PathBuf>,
+
+    /// Compare the violations found against a JSON file written earlier by
+    /// `--write-json`, instead of printing them.
+    ///
+    /// Exits 0 and prints nothing when they match exactly, counts included.
+    /// Otherwise prints a diff to stderr and exits 1.
+    #[arg(long = "expect-json", value_name = "FILENAME")]
+    pub expect_json: Option<PathBuf>,
 }
 
 impl Cli {
     /// Run Ahab end to end: query the action graph under a controlled
     /// environment, run the pure hermeticity checks over it, and turn any
     /// violations into a non-zero exit.
-    pub fn run(&self) -> Result<()> {
+    pub fn run(&self) -> Result<ExitCode> {
         if let Some(path) = &self.explain_json {
             let path =
                 resolve_output_path(path, invocation_dir().as_deref());
-            return self.report(&read_json(&path)?);
+            self.report(&read_json(&path)?)?;
+            return Ok(ExitCode::SUCCESS);
         }
 
         let user = random_token("ahab-user");
@@ -94,7 +106,30 @@ impl Cli {
             write_json(&path, &violations)?;
         }
 
-        self.report(&violations)
+        if let Some(path) = &self.expect_json {
+            return self.expect(path, &violations);
+        }
+
+        self.report(&violations)?;
+        Ok(ExitCode::SUCCESS)
+    }
+
+    /// Compare what we found against a saved report, printing a diff and
+    /// failing when they differ.
+    fn expect(
+        &self,
+        path: &Path,
+        found: &BTreeMap<Violation, usize>,
+    ) -> Result<ExitCode> {
+        let path = resolve_output_path(path, invocation_dir().as_deref());
+        let expected = read_json(&path)?;
+
+        if *found == expected {
+            return Ok(ExitCode::SUCCESS);
+        }
+
+        eprint!("{}", render_diff(&expected, found, use_color()));
+        Ok(ExitCode::FAILURE)
     }
 
     /// Print a set of violations and turn a non-empty one into a non-zero
@@ -169,29 +204,89 @@ fn read_json(path: &Path) -> Result<BTreeMap<Violation, usize>> {
     Ok(violations)
 }
 
+impl JsonReport {
+    /// Build the document for a set of violations, preserving their order.
+    fn of(violations: &BTreeMap<Violation, usize>) -> JsonReport {
+        JsonReport {
+            violations: violations
+                .iter()
+                .map(|(violation, count)| CountedViolation {
+                    count: *count,
+                    violation: violation.clone(),
+                })
+                .collect(),
+        }
+    }
+}
+
 /// Write `violations` to `path` as indented JSON, replacing any existing
 /// file.
 fn write_json(
     path: &Path,
     violations: &BTreeMap<Violation, usize>,
 ) -> Result<()> {
-    let report = JsonReport {
-        violations: violations
-            .iter()
-            .map(|(violation, count)| CountedViolation {
-                count: *count,
-                violation: violation.clone(),
-            })
-            .collect(),
-    };
-
-    let mut json = serde_json::to_string_pretty(&report)
-        .context("failed to serialize violations as JSON")?;
+    let mut json =
+        serde_json::to_string_pretty(&JsonReport::of(violations))
+            .context("failed to serialize violations as JSON")?;
     json.push('\n');
 
     std::fs::write(path, json).with_context(|| {
         format!("failed to write JSON report to {}", path.display())
     })
+}
+
+/// Whether to colorize the diff.
+///
+/// Colour only when stderr is a terminal, so a redirected or piped diff
+/// stays plain text; and never when `NO_COLOR` is set, which is the
+/// convention for turning it off regardless.
+fn use_color() -> bool {
+    std::env::var_os("NO_COLOR").is_none()
+        && std::io::stderr().is_terminal()
+}
+
+/// A diff between the violations expected and the violations found.
+fn render_diff(
+    expected: &BTreeMap<Violation, usize>,
+    found: &BTreeMap<Violation, usize>,
+    color: bool,
+) -> String {
+    const RED: &str = "\x1b[31m";
+    const GREEN: &str = "\x1b[32m";
+    const CYAN: &str = "\x1b[36m";
+    const RESET: &str = "\x1b[0m";
+
+    let render = |violations: &BTreeMap<Violation, usize>| {
+        serde_json::to_string_pretty(&JsonReport::of(violations))
+            .unwrap_or_else(|_| String::from("<unserializable>"))
+    };
+    let (expected, found) = (render(expected), render(found));
+
+    let diff = TextDiff::from_lines(&expected, &found);
+    let unified = diff.unified_diff().context_radius(3).to_string();
+
+    if !color {
+        return unified;
+    }
+
+    // Every line of a unified diff is prefixed by its marker, so the first
+    // character is all that has to be looked at.
+    let mut colored = String::with_capacity(unified.len());
+    for line in unified.lines() {
+        let tint = match line.chars().next() {
+            Some('-') => RED,
+            Some('+') => GREEN,
+            Some('@') => CYAN,
+            _ => "",
+        };
+        if tint.is_empty() {
+            colored.push_str(line);
+        } else {
+            colored.push_str(&format!("{tint}{line}{RESET}"));
+        }
+        colored.push('\n');
+    }
+    colored
 }
 
 /// Format one or more violations into a numbered, human-readable report.
@@ -307,6 +402,130 @@ mod tests {
             resolve_output_path(Path::new("out.json"), None),
             PathBuf::from("out.json"),
         );
+    }
+
+    /// The changed lines of `diff` carrying this sign, joined. Hunk headers
+    /// (`---`, `+++`) are skipped: they start with the same characters but
+    /// are not content.
+    fn signed(diff: &str, sign: char) -> String {
+        let header: String = std::iter::repeat_n(sign, 3).collect();
+        diff.lines()
+            .filter(|line| {
+                line.starts_with(sign) && !line.starts_with(&header)
+            })
+            .collect::<Vec<_>>()
+            .join("\n")
+    }
+
+    /// The diff between two sets of violations, uncoloured.
+    fn diff(
+        expected: &BTreeMap<Violation, usize>,
+        found: &BTreeMap<Violation, usize>,
+    ) -> String {
+        render_diff(expected, found, false)
+    }
+
+    #[test]
+    fn identical_violations_produce_no_diff() {
+        let violations = once([bad_path("CppCompile", 1, "/bin")]);
+        assert_eq!(diff(&violations, &violations), "");
+    }
+
+    #[test]
+    fn a_violation_only_found_is_added_and_only_expected_is_removed() {
+        let expected = once([bad_path("A", 1, "/expected-only")]);
+        let found = once([bad_path("B", 2, "/found-only")]);
+        let d = diff(&expected, &found);
+        assert!(signed(&d, '-').contains("/expected-only"), "{d}");
+        assert!(signed(&d, '+').contains("/found-only"), "{d}");
+        assert!(!signed(&d, '+').contains("/expected-only"), "{d}");
+    }
+
+    #[test]
+    fn a_changed_count_shows_both_sides() {
+        // The reason counts are compared at all: the same violation on one
+        // action and on three is not the same result.
+        let violation = bad_path("CppCompile", 1, "/bin");
+        let expected: BTreeMap<Violation, usize> =
+            [(violation.clone(), 3)].into_iter().collect();
+        let found: BTreeMap<Violation, usize> =
+            [(violation, 5)].into_iter().collect();
+        let d = diff(&expected, &found);
+        assert!(signed(&d, '-').contains("\"count\": 3"), "{d}");
+        assert!(signed(&d, '+').contains("\"count\": 5"), "{d}");
+        // Only the count line changed, so the violation itself is context.
+        assert!(!signed(&d, '-').contains("bad_path"), "{d}");
+    }
+
+    #[test]
+    fn unchanged_violations_are_left_out_of_the_diff() {
+        let same = bad_path("A", 1, "/same");
+        let expected: BTreeMap<Violation, usize> =
+            [(same.clone(), 1)].into_iter().collect();
+        let mut found = expected.clone();
+        found.insert(bad_path("B", 2, "/new"), 1);
+
+        let d = diff(&expected, &found);
+        assert!(signed(&d, '+').contains("/new"), "{d}");
+        // The unchanged one may appear as context, but never as a change.
+        assert!(!signed(&d, '+').contains("/same"), "{d}");
+        assert!(!signed(&d, '-').contains("/same"), "{d}");
+    }
+
+    #[test]
+    fn the_diff_is_plain_text_unless_colour_is_asked_for() {
+        let expected = once([bad_path("A", 1, "/a")]);
+        let found = once([bad_path("B", 2, "/b")]);
+
+        let plain = render_diff(&expected, &found, false);
+        assert!(!plain.contains('\x1b'), "{plain:?}");
+
+        let coloured = render_diff(&expected, &found, true);
+        assert!(coloured.contains("\x1b[31m-"), "{coloured:?}");
+        assert!(coloured.contains("\x1b[32m+"), "{coloured:?}");
+        // Every tinted line resets, so the terminal is not left coloured.
+        for line in coloured.lines() {
+            let tinted = line.starts_with('\x1b');
+            assert_eq!(tinted, line.ends_with("\x1b[0m"), "{line:?}");
+        }
+    }
+
+    #[test]
+    fn the_diff_is_the_same_bytes_every_time() {
+        // Both documents are serialized in the report's own order, so the
+        // diff of a given difference is reproducible—without which a diff
+        // between two runs would be worthless.
+        let expected = once([
+            bad_path("Genrule", 2, "/b"),
+            bad_path("CppCompile", 1, "/a"),
+        ]);
+        let found = once([bad_path("CppCompile", 1, "/a")]);
+        assert_eq!(diff(&expected, &found), diff(&expected, &found));
+        assert!(signed(&diff(&expected, &found), '-').contains("/b"));
+    }
+
+    #[test]
+    fn one_changed_field_diffs_as_one_line() {
+        // The reason this is a line diff and not an entry diff: an entry-wise
+        // comparison keys on the whole violation, so any edit deletes and
+        // re-inserts the lot—60 lines of noise for a one-word change.
+        let program = |module: &str| Violation::UnknownProgram {
+            action: ActionRef {
+                mnemonic: "Rustc".to_owned(),
+                target: "//test:t1".to_owned(),
+            },
+            program: ProgramId::module(module, "bin/tool"),
+            wrappers: Vec::new(),
+        };
+        let d = diff(
+            &once([program("rules_haskell")]),
+            &once([program("rules_rust")]),
+        );
+
+        assert_eq!(signed(&d, '-').lines().count(), 1, "{d}");
+        assert_eq!(signed(&d, '+').lines().count(), 1, "{d}");
+        assert!(signed(&d, '-').contains("rules_haskell"), "{d}");
+        assert!(signed(&d, '+').contains("rules_rust"), "{d}");
     }
 
     #[test]

@@ -63,6 +63,10 @@ crate.spec(
     version = "1",
 )
 crate.spec(
+    package = "similar",
+    version = "2",
+)
+crate.spec(
     package = "prost",
     version = "0.13",
 )
