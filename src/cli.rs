@@ -1,7 +1,6 @@
 //! Command-line interface and top-level orchestration for Ahab.
 
 use std::collections::BTreeMap;
-use std::io::IsTerminal;
 use std::path::{Path, PathBuf};
 use std::process::ExitCode;
 
@@ -14,6 +13,7 @@ use crate::aquery::{random_token, run_aquery};
 
 use crate::checks::{Violation, check_all};
 use crate::melville;
+use crate::terminal_color::Palette;
 
 /// Command-line interface for Ahab.
 #[derive(Debug, Parser)]
@@ -128,7 +128,7 @@ impl Cli {
             return Ok(ExitCode::SUCCESS);
         }
 
-        eprint!("{}", render_diff(&expected, found, use_color()));
+        eprint!("{}", render_diff(&expected, found, Palette::for_stderr()));
         Ok(ExitCode::FAILURE)
     }
 
@@ -139,7 +139,14 @@ impl Cli {
         violations: &BTreeMap<Violation, usize>,
     ) -> Result<()> {
         if !violations.is_empty() {
-            bail!("{}", report_violations(violations, !self.shut_up));
+            bail!(
+                "{}",
+                report_violations(
+                    violations,
+                    !self.shut_up,
+                    Palette::for_stderr(),
+                )
+            );
         }
 
         println!("All hermeticity checks passed.");
@@ -235,27 +242,12 @@ fn write_json(
     })
 }
 
-/// Whether to colorize the diff.
-///
-/// Colour only when stderr is a terminal, so a redirected or piped diff
-/// stays plain text; and never when `NO_COLOR` is set, which is the
-/// convention for turning it off regardless.
-fn use_color() -> bool {
-    std::env::var_os("NO_COLOR").is_none()
-        && std::io::stderr().is_terminal()
-}
-
 /// A diff between the violations expected and the violations found.
 fn render_diff(
     expected: &BTreeMap<Violation, usize>,
     found: &BTreeMap<Violation, usize>,
-    color: bool,
+    palette: Palette,
 ) -> String {
-    const RED: &str = "\x1b[31m";
-    const GREEN: &str = "\x1b[32m";
-    const CYAN: &str = "\x1b[36m";
-    const RESET: &str = "\x1b[0m";
-
     let render = |violations: &BTreeMap<Violation, usize>| {
         serde_json::to_string_pretty(&JsonReport::of(violations))
             .unwrap_or_else(|_| String::from("<unserializable>"))
@@ -265,25 +257,9 @@ fn render_diff(
     let diff = TextDiff::from_lines(&expected, &found);
     let unified = diff.unified_diff().context_radius(3).to_string();
 
-    if !color {
-        return unified;
-    }
-
-    // Every line of a unified diff is prefixed by its marker, so the first
-    // character is all that has to be looked at.
     let mut colored = String::with_capacity(unified.len());
     for line in unified.lines() {
-        let tint = match line.chars().next() {
-            Some('-') => RED,
-            Some('+') => GREEN,
-            Some('@') => CYAN,
-            _ => "",
-        };
-        if tint.is_empty() {
-            colored.push_str(line);
-        } else {
-            colored.push_str(&format!("{tint}{line}{RESET}"));
-        }
+        colored.push_str(&palette.diff_line(line));
         colored.push('\n');
     }
     colored
@@ -294,6 +270,7 @@ fn render_diff(
 fn report_violations(
     violations: &BTreeMap<Violation, usize>,
     quote: bool,
+    palette: Palette,
 ) -> String {
     let distinct = violations.len();
     let occurrences: usize = violations.values().sum();
@@ -303,32 +280,34 @@ fn report_violations(
         "violations"
     };
 
-    let mut report = if distinct == occurrences {
+    let heading = if distinct == occurrences {
         format!("found {distinct} hermeticity {noun}:")
     } else {
         format!(
             "found {distinct} distinct hermeticity {noun} ({occurrences} occurrences):"
         )
     };
+    let mut report = palette.heading(&heading);
 
     for (i, (violation, count)) in violations.iter().enumerate() {
+        // The number is framing, so it recedes; the multiplicity is a
+        // quantity worth noticing, so it does not.
+        let number = palette.faint(&format!("{}.", i + 1));
         let multiplicity = if *count == 1 {
             String::new()
         } else {
-            format!("×{count} ")
+            palette.caution(&format!("×{count}")) + " "
         };
         report.push_str(&format!(
-            "\n  {}. {}{}",
-            i + 1,
-            multiplicity,
-            violation.render()
+            "\n  {number} {multiplicity}{}",
+            violation.render(palette)
         ));
     }
 
     if quote {
         report.push_str(&format!(
             "\n\n  {}",
-            melville::quote_for(&violations)
+            palette.faint(melville::quote_for(&violations))
         ));
     }
     report
@@ -417,12 +396,12 @@ mod tests {
             .join("\n")
     }
 
-    /// The diff between two sets of violations, uncoloured.
+    /// The diff between two sets of violations, uncolored.
     fn diff(
         expected: &BTreeMap<Violation, usize>,
         found: &BTreeMap<Violation, usize>,
     ) -> String {
-        render_diff(expected, found, false)
+        render_diff(expected, found, Palette::plain())
     }
 
     #[test]
@@ -473,18 +452,18 @@ mod tests {
     }
 
     #[test]
-    fn the_diff_is_plain_text_unless_colour_is_asked_for() {
+    fn the_diff_is_plain_text_unless_color_is_asked_for() {
         let expected = once([bad_path("A", 1, "/a")]);
         let found = once([bad_path("B", 2, "/b")]);
 
-        let plain = render_diff(&expected, &found, false);
+        let plain = render_diff(&expected, &found, Palette::plain());
         assert!(!plain.contains('\x1b'), "{plain:?}");
 
-        let coloured = render_diff(&expected, &found, true);
-        assert!(coloured.contains("\x1b[31m-"), "{coloured:?}");
-        assert!(coloured.contains("\x1b[32m+"), "{coloured:?}");
-        // Every tinted line resets, so the terminal is not left coloured.
-        for line in coloured.lines() {
+        let colored = render_diff(&expected, &found, Palette::color());
+        assert!(colored.contains("\x1b[31m-"), "{colored:?}");
+        assert!(colored.contains("\x1b[32m+"), "{colored:?}");
+        // Every tinted line resets, so the terminal is not left colored.
+        for line in colored.lines() {
             let tinted = line.starts_with('\x1b');
             assert_eq!(tinted, line.ends_with("\x1b[0m"), "{line:?}");
         }
@@ -561,8 +540,8 @@ mod tests {
 
         assert_eq!(read, violations);
         assert_eq!(
-            report_violations(&read, false),
-            report_violations(&violations, false),
+            report_violations(&read, false, Palette::plain()),
+            report_violations(&violations, false, Palette::plain()),
         );
     }
 
@@ -709,7 +688,8 @@ mod tests {
             .iter()
             .map(|v| v["violation"]["action"]["mnemonic"].as_str().unwrap())
             .collect();
-        let printed = report_violations(&violations, false);
+        let printed =
+            report_violations(&violations, false, Palette::plain());
         assert_eq!(listed, ["CppCompile", "Genrule"]);
         assert!(
             printed.find("CppCompile").unwrap()
@@ -756,6 +736,7 @@ mod tests {
         let report = report_violations(
             &once([bad_path("CppCompile", 1, "/bin")]),
             true,
+            Palette::plain(),
         );
         assert!(
             report.starts_with("found 1 hermeticity violation:\n"),
@@ -772,6 +753,7 @@ mod tests {
                 bad_path("Genrule", 2, "/usr/bin"),
             ]),
             true,
+            Palette::plain(),
         );
         assert!(
             report.starts_with("found 2 hermeticity violations:\n"),
@@ -785,10 +767,73 @@ mod tests {
     }
 
     #[test]
+    fn the_report_is_plain_text_unless_color_is_asked_for() {
+        let violations: BTreeMap<Violation, usize> =
+            [(bad_path("CppCompile", 1, "/bin"), 3)]
+                .into_iter()
+                .collect();
+
+        let plain = report_violations(&violations, false, Palette::plain());
+        assert!(!plain.contains('\x1b'), "{plain:?}");
+
+        let colored =
+            report_violations(&violations, false, Palette::color());
+        assert!(colored.contains('\x1b'), "{colored:?}");
+        // Stripping the escapes gets the plain report back, so color adds
+        // nothing to what the text says.
+        assert_eq!(strip_ansi(&colored), plain);
+    }
+
+    #[test]
+    fn color_marks_the_kind_the_action_and_the_finding() {
+        let violations = once([Violation::UnknownProgram {
+            action: ActionRef {
+                mnemonic: "Rustc".to_owned(),
+                target: "//test:t1".to_owned(),
+            },
+            program: ProgramId::module("rules_rust", "bin/tool"),
+            wrappers: Vec::new(),
+        }]);
+        let r = report_violations(&violations, false, Palette::color());
+        // Caution for a finding Ahab cannot vouch for either way, cyan for
+        // whose action it is, bold for the program itself.
+        // The kind opens the line, so it carries no color of its own.
+        assert!(r.contains("reproducibility unknown"), "{r}");
+        assert!(!r.contains("\x1b[33mreproducibility"), "{r}");
+        assert!(r.contains("\x1b[35mRustc action for target"), "{r}");
+        assert!(
+            r.contains("\x1b[36m\"@rules_rust//bin/tool\"\x1b[0m"),
+            "{r}"
+        );
+        // Bold means heading and nothing else, so it must not appear on a
+        // finding.
+        assert!(!r.contains("\x1b[1m\"@rules_rust//bin/tool\""), "{r}");
+    }
+
+    /// Remove ANSI escapes, to compare colored output against plain.
+    fn strip_ansi(text: &str) -> String {
+        let mut out = String::with_capacity(text.len());
+        let mut chars = text.chars();
+        while let Some(c) = chars.next() {
+            if c != '\x1b' {
+                out.push(c);
+                continue;
+            }
+            for c in chars.by_ref() {
+                if c == 'm' {
+                    break;
+                }
+            }
+        }
+        out
+    }
+
+    #[test]
     fn a_violation_occurring_once_carries_no_multiplicity_marker() {
         let report = report_violations(
             &once([bad_path("CppCompile", 1, "/bin")]),
             false,
+            Palette::plain(),
         );
         assert!(!report.contains('×'), "{report}");
         // With no repeats the occurrence count would only be noise.
@@ -801,7 +846,8 @@ mod tests {
             [(bad_path("CppCompile", 1, "/bin"), 342)]
                 .into_iter()
                 .collect();
-        let report = report_violations(&violations, false);
+        let report =
+            report_violations(&violations, false, Palette::plain());
 
         // One numbered line, carrying the multiplicity.
         assert!(
@@ -823,7 +869,8 @@ mod tests {
         ]
         .into_iter()
         .collect();
-        let report = report_violations(&violations, false);
+        let report =
+            report_violations(&violations, false, Palette::plain());
         assert!(
             report.starts_with(
                 "found 2 distinct hermeticity violations (7 occurrences):\n"
@@ -835,7 +882,7 @@ mod tests {
     #[test]
     fn report_ends_with_a_melville_quote() {
         let violations = once([bad_path("CppCompile", 1, "/bin")]);
-        let report = report_violations(&violations, true);
+        let report = report_violations(&violations, true, Palette::plain());
         let quote = melville::quote_for(&violations);
         assert!(report.ends_with(&format!("\n\n  {quote}")), "{report}");
     }
@@ -844,15 +891,16 @@ mod tests {
     fn quote_is_stable_for_the_same_violations() {
         let violations = once([bad_path("CppCompile", 1, "/bin")]);
         assert_eq!(
-            report_violations(&violations, true),
-            report_violations(&violations, true)
+            report_violations(&violations, true, Palette::plain()),
+            report_violations(&violations, true, Palette::plain())
         );
     }
 
     #[test]
     fn shut_up_suppresses_the_quote() {
         let violations = once([bad_path("CppCompile", 1, "/bin")]);
-        let report = report_violations(&violations, false);
+        let report =
+            report_violations(&violations, false, Palette::plain());
         // The violations are still reported...
         assert!(
             report.starts_with("found 1 hermeticity violation:\n"),

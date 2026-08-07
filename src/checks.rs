@@ -12,6 +12,7 @@ use crate::reproducibility_spec::{
     Conformance, hardcoded,
     program_id::{Origin, ProgramId},
 };
+use crate::terminal_color::Palette;
 
 /// The exact value of `PATH` that every action is required to use.
 pub(crate) const EXPECTED_PATH: &str = "/bin:/usr/bin:/usr/local/bin";
@@ -160,17 +161,21 @@ impl LeakSite {
 fn provenance(
     wrappers: &[ProgramId],
     synonym: Option<&ProgramId>,
+    palette: Palette,
 ) -> String {
     let mut parts = Vec::new();
     if !wrappers.is_empty() {
         let names: Vec<String> = wrappers
             .iter()
-            .map(|w| format!("{w:?}", w = w.to_string()))
+            .map(|w| palette.finding(&format!("{w:?}", w = w.to_string())))
             .collect();
         parts.push(format!("wrapped by {}", names.join(", then ")));
     }
     if let Some(synonym) = synonym {
-        parts.push(format!("spec from synonym {:?}", synonym.to_string()));
+        parts.push(format!(
+            "spec from synonym {}",
+            palette.finding(&format!("{:?}", synonym.to_string())),
+        ));
     }
     if parts.is_empty() {
         return String::new();
@@ -280,47 +285,64 @@ pub(crate) enum Violation {
 
 impl Violation {
     /// Pretty-print the violation into a single human-readable line.
-    pub(crate) fn render(&self) -> String {
+    pub(crate) fn render(&self, palette: Palette) -> String {
+        let hermeticity = "hermeticity violation";
+        let reproducibility = "reproducibility violation";
+        let unknown = "reproducibility unknown";
+        let at = |action: &ActionRef| palette.action(&action.to_string());
+        let found = |text: &str| palette.finding(text);
+
         match self {
             Violation::EnvironmentLeak {
                 action,
                 source,
                 sentinel,
                 site,
-            } => match site {
-                LeakSite::Argument { value } => format!(
-                    "hermeticity violation: {source} leaked into an argument of {action} \
-                     (found sentinel {sentinel:?} in argument {value:?})",
-                    source = source.as_str(),
-                ),
-                LeakSite::ParamFile { exec_path, value } => format!(
-                    "hermeticity violation: {source} leaked into param file {exec_path:?} \
-                     of {action} (found sentinel {sentinel:?} in line {value:?})",
-                    source = source.as_str(),
-                ),
-                LeakSite::EnvVar { key, value } => format!(
-                    "hermeticity violation: {source} leaked into environment variable \
-                     {key:?} of {action} (found sentinel {sentinel:?} in value {value:?})",
-                    source = source.as_str(),
-                ),
-            },
+            } => {
+                let source = found(source.as_str());
+                let action = at(action);
+                match site {
+                    LeakSite::Argument { value } => format!(
+                        "{hermeticity}: {source} leaked into an argument of \
+                         {action} (found sentinel {sentinel:?} in argument \
+                         {value:?})",
+                    ),
+                    LeakSite::ParamFile { exec_path, value } => format!(
+                        "{hermeticity}: {source} leaked into param file \
+                         {exec_path:?} of {action} (found sentinel \
+                         {sentinel:?} in line {value:?})",
+                    ),
+                    LeakSite::EnvVar { key, value } => format!(
+                        "{hermeticity}: {source} leaked into environment \
+                         variable {key:?} of {action} (found sentinel \
+                         {sentinel:?} in value {value:?})",
+                    ),
+                }
+            }
             Violation::BadPath { action, actual } => format!(
-                "hermeticity violation: {action} sets PATH to {actual:?}, expected {EXPECTED_PATH:?}",
+                "{hermeticity}: {} sets PATH to {}, expected {EXPECTED_PATH:?}",
+                at(action),
+                found(&format!("{actual:?}")),
             ),
-            Violation::AbsolutePath { action, path, site } => match site {
-                LeakSite::Argument { value } => format!(
-                    "hermeticity violation: {action} references absolute path {path:?} \
-                     in argument {value:?}",
-                ),
-                LeakSite::ParamFile { exec_path, value } => format!(
-                    "hermeticity violation: {action} references absolute path {path:?} \
-                     in param file {exec_path:?} (line {value:?})",
-                ),
-                LeakSite::EnvVar { key, value } => format!(
-                    "hermeticity violation: {action} references absolute path {path:?} \
-                     in environment variable {key:?} (value {value:?})",
-                ),
-            },
+            Violation::AbsolutePath { action, path, site } => {
+                let action = at(action);
+                let path = found(&format!("{path:?}"));
+                match site {
+                    LeakSite::Argument { value } => format!(
+                        "{hermeticity}: {action} references absolute path \
+                         {path} in argument {value:?}",
+                    ),
+                    LeakSite::ParamFile { exec_path, value } => format!(
+                        "{hermeticity}: {action} references absolute path \
+                         {path} in param file {exec_path:?} (line {value:?})",
+                    ),
+                    LeakSite::EnvVar { key, value } => format!(
+                        "{hermeticity}: {action} references absolute path \
+                         {path} in environment variable {key:?} \
+                         (value {value:?})",
+                    ),
+                }
+            }
             // Programs render through their `Display`
             // (`@rules_rust//util/…`) rather than their `Debug`, then quote
             // that as a whole.
@@ -329,20 +351,22 @@ impl Violation {
                 program,
                 wrappers,
             } => format!(
-                "hermeticity violation: {action} runs program {:?}{}, which comes \
-                 from outside the build",
-                program.to_string(),
-                provenance(wrappers, None),
+                "{hermeticity}: {} runs program {}{}, which comes from \
+                 outside the build",
+                at(action),
+                found(&format!("{:?}", program.to_string())),
+                provenance(wrappers, None, palette),
             ),
             Violation::UnknownProgram {
                 action,
                 program,
                 wrappers,
             } => format!(
-                "reproducibility unknown: {action} runs program {:?}{}, which has no \
-                 known reproducibility spec",
-                program.to_string(),
-                provenance(wrappers, None),
+                "{unknown}: {} runs program {}{}, which has no known \
+                 reproducibility spec",
+                at(action),
+                found(&format!("{:?}", program.to_string())),
+                provenance(wrappers, None, palette),
             ),
             Violation::NeverReproducible {
                 action,
@@ -350,10 +374,11 @@ impl Violation {
                 wrappers,
                 synonym,
             } => format!(
-                "reproducibility violation: {action} runs program {:?}{}, which is never \
+                "{reproducibility}: {} runs program {}{}, which is never \
                  reproducible",
-                program.to_string(),
-                provenance(wrappers, synonym.as_ref()),
+                at(action),
+                found(&format!("{:?}", program.to_string())),
+                provenance(wrappers, synonym.as_ref(), palette),
             ),
             Violation::ConditionalReproducibility {
                 action,
@@ -366,19 +391,22 @@ impl Violation {
                 let mut reasons = Vec::new();
                 if !missing_required.is_empty() {
                     reasons.push(format!(
-                        "missing required flag(s) {missing_required:?}"
+                        "missing required flag(s) {}",
+                        found(&format!("{missing_required:?}")),
                     ));
                 }
                 if !present_breaking.is_empty() {
                     reasons.push(format!(
-                        "present breaking flag(s) {present_breaking:?}"
+                        "present breaking flag(s) {}",
+                        found(&format!("{present_breaking:?}")),
                     ));
                 }
                 format!(
-                    "reproducibility violation: {action} runs program {:?}{} \
+                    "{reproducibility}: {} runs program {}{} \
                      non-reproducibly: {}",
-                    program.to_string(),
-                    provenance(wrappers, synonym.as_ref()),
+                    at(action),
+                    found(&format!("{:?}", program.to_string())),
+                    provenance(wrappers, synonym.as_ref(), palette),
                     reasons.join("; "),
                 )
             }
@@ -388,7 +416,7 @@ impl Violation {
 
 impl std::fmt::Display for Violation {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        f.write_str(&self.render())
+        f.write_str(&self.render(Palette::plain()))
     }
 }
 
@@ -1054,7 +1082,7 @@ mod tests {
             },
             actual: "/bin".to_owned(),
         };
-        let rendered = v.render();
+        let rendered = v.render(Palette::plain());
         assert!(
             rendered.contains("CppCompile action for target //test:t3"),
             "{rendered}"
@@ -1449,7 +1477,7 @@ mod tests {
                 "util/process_wrapper/process_wrapper",
             )],
         };
-        let r = v.render();
+        let r = v.render(Palette::plain());
         // The verdict is about the wrapped command, and says so.
         assert!(
             r.contains(
@@ -1549,7 +1577,7 @@ mod tests {
             program: ProgramId::of("/bin/bash"),
             wrappers: Vec::new(),
         };
-        let r = v.render();
+        let r = v.render(Palette::plain());
         assert!(r.contains(r#"program "/bin/bash""#), "{r}");
         assert!(r.contains("outside the build"), "{r}");
         // Not framed as a missing spec.
@@ -1910,7 +1938,7 @@ mod tests {
                 value: "-L/opt/lib".to_owned(),
             },
         };
-        let r = v.render();
+        let r = v.render(Palette::plain());
         assert!(r.contains(r#"param file "out/foo.params""#), "{r}");
         assert!(r.contains(r#"line "-L/opt/lib""#), "{r}");
     }
@@ -1931,7 +1959,7 @@ mod tests {
             wrappers: Vec::new(),
             synonym: None,
         };
-        let r = v.render();
+        let r = v.render(Palette::plain());
         assert!(r.contains("Genrule action for target //test:t4"), "{r}");
         assert!(r.contains(r#"program "date""#), "{r}");
         assert!(r.contains("never"), "{r}");
@@ -1959,7 +1987,7 @@ mod tests {
             wrappers: Vec::new(),
             synonym: Some(clang),
         };
-        let r = v.render();
+        let r = v.render(Palette::plain());
         // Both the program that ran and the one whose spec judged it.
         assert!(
             r.contains(
@@ -1987,7 +2015,7 @@ mod tests {
             ),
             wrappers: Vec::new(),
         };
-        let r = v.render();
+        let r = v.render(Palette::plain());
         assert!(
             r.contains(r#"program "@rules_rust//util/process_wrapper/process_wrapper""#),
             "{r}"
@@ -2008,7 +2036,7 @@ mod tests {
             missing_required: vec!["--deterministic".to_owned()],
             present_breaking: vec!["--timestamp".to_owned()],
         };
-        let r = v.render();
+        let r = v.render(Palette::plain());
         assert!(r.contains(r#"program "gcc""#), "{r}");
         assert!(r.contains("missing required flag(s)"), "{r}");
         assert!(r.contains("--deterministic"), "{r}");
@@ -2029,7 +2057,7 @@ mod tests {
             missing_required: vec!["--sorted".to_owned()],
             present_breaking: vec![],
         };
-        let r = v.render();
+        let r = v.render(Palette::plain());
         assert!(r.contains("missing required flag(s)"), "{r}");
         // No breaking reason when the list is empty.
         assert!(!r.contains("breaking"), "{r}");

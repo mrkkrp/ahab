@@ -6,3 +6,4 @@ pub mod cli;
 mod melville;
 mod param_files;
 mod reproducibility_spec;
+mod terminal_color;
