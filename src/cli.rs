@@ -5,7 +5,7 @@ use std::path::{Path, PathBuf};
 
 use anyhow::{Context, Result, bail};
 use clap::Parser;
-use serde::Serialize;
+use serde::{Deserialize, Serialize};
 
 use crate::aquery::{random_token, run_aquery};
 
@@ -26,8 +26,11 @@ pub struct Cli {
     pub configs: Vec<String>,
 
     /// The Bazel label or wildcard to query (e.g. `//foo:bar` or `//...`).
-    #[arg(value_name = "LABEL")]
-    pub label: String,
+    ///
+    /// Not needed with `--explain-json`, which reads a saved report rather
+    /// than querying Bazel.
+    #[arg(value_name = "LABEL", required_unless_present = "explain_json")]
+    pub label: Option<String>,
 
     /// Print every action we analyze (useful for debugging). Other parts of
     /// the parsed action graph are omitted, as the checks don't use them.
@@ -42,6 +45,14 @@ pub struct Cli {
     /// usual output on the screen.
     #[arg(long = "write-json", value_name = "FILENAME")]
     pub write_json: Option<PathBuf>,
+
+    /// Print the report from a JSON file written earlier by `--write-json`,
+    /// instead of analyzing anything.
+    ///
+    /// Bazel is not consulted, so no label is needed and the other options
+    /// are ignored—except `--shut-up`, which still suppresses the quote.
+    #[arg(long = "explain-json", value_name = "FILENAME")]
+    pub explain_json: Option<PathBuf>,
 }
 
 impl Cli {
@@ -49,11 +60,18 @@ impl Cli {
     /// environment, run the pure hermeticity checks over it, and turn any
     /// violations into a non-zero exit.
     pub fn run(&self) -> Result<()> {
+        if let Some(path) = &self.explain_json {
+            let path =
+                resolve_output_path(path, invocation_dir().as_deref());
+            return self.report(&read_json(&path)?);
+        }
+
         let user = random_token("ahab-user");
         let hostname = random_token("ahab-host");
         let env =
             [("USER", user.as_str()), ("HOSTNAME", hostname.as_str())];
-        let container = run_aquery(&self.configs, &self.label, &env)?;
+        let label = self.label.as_deref().unwrap_or_default();
+        let container = run_aquery(&self.configs, label, &env)?;
 
         // For debugging, dump every action we're about to analyze. We print
         // only the actions; the other parts of the container aren't used by
@@ -75,8 +93,17 @@ impl Cli {
             write_json(&path, &violations)?;
         }
 
+        self.report(&violations)
+    }
+
+    /// Print a set of violations and turn a non-empty one into a non-zero
+    /// exit.
+    fn report(
+        &self,
+        violations: &BTreeMap<Violation, usize>,
+    ) -> Result<()> {
         if !violations.is_empty() {
-            bail!("{}", report_violations(&violations, !self.shut_up));
+            bail!("{}", report_violations(violations, !self.shut_up));
         }
 
         println!("All hermeticity checks passed.");
@@ -103,12 +130,12 @@ fn resolve_output_path(path: &Path, base: Option<&Path>) -> PathBuf {
 
 /// One violation as it appears in the JSON report: the violation's own
 /// fields, plus how many times it occurred.
-#[derive(Debug, Serialize)]
-struct CountedViolation<'a> {
+#[derive(Debug, Serialize, Deserialize)]
+struct CountedViolation {
     /// How many times this exact violation occurred.
     count: usize,
     /// The violation itself.
-    violation: &'a Violation,
+    violation: Violation,
 }
 
 /// The whole JSON document.
@@ -116,10 +143,29 @@ struct CountedViolation<'a> {
 /// An object with a named field rather than a bare array, so that later
 /// additions—a schema version, the label queried, a summary—do not change
 /// the type of the top-level value and break every consumer.
-#[derive(Debug, Serialize)]
-struct JsonReport<'a> {
+#[derive(Debug, Serialize, Deserialize)]
+struct JsonReport {
     /// Distinct violations, in the same order as the printed report.
-    violations: Vec<CountedViolation<'a>>,
+    violations: Vec<CountedViolation>,
+}
+
+/// Read a report written earlier by [`write_json`].
+fn read_json(path: &Path) -> Result<BTreeMap<Violation, usize>> {
+    let text = std::fs::read_to_string(path).with_context(|| {
+        format!("failed to read JSON report from {}", path.display())
+    })?;
+    let report: JsonReport =
+        serde_json::from_str(&text).with_context(|| {
+            format!("{} is not a report Ahab wrote", path.display())
+        })?;
+
+    let mut violations = BTreeMap::new();
+    for counted in report.violations {
+        // Summed rather than overwritten: a hand-edited file listing the
+        // same violation twice should report the total, not the last one.
+        *violations.entry(counted.violation).or_insert(0) += counted.count;
+    }
+    Ok(violations)
 }
 
 /// Write `violations` to `path` as indented JSON, replacing any existing
@@ -133,7 +179,7 @@ fn write_json(
             .iter()
             .map(|(violation, count)| CountedViolation {
                 count: *count,
-                violation,
+                violation: violation.clone(),
             })
             .collect(),
     };
@@ -195,7 +241,8 @@ fn report_violations(
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::checks::{ActionRef, LeakSite, Violation};
+    use crate::checks::{ActionRef, EnvSource, LeakSite, Violation};
+    use crate::reproducibility_spec::program_id::ProgramId;
 
     fn bad_path(mnemonic: &str, target_id: u32, actual: &str) -> Violation {
         Violation::BadPath {
@@ -259,6 +306,131 @@ mod tests {
             resolve_output_path(Path::new("out.json"), None),
             PathBuf::from("out.json"),
         );
+    }
+
+    #[test]
+    fn a_written_report_reads_back_unchanged() {
+        // The property `--explain-json` rests on: what comes back is the
+        // same value that was written, so it renders identically.
+        let violations: BTreeMap<Violation, usize> = [
+            (bad_path("CppCompile", 1, "/bin"), 342),
+            (
+                Violation::AbsolutePath {
+                    action: ActionRef {
+                        mnemonic: String::new(),
+                        target: "//test:t2".to_owned(),
+                    },
+                    path: "/usr/include".to_owned(),
+                    site: LeakSite::ParamFile {
+                        exec_path: "out/foo.params".to_owned(),
+                        // Quotes and newlines: the round trip has to
+                        // survive the arguments real actions carry.
+                        value: "-I/usr/include -D__X__=\"y\"\nnext"
+                            .to_owned(),
+                    },
+                },
+                7,
+            ),
+        ]
+        .into_iter()
+        .collect();
+
+        let path = scratch("roundtrip.json");
+        write_json(&path, &violations).expect("write should succeed");
+        let read = read_json(&path).expect("read should succeed");
+
+        assert_eq!(read, violations);
+        assert_eq!(
+            report_violations(&read, false),
+            report_violations(&violations, false),
+        );
+    }
+
+    #[test]
+    fn every_violation_kind_survives_the_round_trip() {
+        // Each variant is tagged separately, so each can break separately.
+        let program = ProgramId::of("external/llvm+/bin/clang");
+        let wrappers = vec![ProgramId::module(
+            "rules_rust",
+            "util/process_wrapper/pw",
+        )];
+        let action = ActionRef {
+            mnemonic: "A".to_owned(),
+            target: "//test:t1".to_owned(),
+        };
+        let violations = once([
+            Violation::EnvironmentLeak {
+                action: action.clone(),
+                source: EnvSource::Hostname,
+                sentinel: "s".to_owned(),
+                site: LeakSite::EnvVar {
+                    key: "K".to_owned(),
+                    value: "v".to_owned(),
+                },
+            },
+            bad_path("A", 1, "/bin"),
+            Violation::AbsolutePath {
+                action: action.clone(),
+                path: "/x".to_owned(),
+                site: LeakSite::Argument {
+                    value: "-I/x".to_owned(),
+                },
+            },
+            Violation::SystemProgram {
+                action: action.clone(),
+                program: ProgramId::of("/bin/bash"),
+                wrappers: Vec::new(),
+            },
+            Violation::UnknownProgram {
+                action: action.clone(),
+                program: program.clone(),
+                wrappers: wrappers.clone(),
+            },
+            Violation::NeverReproducible {
+                action: action.clone(),
+                program: program.clone(),
+                wrappers: wrappers.clone(),
+                synonym: Some(ProgramId::module("m", "bin/other")),
+            },
+            Violation::ConditionalReproducibility {
+                action,
+                program,
+                wrappers,
+                synonym: None,
+                missing_required: vec!["--deterministic".to_owned()],
+                present_breaking: vec!["--timestamp".to_owned()],
+            },
+        ]);
+
+        let path = scratch("kinds.json");
+        write_json(&path, &violations).expect("write should succeed");
+        assert_eq!(
+            read_json(&path).expect("read should succeed"),
+            violations
+        );
+    }
+
+    #[test]
+    fn reading_a_file_that_is_not_a_report_says_so() {
+        let path = scratch("garbage.json");
+        std::fs::write(&path, "{\"something\": 1}").unwrap();
+        let message = read_json(&path).unwrap_err().to_string();
+        assert!(
+            message.contains("is not a report Ahab wrote"),
+            "{message}"
+        );
+    }
+
+    #[test]
+    fn reading_a_missing_file_names_it() {
+        let path = scratch("does-not-exist.json");
+        let _ = std::fs::remove_file(&path);
+        let message = read_json(&path).unwrap_err().to_string();
+        assert!(
+            message.contains("failed to read JSON report"),
+            "{message}"
+        );
+        assert!(message.contains("does-not-exist.json"), "{message}");
     }
 
     #[test]

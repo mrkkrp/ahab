@@ -145,12 +145,22 @@
 //! is a question about the shape of [`super::ReproducibilitySpec`], not
 //! about identity.
 
-use serde::Serialize;
+use serde::{Deserialize, Serialize};
 
 use std::fmt;
 
 /// Where a program comes from, with unstable naming normalized away.
-#[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Hash, Serialize)]
+#[derive(
+    Debug,
+    Clone,
+    PartialEq,
+    Eq,
+    PartialOrd,
+    Ord,
+    Hash,
+    Serialize,
+    Deserialize,
+)]
 #[serde(rename_all = "snake_case")]
 pub enum Origin {
     /// The main repository—the workspace being analyzed. `extension` is set
@@ -177,7 +187,17 @@ pub enum Origin {
 }
 
 /// A stable key identifying the program an action runs.
-#[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Hash, Serialize)]
+#[derive(
+    Debug,
+    Clone,
+    PartialEq,
+    Eq,
+    PartialOrd,
+    Ord,
+    Hash,
+    Serialize,
+    Deserialize,
+)]
 pub struct ProgramId {
     /// The repository the program comes from.
     pub origin: Origin,
