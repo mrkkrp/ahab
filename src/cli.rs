@@ -17,7 +17,8 @@ use crate::melville;
 #[command(
     name = "ahab",
     about = "Advanced hermeticity analyzer for Bazel",
-    version
+    version,
+    max_term_width = 76
 )]
 pub struct Cli {
     /// A `--config=<name>` to forward to `bazel aquery`. May be repeated

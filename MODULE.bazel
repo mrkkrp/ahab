@@ -43,7 +43,10 @@ register_toolchains("@rust_toolchains//:all")
 crate = use_extension("@rules_rust//crate_universe:extensions.bzl", "crate")
 crate.spec(
     package = "clap",
-    features = ["derive"],
+    features = [
+        "derive",
+        "wrap_help",
+    ],
     version = "4",
 )
 crate.spec(
