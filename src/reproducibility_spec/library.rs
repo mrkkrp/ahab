@@ -1,24 +1,31 @@
-//! The hardcoded library of known [`ReproducibilitySpec`]s, keyed by
-//! program.
+//! What Ahab knows about reproducibility of the programs a build runs,
+//! keyed by [`ProgramId`].
 
-use std::collections::HashMap;
-use std::sync::OnceLock;
+use std::collections::{BTreeMap, BTreeSet, HashMap};
 
-use super::ReproducibilitySpec;
+use serde::Deserialize;
+
 use super::program_id::{Origin, ProgramId};
+use super::{Reproducibility, ReproducibilitySpec};
 
 /// What the library knows about one program.
-#[allow(dead_code)]
+///
+/// An entry either answers the reproducibility question for that program or
+/// says where to ask it instead—of another program, or of the command this
+/// one turns out to run.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum Entry {
-    /// The program has its own spec.
+    /// The program's own reproducibility.
     Spec(ReproducibilitySpec),
-    /// The program is reproducible under exactly the same conditions as
-    /// this other program. Look that one up instead.
+    /// The program is reproducible under exactly the conditions of this
+    /// other one.
+    ///
+    /// A claim about behavior, not identity: `clang++` may be declared the
+    /// same as `clang` without being the same binary. What the action
+    /// actually ran is still what gets reported.
     SameAs(ProgramId),
-    /// The program is a wrapper: it runs another program named in its own
-    /// arguments, and its reproducibility is that of the wrapped command.
-    /// The [`Transition`] says where in the arguments to find it.
+    /// The program runs another, named in its own arguments, and is as
+    /// reproducible as whatever that turns out to be.
     Wraps(Transition),
 }
 
@@ -82,12 +89,6 @@ fn entries() -> Vec<(ProgramId, Entry)> {
     ]
 }
 
-/// The library, indexed by program. Built from [`entries`] on first use.
-fn library() -> &'static HashMap<ProgramId, Entry> {
-    static LIBRARY: OnceLock<HashMap<ProgramId, Entry>> = OnceLock::new();
-    LIBRARY.get_or_init(|| entries().into_iter().collect())
-}
-
 /// What an action's command line turned out to be, once wrappers have been
 /// unwrapped and synonyms followed.
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -104,81 +105,200 @@ pub struct Resolution<'a> {
     /// The spec answering for [`program`](Self::program), with the program
     /// that carried it—the same one unless a synonym was followed. `None`
     /// when the library knows nothing about it.
-    pub spec: Option<(&'static ProgramId, &'static ReproducibilitySpec)>,
+    pub spec: Option<(ProgramId, ReproducibilitySpec)>,
 }
 
 impl Resolution<'_> {
     /// The program whose spec judged [`program`](Self::program), when that
     /// is a different one—i.e. when a synonym was followed. `None` when the
     /// program answered for itself, or when there is no spec at all.
-    ///
-    /// The distinction is worth reporting: a verdict reached through a
-    /// synonym is only as good as the claim that the two behave alike.
-    pub fn synonym(&self) -> Option<&'static ProgramId> {
+    pub fn synonym(&self) -> Option<&ProgramId> {
         self.spec
+            .as_ref()
             .map(|(carrier, _)| carrier)
             .filter(|carrier| **carrier != self.program)
     }
 }
 
-/// Resolve what an action really runs, from its program and `argv[1..]`.
-pub fn resolve(program: ProgramId, args: Vec<&str>) -> Resolution<'_> {
-    resolve_in(library(), program, args)
+/// What Ahab knows about programs: the built-in entries, plus whatever a
+/// project has added.
+#[derive(Debug, Clone, Default)]
+pub struct Library {
+    entries: HashMap<ProgramId, Entry>,
 }
 
-/// Resolve against a given library, so tests can inject synthetic ones.
-fn resolve_in<'a>(
-    library: &'static HashMap<ProgramId, Entry>,
-    program: ProgramId,
-    args: Vec<&'a str>,
-) -> Resolution<'a> {
-    let mut program = program;
-    let mut key = program.clone();
-    let mut args = args;
-    let mut wrappers = Vec::new();
-
-    for _ in 0..MAX_RESOLUTION_STEPS {
-        // A program from outside the build is a verdict in itself, and
-        // unwrapping it would be pretending we know what it does: `bash -c`
-        // runs a whole script, not a single command.
-        if program.origin == Origin::System {
-            break;
-        }
-
-        let Some((found, entry)) = library.get_key_value(&key) else {
-            break;
-        };
-
-        match entry {
-            Entry::Spec(spec) => {
-                return Resolution {
-                    program,
-                    args,
-                    wrappers,
-                    spec: Some((found, spec)),
-                };
-            }
-            Entry::SameAs(target) => key = target.clone(),
-            Entry::Wraps(transition) => {
-                let Some((wrapped, rest)) = transition.apply(&args) else {
-                    // The rule did not fire, so we cannot say what ran.
-                    // Leaving the wrapper in place reports it as unknown.
-                    break;
-                };
-                wrappers.push(program);
-                program = ProgramId::of(wrapped);
-                key = program.clone();
-                args = rest;
-            }
+impl Library {
+    /// The library Ahab ships with.
+    pub fn builtin() -> Library {
+        Library {
+            entries: entries().into_iter().collect(),
         }
     }
 
-    Resolution {
-        program,
-        args,
-        wrappers,
-        spec: None,
+    /// Add entries, replacing any already present for the same program.
+    ///
+    /// Later entries win, so a project can override what Ahab believes
+    /// about a program, and a file given later on the command line
+    /// overrides one given earlier.
+    pub fn extend(
+        &mut self,
+        entries: impl IntoIterator<Item = (ProgramId, Entry)>,
+    ) {
+        self.entries.extend(entries);
     }
+
+    /// Resolve what an action really runs, from its program and `argv[1..]`.
+    ///
+    /// Follows [`Entry::Wraps`] transitions through wrappers and
+    /// [`Entry::SameAs`] links through synonyms until reaching a program
+    /// that carries a spec, is unknown, or comes from outside the build.
+    /// Always yields a [`Resolution`]: an unknown program is a verdict for
+    /// the caller to report, not a failure here.
+    pub fn resolve<'a>(
+        &self,
+        program: ProgramId,
+        args: Vec<&'a str>,
+    ) -> Resolution<'a> {
+        let mut program = program;
+        let mut key = program.clone();
+        let mut args = args;
+        let mut wrappers = Vec::new();
+
+        for _ in 0..MAX_RESOLUTION_STEPS {
+            // A program from outside the build is a verdict in itself, and
+            // unwrapping it would be pretending we know what it does:
+            // `bash -c` runs a whole script, not a single command.
+            if program.origin == Origin::System {
+                break;
+            }
+
+            let Some((found, entry)) = self.entries.get_key_value(&key)
+            else {
+                break;
+            };
+
+            match entry {
+                Entry::Spec(spec) => {
+                    return Resolution {
+                        program,
+                        args,
+                        wrappers,
+                        spec: Some((found.clone(), spec.clone())),
+                    };
+                }
+                Entry::SameAs(target) => key = target.clone(),
+                Entry::Wraps(transition) => {
+                    let Some((wrapped, rest)) = transition.apply(&args)
+                    else {
+                        // The rule did not fire, so we cannot say what ran.
+                        // Leaving the wrapper in place reports it unknown.
+                        break;
+                    };
+                    wrappers.push(program);
+                    program = ProgramId::of(wrapped);
+                    key = program.clone();
+                    args = rest;
+                }
+            }
+        }
+
+        Resolution {
+            program,
+            args,
+            wrappers,
+            spec: None,
+        }
+    }
+}
+
+/// The JSON form of a `--repro-specs` file: an object keyed by program.
+#[derive(Debug, Deserialize)]
+struct SpecFile {
+    /// What the file says about each program.
+    programs: BTreeMap<String, EntryFile>,
+}
+
+/// The JSON form of an [`Entry`].
+///
+/// A separate type from `Entry` so the file format is not hostage to the
+/// internal representation, and so it can be spelled the way a person would
+/// write it: `{"same_as": "@llvm+t//bin/clang"}` rather than the nesting a
+/// derived encoding of `Entry` would produce.
+#[derive(Debug, Deserialize)]
+#[serde(rename_all = "snake_case")]
+enum EntryFile {
+    /// The program's own reproducibility.
+    Spec(SpecFields),
+    /// The program is judged by another program's spec.
+    SameAs(String),
+    /// The program runs another named in its arguments.
+    Wraps(TransitionFile),
+}
+
+/// The JSON form of a [`ReproducibilitySpec`].
+#[derive(Debug, Deserialize)]
+struct SpecFields {
+    /// The baseline disposition.
+    reproducibility: Reproducibility,
+    /// Flags required for the program to be reproducible.
+    #[serde(default)]
+    required_flags: BTreeSet<String>,
+    /// Flags that break its reproducibility.
+    #[serde(default)]
+    breaking_flags: BTreeSet<String>,
+    /// Arguments that stand for a different option, as `argument -> option`.
+    /// Anything unlisted stands for itself.
+    #[serde(default)]
+    recognize: BTreeMap<String, String>,
+}
+
+/// The JSON form of a [`Transition`].
+#[derive(Debug, Deserialize)]
+#[serde(rename_all = "snake_case")]
+enum TransitionFile {
+    /// The wrapped command follows this separator.
+    AfterSeparator(String),
+}
+
+/// Parse the entries a `--repro-specs` file declares.
+///
+/// Errors name the program at fault, since a file may declare many and the
+/// serde error alone would only give a position.
+pub fn parse_entries(
+    json: &str,
+) -> Result<Vec<(ProgramId, Entry)>, String> {
+    let file: SpecFile =
+        serde_json::from_str(json).map_err(|why| why.to_string())?;
+
+    file.programs
+        .into_iter()
+        .map(|(program, entry)| {
+            let named = |what: &str, text: &str| {
+                text.parse::<ProgramId>()
+                    .map_err(|why| format!("{program}: {what}: {why}"))
+            };
+            let id = named("program", &program)?;
+            let entry = match entry {
+                EntryFile::Spec(fields) => Entry::Spec(
+                    ReproducibilitySpec::new(
+                        fields.reproducibility,
+                        fields.required_flags,
+                        fields.breaking_flags,
+                    )
+                    .with_translations(fields.recognize),
+                ),
+                EntryFile::SameAs(target) => {
+                    Entry::SameAs(named("same_as", &target)?)
+                }
+                EntryFile::Wraps(TransitionFile::AfterSeparator(
+                    separator,
+                )) => {
+                    Entry::Wraps(Transition::AfterSeparator { separator })
+                }
+            };
+            Ok((id, entry))
+        })
+        .collect()
 }
 
 #[cfg(test)]
@@ -202,28 +322,27 @@ mod tests {
         )
     }
 
-    /// Index entries into a library with the `'static` lifetime the real one
-    /// has. Leaks, which costs nothing in a test binary.
-    fn index(
-        entries: Vec<(ProgramId, Entry)>,
-    ) -> &'static HashMap<ProgramId, Entry> {
-        Box::leak(Box::new(entries.into_iter().collect()))
+    /// A library holding exactly these entries and nothing built in.
+    fn index(entries: Vec<(ProgramId, Entry)>) -> Library {
+        let mut library = Library::default();
+        library.extend(entries);
+        library
     }
 
     /// Resolve with no arguments, for tests that only care about programs.
     fn resolve_bare<'a>(
-        library: &'static HashMap<ProgramId, Entry>,
+        library: &Library,
         program: &ProgramId,
     ) -> Resolution<'a> {
-        resolve_in(library, program.clone(), Vec::new())
+        library.resolve(program.clone(), Vec::new())
     }
 
     /// The spec a synthetic library gives `program`, if any.
     fn spec_for(
-        library: &'static HashMap<ProgramId, Entry>,
+        library: &Library,
         program: &ProgramId,
     ) -> Option<ReproducibilitySpec> {
-        resolve_bare(library, program).spec.map(|(_, s)| s.clone())
+        resolve_bare(library, program).spec.map(|(_, spec)| spec)
     }
 
     // Stand-in programs for the resolution tests.
@@ -251,12 +370,14 @@ mod tests {
     #[test]
     fn library_is_empty_so_everything_is_unknown() {
         assert!(
-            resolve(ProgramId::of("/usr/bin/gcc"), vec![])
+            Library::builtin()
+                .resolve(ProgramId::of("/usr/bin/gcc"), vec![])
                 .spec
                 .is_none()
         );
         assert!(
-            resolve(ProgramId::of("external/llvm+/bin/clang"), vec![])
+            Library::builtin()
+                .resolve(ProgramId::of("external/llvm+/bin/clang"), vec![])
                 .spec
                 .is_none()
         );
@@ -311,13 +432,13 @@ mod tests {
     #[test]
     fn a_program_with_its_own_spec_resolves_to_it() {
         let library = index(vec![(a(), Entry::Spec(always()))]);
-        assert_eq!(spec_for(library, &a()), Some(always()));
+        assert_eq!(spec_for(&library, &a()), Some(always()));
     }
 
     #[test]
     fn an_unknown_program_resolves_to_no_spec() {
         let library = index(vec![(a(), Entry::Spec(always()))]);
-        assert_eq!(spec_for(library, &b()), None);
+        assert_eq!(spec_for(&library, &b()), None);
     }
 
     #[test]
@@ -326,9 +447,9 @@ mod tests {
             (a(), Entry::Spec(never())),
             (b(), Entry::SameAs(a())),
         ]);
-        assert_eq!(spec_for(library, &b()), Some(never()));
+        assert_eq!(spec_for(&library, &b()), Some(never()));
         // And the alias did not disturb the program it points at.
-        assert_eq!(spec_for(library, &a()), Some(never()));
+        assert_eq!(spec_for(&library, &a()), Some(never()));
     }
 
     #[test]
@@ -338,13 +459,13 @@ mod tests {
             (b(), Entry::SameAs(a())),
             (c(), Entry::SameAs(b())),
         ]);
-        assert_eq!(spec_for(library, &c()), Some(always()));
+        assert_eq!(spec_for(&library, &c()), Some(always()));
     }
 
     #[test]
     fn a_synonym_pointing_nowhere_resolves_to_no_spec() {
         let library = index(vec![(b(), Entry::SameAs(a()))]);
-        assert_eq!(spec_for(library, &b()), None);
+        assert_eq!(spec_for(&library, &b()), None);
     }
 
     #[test]
@@ -353,7 +474,7 @@ mod tests {
             (a(), Entry::SameAs(b())),
             (b(), Entry::SameAs(a())),
         ]);
-        assert_eq!(spec_for(library, &a()), None);
+        assert_eq!(spec_for(&library, &a()), None);
     }
 
     #[test]
@@ -366,22 +487,22 @@ mod tests {
             (a(), Entry::Spec(always())),
             (b(), Entry::SameAs(a())),
         ]);
-        let resolved = resolve_bare(library, &b());
+        let resolved = resolve_bare(&library, &b());
         assert_eq!(resolved.program, b());
-        assert_eq!(resolved.spec.map(|(carrier, _)| carrier), Some(&a()));
         assert_eq!(resolved.synonym(), Some(&a()));
+        assert_eq!(resolved.spec.map(|(carrier, _)| carrier), Some(a()));
     }
 
     #[test]
     fn a_program_with_its_own_spec_reports_no_synonym() {
         let library = index(vec![(a(), Entry::Spec(always()))]);
-        assert_eq!(resolve_bare(library, &a()).synonym(), None);
+        assert_eq!(resolve_bare(&library, &a()).synonym(), None);
     }
 
     #[test]
     fn an_unknown_program_reports_no_synonym() {
         let library = index(vec![(b(), Entry::SameAs(a()))]);
-        assert_eq!(resolve_bare(library, &b()).synonym(), None);
+        assert_eq!(resolve_bare(&library, &b()).synonym(), None);
     }
 
     // ---- wrappers ----
@@ -394,8 +515,7 @@ mod tests {
             (a(), wraps_after_dashdash()),
             (b(), Entry::Spec(never())),
         ]);
-        let resolved = resolve_in(
-            library,
+        let resolved = library.resolve(
             a(),
             vec!["--arg-file", "x", "--", "external/b+/bin/b", "--opt"],
         );
@@ -410,8 +530,7 @@ mod tests {
         // Everything before the separator belongs to the wrapper, and must
         // not be mistaken for a flag of the wrapped program.
         let library = index(vec![(a(), wraps_after_dashdash())]);
-        let resolved = resolve_in(
-            library,
+        let resolved = library.resolve(
             a(),
             vec!["--subst", "pwd=x", "--", "external/b+/bin/b"],
         );
@@ -426,8 +545,7 @@ mod tests {
             (b(), wraps_after_dashdash()),
             (c(), Entry::Spec(always())),
         ]);
-        let resolved = resolve_in(
-            library,
+        let resolved = library.resolve(
             a(),
             vec![
                 "--",
@@ -447,7 +565,7 @@ mod tests {
         // The reason this matters: without unwrapping, a wrapper hides the
         // fact that the action ultimately shells out to a host tool.
         let library = index(vec![(a(), wraps_after_dashdash())]);
-        let resolved = resolve_in(library, a(), vec!["--", "/usr/bin/gcc"]);
+        let resolved = library.resolve(a(), vec!["--", "/usr/bin/gcc"]);
         assert_eq!(resolved.program.origin, Origin::System);
         assert_eq!(resolved.wrappers, vec![a()]);
         assert!(resolved.spec.is_none());
@@ -458,7 +576,7 @@ mod tests {
         // No separator: we cannot say what ran, so the wrapper stays and is
         // reported as unknown rather than waved through.
         let library = index(vec![(a(), wraps_after_dashdash())]);
-        let resolved = resolve_in(library, a(), vec!["--arg-file", "x"]);
+        let resolved = library.resolve(a(), vec!["--arg-file", "x"]);
         assert_eq!(resolved.program, a());
         assert!(resolved.wrappers.is_empty());
         assert!(resolved.spec.is_none());
@@ -467,7 +585,7 @@ mod tests {
     #[test]
     fn a_separator_with_nothing_after_it_does_not_fire() {
         let library = index(vec![(a(), wraps_after_dashdash())]);
-        let resolved = resolve_in(library, a(), vec!["--"]);
+        let resolved = library.resolve(a(), vec!["--"]);
         assert_eq!(resolved.program, a());
         assert!(resolved.spec.is_none());
     }
@@ -479,11 +597,8 @@ mod tests {
             (a(), wraps_after_dashdash()),
             (b(), Entry::Spec(always())),
         ]);
-        let resolved = resolve_in(
-            library,
-            a(),
-            vec!["--", "external/b+/bin/b", "--", "tail"],
-        );
+        let resolved = library
+            .resolve(a(), vec!["--", "external/b+/bin/b", "--", "tail"]);
         assert_eq!(resolved.program, ProgramId::of("external/b+/bin/b"));
         assert_eq!(resolved.args, vec!["--", "tail"]);
     }
@@ -497,7 +612,7 @@ mod tests {
             std::iter::repeat_n(["--", "external/a+/bin/a"], 40)
                 .flatten()
                 .collect();
-        let resolved = resolve_in(library, a(), args);
+        let resolved = library.resolve(a(), args);
         assert!(resolved.spec.is_none());
     }
 }

@@ -9,7 +9,8 @@ use crate::param_files::{
     ArgSource, Sourced, analyzable_strings, expanded_command_line,
 };
 use crate::reproducibility_spec::{
-    Conformance, hardcoded,
+    Conformance,
+    library::Library,
     program_id::{Origin, ProgramId},
 };
 use crate::terminal_color::Palette;
@@ -427,11 +428,12 @@ pub(crate) fn check_all(
     container: &ActionGraphContainer,
     user: &str,
     hostname: &str,
+    library: &Library,
 ) -> BTreeMap<Violation, usize> {
     let mut violations = check_environment_leaks(container, user, hostname);
     violations.extend(check_path(container));
     violations.extend(check_absolute_paths(container));
-    violations.extend(check_reproducibility(container));
+    violations.extend(check_reproducibility(container, library));
 
     let mut counted = BTreeMap::new();
     for violation in violations {
@@ -667,6 +669,7 @@ pub(crate) fn check_absolute_paths(
 /// specs.
 pub(crate) fn check_reproducibility(
     container: &ActionGraphContainer,
+    library: &Library,
 ) -> Vec<Violation> {
     let mut violations = Vec::new();
     let targets = target_labels(container);
@@ -677,7 +680,7 @@ pub(crate) fn check_reproducibility(
             continue;
         };
 
-        let resolved = hardcoded::resolve(
+        let resolved = library.resolve(
             ProgramId::of(executable.value),
             args.iter().map(|sourced| sourced.value).collect(),
         );
@@ -1427,7 +1430,7 @@ mod tests {
             1,
             &["external/llvm+/bin/clang", "-c", "foo.c"],
         )]);
-        let found = check_reproducibility(&c);
+        let found = check_reproducibility(&c, &Library::builtin());
         assert_eq!(found.len(), 1);
         assert_unknown_program(
             &found[0],
@@ -1445,7 +1448,7 @@ mod tests {
             1,
             &["/bin/bash", "-c", "true"],
         )]);
-        let found = check_reproducibility(&c);
+        let found = check_reproducibility(&c, &Library::builtin());
         assert_eq!(found.len(), 1);
         assert_eq!(
             found[0],
@@ -1531,7 +1534,7 @@ mod tests {
             &["/bin/bash", "-c", "true"],
         )]);
         assert!(check_absolute_paths(&c).is_empty());
-        assert_eq!(check_reproducibility(&c).len(), 1);
+        assert_eq!(check_reproducibility(&c, &Library::builtin()).len(), 1);
     }
 
     #[test]
@@ -1561,7 +1564,7 @@ mod tests {
         // the case the absolute-path check cannot see: there is no `/` in it.
         let c =
             container(vec![action_with_args("CppCompile", 1, &["gcc"])]);
-        let found = check_reproducibility(&c);
+        let found = check_reproducibility(&c, &Library::builtin());
         assert_eq!(found.len(), 1);
         assert!(matches!(found[0], Violation::SystemProgram { .. }));
         assert!(check_absolute_paths(&c).is_empty());
@@ -1596,7 +1599,7 @@ mod tests {
                 "bazel-out/k8-opt-exec/bin/external/rules_rust+/util/process_wrapper/process_wrapper",
             ],
         )]);
-        let found = check_reproducibility(&c);
+        let found = check_reproducibility(&c, &Library::builtin());
         assert_eq!(found.len(), 1);
         assert_unknown_program(
             &found[0],
@@ -1623,7 +1626,7 @@ mod tests {
                 "external/rules_rust++crate+crates__anyhow-1.0.104/_bs.out_dir",
             ],
         )]);
-        let found = check_reproducibility(&c);
+        let found = check_reproducibility(&c, &Library::builtin());
         match &found[0] {
             Violation::UnknownProgram { program, .. } => {
                 assert_eq!(
@@ -1644,7 +1647,7 @@ mod tests {
         // No argv[0] -> nothing to attribute a program to -> skipped.
         let c =
             container(vec![action_with_env("A", 1, &[("HOME", "/tmp")])]);
-        assert!(check_reproducibility(&c).is_empty());
+        assert!(check_reproducibility(&c, &Library::builtin()).is_empty());
     }
 
     #[test]
@@ -1653,7 +1656,7 @@ mod tests {
             action_with_args("A", 1, &["external/llvm+/bin/clang"]),
             action_with_args("B", 2, &["external/rules_rust+/util/x"]),
         ]);
-        let found = check_reproducibility(&c);
+        let found = check_reproducibility(&c, &Library::builtin());
         assert_eq!(found.len(), 2);
         assert_unknown_program(
             &found[0],
@@ -1705,6 +1708,7 @@ mod tests {
             &container(mixed_actions()),
             USER_SENTINEL,
             HOST_SENTINEL,
+            &Library::builtin(),
         );
 
         let actions = mixed_actions();
@@ -1715,7 +1719,8 @@ mod tests {
                 check_all(
                     &container(rotated),
                     USER_SENTINEL,
-                    HOST_SENTINEL
+                    HOST_SENTINEL,
+                    &Library::builtin()
                 ),
                 expected,
                 "rotating the actions by {split} changed the report",
@@ -1731,9 +1736,14 @@ mod tests {
             check_environment_leaks(&c, USER_SENTINEL, HOST_SENTINEL);
         individually.extend(check_path(&c));
         individually.extend(check_absolute_paths(&c));
-        individually.extend(check_reproducibility(&c));
+        individually.extend(check_reproducibility(&c, &Library::builtin()));
 
-        let combined = check_all(&c, USER_SENTINEL, HOST_SENTINEL);
+        let combined = check_all(
+            &c,
+            USER_SENTINEL,
+            HOST_SENTINEL,
+            &Library::builtin(),
+        );
         assert_eq!(
             combined.values().sum::<usize>(),
             individually.len(),
@@ -1775,6 +1785,7 @@ mod tests {
             &container(sibling_actions()),
             USER_SENTINEL,
             HOST_SENTINEL,
+            &Library::builtin(),
         );
 
         // `-I/opt/include` is byte-identical across the three actions, and an
@@ -1807,11 +1818,13 @@ mod tests {
             &container(sibling_actions()[..1].to_vec()),
             USER_SENTINEL,
             HOST_SENTINEL,
+            &Library::builtin(),
         );
         let three = check_all(
             &container(sibling_actions()),
             USER_SENTINEL,
             HOST_SENTINEL,
+            &Library::builtin(),
         );
 
         assert_eq!(
@@ -1915,7 +1928,7 @@ mod tests {
             &["external/llvm+/bin/clang", "@out/foo.params"],
             &[("out/foo.params", &["-O2"])],
         )]);
-        let found = check_reproducibility(&c);
+        let found = check_reproducibility(&c, &Library::builtin());
         assert_eq!(found.len(), 1);
         assert_unknown_program(
             &found[0],
@@ -1942,11 +1955,6 @@ mod tests {
         assert!(r.contains(r#"param file "out/foo.params""#), "{r}");
         assert!(r.contains(r#"line "-L/opt/lib""#), "{r}");
     }
-
-    // Rendering of the conformance-failure variants. (The end-to-end path
-    // through `check_reproducibility` for a *known* program is exercised once the
-    // hardcoded library gains specs; the conformance logic itself is covered by
-    // the `reproducibility_spec` tests. Here we pin the rendered diagnostics.)
 
     #[test]
     fn renders_never_reproducible() {
