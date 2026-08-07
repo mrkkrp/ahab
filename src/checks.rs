@@ -8,7 +8,8 @@ use crate::param_files::{
     ArgSource, Sourced, analyzable_strings, expanded_command_line,
 };
 use crate::reproducibility_spec::{
-    Conformance, hardcoded, program_id::ProgramId,
+    Conformance, hardcoded,
+    program_id::{Origin, ProgramId},
 };
 
 /// The exact value of `PATH` that every action is required to use.
@@ -183,6 +184,15 @@ pub(crate) enum Violation {
         /// text.
         site: LeakSite,
     },
+    /// An action runs a program from outside the build: named by an
+    /// absolute path, or by a bare command name left to `PATH`. Either way
+    /// the tool is whatever the machine happens to have, so the action
+    /// cannot be hermetic and no reproducibility spec could redeem it.
+    SystemProgram {
+        action: ActionRef,
+        /// The program the action runs.
+        program: ProgramId,
+    },
     /// An action runs a program for which we have no reproducibility spec,
     /// so we cannot vouch for the action's reproducibility. Reported
     /// conservatively—an unknown program is treated as a problem, not a
@@ -264,6 +274,11 @@ impl Violation {
             // Programs render through their `Display`
             // (`@rules_rust//util/…`) rather than their `Debug`, then quote
             // that as a whole.
+            Violation::SystemProgram { action, program } => format!(
+                "hermeticity violation: {action} runs program {:?}, which comes \
+                 from outside the build",
+                program.to_string(),
+            ),
             Violation::UnknownProgram { action, program } => format!(
                 "reproducibility unknown: {action} runs program {:?}, which has no \
                  known reproducibility spec",
@@ -520,7 +535,9 @@ pub(crate) fn check_absolute_paths(
     for action in &container.actions {
         // Spilling a command line into a param file must not launder an
         // absolute path out of the report, so both are scanned.
-        for sourced in analyzable_strings(action) {
+        let program = usize::from(!action.arguments.is_empty());
+        for sourced in analyzable_strings(action).into_iter().skip(program)
+        {
             for path in absolute_paths(sourced.value) {
                 if is_allowed_absolute_path(&path) {
                     continue;
@@ -570,6 +587,14 @@ pub(crate) fn check_reproducibility(
             continue;
         };
         let program = ProgramId::of(executable.value);
+
+        if program.origin == Origin::System {
+            violations.push(Violation::SystemProgram {
+                action: ActionRef::of(action, &targets),
+                program,
+            });
+            continue;
+        }
 
         let Some((carrier, spec)) = hardcoded::lookup(&program) else {
             violations.push(Violation::UnknownProgram {
@@ -1126,7 +1151,7 @@ mod tests {
         let c = container(vec![action_with_args(
             "CppCompile",
             1,
-            &["-I/usr/include"],
+            &["tool", "-I/usr/include"],
         )]);
         let found = check_absolute_paths(&c);
         assert_eq!(found.len(), 1);
@@ -1164,8 +1189,11 @@ mod tests {
 
     #[test]
     fn colon_list_argument_reports_each_path() {
-        let c =
-            container(vec![action_with_args("A", 1, &["/bin:/usr/bin"])]);
+        let c = container(vec![action_with_args(
+            "A",
+            1,
+            &["tool", "/bin:/usr/bin"],
+        )]);
         let found = check_absolute_paths(&c);
         assert_eq!(found.len(), 2);
         assert_abs_path(
@@ -1249,7 +1277,7 @@ mod tests {
         let c = container(vec![action_with_args(
             "A",
             1,
-            &["/dev/null:/opt/bin"],
+            &["tool", "/dev/null:/opt/bin"],
         )]);
         let found = check_absolute_paths(&c);
         assert_eq!(found.len(), 1);
@@ -1290,13 +1318,12 @@ mod tests {
 
     #[test]
     fn unknown_program_is_flagged_by_its_normalized_identity() {
-        // With an empty spec library every program is unknown, and the reported
-        // program is argv[0] as a rendered ProgramId. An absolute path is a
-        // system tool, so it is reported verbatim.
+        // With an empty spec library every program in the build is unknown,
+        // and the reported program is argv[0] as a rendered ProgramId.
         let c = container(vec![action_with_args(
             "CppCompile",
             1,
-            &["/usr/bin/gcc", "-c", "foo.c"],
+            &["external/llvm+/bin/clang", "-c", "foo.c"],
         )]);
         let found = check_reproducibility(&c);
         assert_eq!(found.len(), 1);
@@ -1304,8 +1331,120 @@ mod tests {
             &found[0],
             "CppCompile",
             1,
-            &ProgramId::of("/usr/bin/gcc"),
+            &ProgramId::of("external/llvm+/bin/clang"),
         );
+    }
+
+    #[test]
+    fn a_program_named_by_an_absolute_path_is_a_system_program() {
+        // No spec could redeem it, so it is not reported as merely unknown.
+        let c = container(vec![action_with_args(
+            "Genrule",
+            1,
+            &["/bin/bash", "-c", "true"],
+        )]);
+        let found = check_reproducibility(&c);
+        assert_eq!(found.len(), 1);
+        assert_eq!(
+            found[0],
+            Violation::SystemProgram {
+                action: ActionRef {
+                    mnemonic: "Genrule".to_owned(),
+                    target: test_label(1),
+                },
+                program: ProgramId::of("/bin/bash"),
+            }
+        );
+    }
+
+    #[test]
+    fn a_sentinel_in_the_program_path_is_still_a_leak() {
+        // Why the argv[0] skip belongs to `check_absolute_paths` and not to
+        // `analyzable_strings`: a toolchain configured under the invoking
+        // user's home bakes their name into argv[0], and that is exactly the
+        // leak Ahab hunts. Nothing else would report it — the accompanying
+        // SystemProgram violation says the tool is external, not that a
+        // username is embedded in its path.
+        let program = format!("/home/{USER_SENTINEL}/toolchains/bin/gcc");
+        let c =
+            container(vec![action_with_args("CppCompile", 1, &[&program])]);
+        let found = leaks(&c);
+        assert_eq!(found.len(), 1, "{found:?}");
+        assert_env_leak(
+            &found[0],
+            (
+                "CppCompile",
+                1,
+                EnvSource::User,
+                USER_SENTINEL,
+                LeakSite::Argument {
+                    value: program.clone(),
+                },
+            ),
+        );
+    }
+
+    #[test]
+    fn the_program_itself_is_not_reported_as_an_absolute_path() {
+        // Reported once, by the check that can say what is actually wrong.
+        // Flagging it here too would only repeat it, less clearly: the
+        // extracted path and the argument holding it are the same string.
+        let c = container(vec![action_with_args(
+            "Genrule",
+            1,
+            &["/bin/bash", "-c", "true"],
+        )]);
+        assert!(check_absolute_paths(&c).is_empty());
+        assert_eq!(check_reproducibility(&c).len(), 1);
+    }
+
+    #[test]
+    fn skipping_the_program_does_not_hide_later_arguments() {
+        // Only argv[0] is exempt; an absolute path anywhere after it stands.
+        let c = container(vec![action_with_args(
+            "Genrule",
+            1,
+            &["/bin/bash", "-I/usr/include"],
+        )]);
+        let found = check_absolute_paths(&c);
+        assert_eq!(found.len(), 1);
+        assert_abs_path(
+            &found[0],
+            "Genrule",
+            1,
+            "/usr/include",
+            LeakSite::Argument {
+                value: "-I/usr/include".to_owned(),
+            },
+        );
+    }
+
+    #[test]
+    fn a_bare_command_name_is_a_system_program() {
+        // Resolved through PATH, so it is whatever the machine has. This is
+        // the case the absolute-path check cannot see: there is no `/` in it.
+        let c =
+            container(vec![action_with_args("CppCompile", 1, &["gcc"])]);
+        let found = check_reproducibility(&c);
+        assert_eq!(found.len(), 1);
+        assert!(matches!(found[0], Violation::SystemProgram { .. }));
+        assert!(check_absolute_paths(&c).is_empty());
+    }
+
+    #[test]
+    fn renders_a_system_program_as_coming_from_outside_the_build() {
+        let v = Violation::SystemProgram {
+            action: ActionRef {
+                mnemonic: "Genrule".to_owned(),
+                target: test_label(1),
+            },
+            program: ProgramId::of("/bin/bash"),
+        };
+        let r = v.render();
+        assert!(r.contains(r#"program "/bin/bash""#), "{r}");
+        assert!(r.contains("outside the build"), "{r}");
+        // Not framed as a missing spec.
+        assert!(!r.contains("spec"), "{r}");
     }
 
     #[test]
@@ -1374,8 +1513,8 @@ mod tests {
     #[test]
     fn each_action_with_an_unknown_program_is_reported() {
         let c = container(vec![
-            action_with_args("A", 1, &["/usr/bin/gcc"]),
-            action_with_args("B", 2, &["clang"]),
+            action_with_args("A", 1, &["external/llvm+/bin/clang"]),
+            action_with_args("B", 2, &["external/rules_rust+/util/x"]),
         ]);
         let found = check_reproducibility(&c);
         assert_eq!(found.len(), 2);
@@ -1383,9 +1522,14 @@ mod tests {
             &found[0],
             "A",
             1,
-            &ProgramId::of("/usr/bin/gcc"),
+            &ProgramId::of("external/llvm+/bin/clang"),
         );
-        assert_unknown_program(&found[1], "B", 2, &ProgramId::of("clang"));
+        assert_unknown_program(
+            &found[1],
+            "B",
+            2,
+            &ProgramId::of("external/rules_rust+/util/x"),
+        );
     }
 
     // ---- deterministic ordering ----
@@ -1473,17 +1617,17 @@ mod tests {
             action_with_args(
                 "CppCompile",
                 1,
-                &["clang", "-I/opt/include", "a.c"],
+                &["external/llvm+/bin/clang", "-I/opt/include", "a.c"],
             ),
             action_with_args(
                 "CppCompile",
                 1,
-                &["clang", "-I/opt/include", "b.c"],
+                &["external/llvm+/bin/clang", "-I/opt/include", "b.c"],
             ),
             action_with_args(
                 "CppCompile",
                 1,
-                &["clang", "-I/opt/include", "c.c"],
+                &["external/llvm+/bin/clang", "-I/opt/include", "c.c"],
             ),
         ]
     }
@@ -1631,7 +1775,7 @@ mod tests {
         let c = container(vec![action_with_param_files(
             "CppLink",
             1,
-            &["/usr/bin/clang", "@out/foo.params"],
+            &["external/llvm+/bin/clang", "@out/foo.params"],
             &[("out/foo.params", &["-O2"])],
         )]);
         let found = check_reproducibility(&c);
@@ -1640,7 +1784,7 @@ mod tests {
             &found[0],
             "CppLink",
             1,
-            &ProgramId::of("/usr/bin/clang"),
+            &ProgramId::of("external/llvm+/bin/clang"),
         );
     }
 
