@@ -368,7 +368,7 @@ mod tests {
     // ---- the real library ----
 
     #[test]
-    fn library_is_empty_so_everything_is_unknown() {
+    fn a_program_the_library_does_not_name_has_no_spec() {
         assert!(
             Library::builtin()
                 .resolve(ProgramId::of("/usr/bin/gcc"), vec![])
@@ -475,6 +475,33 @@ mod tests {
             (b(), Entry::SameAs(a())),
         ]);
         assert_eq!(spec_for(&library, &a()), None);
+    }
+
+    #[test]
+    fn a_self_referential_synonym_terminates() {
+        let library = index(vec![(a(), Entry::SameAs(a()))]);
+        assert_eq!(spec_for(&library, &a()), None);
+    }
+
+    #[test]
+    fn a_chain_longer_than_the_step_limit_gives_up() {
+        // Pins where the bound is, which the cycle tests cannot: they only
+        // show that *some* bound stops them.
+        let chain = |links: usize| {
+            let hop =
+                |i: usize| ProgramId::module("m", &format!("bin/{i}"));
+            let mut entries: Vec<(ProgramId, Entry)> = (0..links)
+                .map(|i| (hop(i), Entry::SameAs(hop(i + 1))))
+                .collect();
+            entries.push((hop(links), Entry::Spec(always())));
+            (index(entries), hop(0))
+        };
+
+        let (library, start) = chain(MAX_RESOLUTION_STEPS - 1);
+        assert_eq!(spec_for(&library, &start), Some(always()));
+
+        let (library, start) = chain(MAX_RESOLUTION_STEPS);
+        assert_eq!(spec_for(&library, &start), None);
     }
 
     #[test]

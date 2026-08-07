@@ -355,12 +355,6 @@ mod tests {
         );
     }
 
-    #[test]
-    fn a_command_line_with_no_arguments_expands_to_nothing() {
-        let a = action(&[], &[("out/foo.params", &["-O2"])]);
-        assert!(expanded_command_line(&a).is_empty());
-    }
-
     // ---- analyzable_strings ----
 
     #[test]

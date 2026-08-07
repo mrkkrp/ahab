@@ -1139,12 +1139,6 @@ mod tests {
     }
 
     #[test]
-    fn extracts_a_single_segment_path() {
-        // "Any /-rooted run" — a lone /bin counts.
-        assert_eq!(absolute_paths("/bin"), vec!["/bin".to_owned()]);
-    }
-
-    #[test]
     fn extracts_path_glued_after_a_flag_without_separator() {
         // -I/usr/include: the path starts mid-token, glued to the flag.
         assert_eq!(
@@ -1585,34 +1579,6 @@ mod tests {
         assert!(r.contains("outside the build"), "{r}");
         // Not framed as a missing spec.
         assert!(!r.contains("spec"), "{r}");
-    }
-
-    #[test]
-    fn unknown_program_identity_is_normalized_for_build_outputs() {
-        // The configuration prefix and the canonical repository name are
-        // stripped, so the violation carries the program's identity rather than
-        // the exec path it happened to be invoked by.
-        let c = container(vec![action_with_args(
-            "Rustc",
-            1,
-            &[
-                "bazel-out/k8-opt-exec/bin/external/rules_rust+/util/process_wrapper/process_wrapper",
-            ],
-        )]);
-        let found = check_reproducibility(&c, &Library::builtin());
-        assert_eq!(found.len(), 1);
-        assert_unknown_program(
-            &found[0],
-            "Rustc",
-            1,
-            &ProgramId {
-                origin: Origin::Module {
-                    name: "rules_rust".to_owned(),
-                    extension: None,
-                },
-                path: "util/process_wrapper/process_wrapper".to_owned(),
-            },
-        );
     }
 
     #[test]

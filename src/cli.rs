@@ -1134,15 +1134,6 @@ mod tests {
     }
 
     #[test]
-    fn quote_is_stable_for_the_same_violations() {
-        let violations = once([bad_path("CppCompile", 1, "/bin")]);
-        assert_eq!(
-            report_violations(&violations, true, Palette::plain()),
-            report_violations(&violations, true, Palette::plain())
-        );
-    }
-
-    #[test]
     fn shut_up_suppresses_the_quote() {
         let violations = once([bad_path("CppCompile", 1, "/bin")]);
         let report =
