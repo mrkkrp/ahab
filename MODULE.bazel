@@ -66,11 +66,6 @@ crate.annotation(
     crate = "protoc-gen-prost",
     gen_binaries = ["protoc-gen-prost"],
 )
-
-# rust_prost_toolchain requires tonic to be configured whenever any tonic
-# attribute is set, and tonic_plugin_flag has a non-empty default — so a
-# prost-only toolchain isn't possible and we must supply tonic too, even though
-# aquery decoding never uses gRPC.
 crate.spec(
     package = "tonic",
     version = "0.12",

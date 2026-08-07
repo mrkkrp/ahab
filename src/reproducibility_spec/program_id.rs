@@ -1,16 +1,15 @@
 //! Stable identification of the programs that build actions run.
 //!
-//! A [`ReproducibilitySpec`](super::ReproducibilitySpec) describes one program,
-//! so specs must be keyed by something that names a program *and only that
-//! program*, consistently across builds. [`ProgramId`] is that key: an action's
-//! `argv[0]` with everything unstable normalized away, leaving only what the
-//! tool's own author controls.
+//! A [`ReproducibilitySpec`](super::ReproducibilitySpec) describes one
+//! program, so specs must be keyed by something that names a program and
+//! only that program, consistently across builds. [`ProgramId`] is that
+//! key: an action's `argv[0]` with everything unstable normalized away,
+//! leaving only what the tool's own author controls.
 //!
 //! The rest of these docs record *why* it is built this way. The reasoning
 //! rests on empirical facts about Bazel that are easy to get wrong and that
 //! shift between releases, so they are written down here rather than
-//! rediscovered. Figures come from a survey of the 336 repositories in this
-//! project's own output base under Bazel 9.2.0.
+//! rediscovered.
 //!
 //! # Why not the obvious keys
 //!
@@ -20,13 +19,14 @@
 //! * **The full exec path** is unique but wildly unstable — see the gradient
 //!   below.
 //! * **The owning target's label**, e.g.
-//!   `@@rules_rust++crate+crates__anyhow-1.0.104//:anyhow`, looks attractive but
-//!   is strictly worse. `analysis_v2.proto`'s `Artifact` carries only `id`,
-//!   `path_fragment_id` and `is_tree_artifact` — no owner — so recovering a
-//!   label means finding the action that generates the executable and reading
-//!   its `target_id`. That fails for prebuilt and system tools, and the label
-//!   embeds the same canonical repository name, so it would need exactly the
-//!   normalization below anyway. Path normalization is the better primitive.
+//!   `@@rules_rust++crate+crates__anyhow-1.0.104//:anyhow`, looks
+//!   attractive but is strictly worse. `analysis_v2.proto`'s `Artifact`
+//!   carries only `id`, `path_fragment_id` and `is_tree_artifact`—no
+//!   owner—so recovering a label means finding the action that generates
+//!   the executable and reading its `target_id`. That fails for prebuilt
+//!   and system tools, and the label embeds the same canonical repository
+//!   name, so it would need exactly the normalization below anyway. Path
+//!   normalization is the better primitive.
 //!
 //! # The stability gradient
 //!
@@ -34,21 +34,22 @@
 //! `bazel-out/k8-opt-exec/bin/external/rules_rust++crate+crates__anyhow-1.0.104/foo`
 //! left to right, stability *increases*:
 //!
-//! 1. **`bazel-out/<configuration>/<root>`** — least stable. Varies with CPU,
+//! 1. **`bazel-out/<configuration>/<root>`**—least stable. Varies with CPU,
 //!    compilation mode and exec-vs-target, and Bazel 8+ can append a
 //!    `-ST-<hash>` suffix for output-directory diffs. Only the three-segment
 //!    *shape* is fixed, so that is all [`strip_output_prefix`] relies on.
-//! 2. **The separator and version fields** — unstable across Bazel releases;
+//! 2. **The separator and version fields**—unstable across Bazel releases;
 //!    see the table below.
 //! 3. **The generated repository name** (`crates__anyhow-1.0.104`,
-//!    `llvm_toolchain_llvm`) — chosen by the project being analyzed, and
+//!    `llvm_toolchain_llvm`)—chosen by the project being analyzed, and
 //!    version- and platform-bearing. Dropped entirely.
-//! 4. **Module and extension names** (`rules_rust`, `crate`) — fixed by the
+//! 4. **Module and extension names** (`rules_rust`, `crate`)—fixed by the
 //!    tool's author. Kept.
-//! 5. **The package and target tail** (`util/process_wrapper/process_wrapper`)
-//!    — most stable: it is the ruleset's own source layout, which moves only
-//!    when the ruleset reorganizes, which is exactly when a spec should be
-//!    revisited anyway. Kept.
+//! 5. **The package and target tail**
+//!    (`util/process_wrapper/process_wrapper`)—most stable: it is the
+//!    ruleset's own source layout, which moves only when the ruleset
+//!    reorganizes, which is exactly when a spec should be revisited anyway.
+//!    Kept.
 //!
 //! # Canonical repository names
 //!
@@ -61,10 +62,6 @@
 //! | 6.x – 7.0  | `rules_rust~0.40.0` | `rules_rust~0.40.0~crate~crates__anyhow-1.0.104` |
 //! | 7.1 – 7.x  | `rules_rust~`     | `rules_rust~~crate~crates__anyhow-1.0.104`  |
 //! | 8.x – 9.x  | `rules_rust+`     | `rules_rust++crate+crates__anyhow-1.0.104`  |
-//!
-//! So the answer to "is `rules_rust+` stable?" is no: the spelling changed twice
-//! in three major releases, and under WORKSPACE that slot holds a name the
-//! consuming project chose in its `http_archive(name = …)`.
 //!
 //! Within a single Bazel version the names still vary by field count. Of the 336
 //! repositories surveyed:
@@ -92,139 +89,109 @@
 //! Only the module and extension names, because only they are outside the
 //! analyzed project's control:
 //!
-//! * **Module name** — comes from `module(name = …)` in the dependency's *own*
-//!   `MODULE.bazel`, i.e. its registry identity. Notably it is not affected by
-//!   `bazel_dep(name = "rules_rust", repo_name = "rr")`, which rebinds only the
-//!   apparent name used inside the consumer's files.
-//! * **Extension name** — the exported symbol in the defining `.bzl`, e.g.
+//! * **Module name**—comes from `module(name = …)` in the dependency's
+//!   *own* `MODULE.bazel`, i.e. its registry identity. Notably it is not
+//!   affected by `bazel_dep(name = "rules_rust", repo_name = "rr")`, which
+//!   rebinds only the apparent name used inside the consumer's files.
+//! * **Extension name**—the exported symbol in the defining `.bzl`, e.g.
 //!   `crate = module_extension(…)` in
-//!   `@rules_rust//crate_universe:extensions.bzl`. The variable a consumer binds
-//!   at the `use_extension` call site never appears. Evidenced by
+//!   `@rules_rust//crate_universe:extensions.bzl`. The variable a consumer
+//!   binds at the `use_extension` call site never appears. Evidenced by
 //!   `bazel_lib++toolchains+coreutils_linux_amd64`, where `toolchains` is
 //!   aspect_bazel_lib's export name even though this project never mentions
-//!   aspect_bazel_lib, and by `rules_rust++i2+rrc__autocfg-1.5.0`, where `i2` is
-//!   one of rules_rust's terse internal extensions.
+//!   aspect_bazel_lib, and by `rules_rust++i2+rrc__autocfg-1.5.0`, where
+//!   `i2` is one of rules_rust's terse internal extensions.
 //!
 //! The other two fields are dropped:
 //!
-//! * **Module version** — empty in all 247 four-field names surveyed, since it
-//!   is populated only under `multiple_version_override`. It is pure churn, and
-//!   it can never be what distinguishes two *programs*: if two versions of a
-//!   tool behave differently that is a question about flags, not identity.
-//! * **Generated repository name** — braids together three separate unstable
-//!   things, all three visible in the survey: names the consuming project chose
-//!   (the `crates` in `crates__anyhow-1.0.104` is its `use_repo(crate,
-//!   "crates")`), dependency versions (`-1.0.104`), and host or target platforms
-//!   (`llvm-toolchain-minimal-22.1.8-linux-amd64`,
-//!   `rust_linux_x86_64__x86_64-unknown-linux-gnu__stable_tools`). None of it is
-//!   knowable to whoever writes a spec.
+//! * **Module version**—empty in all 247 four-field names surveyed, since
+//!   it is populated only under `multiple_version_override`. It is pure
+//!   churn, and it can never be what distinguishes two programs: if two
+//!   versions of a tool behave differently that is a question about flags,
+//!   not identity.
+//! * **Generated repository name**—braids together three separate unstable
+//!   things, all three visible in the survey: names the consuming project
+//!   chose (the `crates` in `crates__anyhow-1.0.104` is its
+//!   `use_repo(crate, "crates")`), dependency versions (`-1.0.104`), and
+//!   host or target platforms (`llvm-toolchain-minimal-22.1.8-linux-amd64`,
+//!   `rust_linux_x86_64__x86_64-unknown-linux-gnu__stable_tools`). None of
+//!   it is knowable to whoever writes a spec.
 //!
 //! The payoff is that a spec never names a version, a platform triple, a
-//! separator, or anything the analyzed project picked — which in turn means
+//! separator, or anything the analyzed project picked—which in turn means
 //! exact matching is enough, and no glob or pattern machinery is needed.
 //!
 //! # Known consequence: extension granularity
 //!
 //! Dropping the repository name means every repository generated by one
-//! extension shares an identity. Each crate_universe build script normalizes to
-//! `@rules_rust+crate//…` regardless of which crate it belongs to, folding
-//! roughly 90 of the surveyed repositories into a single key.
+//! extension shares an identity. Each crate_universe build script
+//! normalizes to `@rules_rust+crate//…` regardless of which crate it
+//! belongs to, folding roughly 90 of the surveyed repositories into a
+//! single key.
 //!
-//! This is deliberate: "a Cargo build script" is the unit we have reproducibility
-//! knowledge about, not "anyhow 1.0.104's build script". It does foreclose
-//! saying "openssl-sys's build script specifically is non-hermetic". If that
-//! becomes necessary, the extension point is an optional discriminator on
-//! [`Origin`] — adding one is backwards compatible with specs written against
-//! the coarser key.
+//! This is deliberate: "a Cargo build script" is the unit we have
+//! reproducibility knowledge about, not "anyhow 1.0.104's build script". It
+//! does foreclose saying "openssl-sys's build script specifically is
+//! non-hermetic". If that becomes necessary, the extension point is an
+//! optional discriminator on [`Origin`] — adding one is backwards
+//! compatible with specs written against the coarser key.
 //!
 //! # Related concern, deliberately out of scope
 //!
-//! `process_wrapper` and friends are *wrappers*: their reproducibility is really
-//! that of whatever follows `--` in their argument list. Keying them like any
-//! other program is a simplification. Handling it properly means letting a spec
-//! say "I am a wrapper, re-dispatch on `argv[n..]`", which is a question about
-//! the shape of [`super::ReproducibilitySpec`], not about identity.
+//! `process_wrapper` and friends are *wrappers*: their reproducibility is
+//! really that of whatever follows `--` in their argument list. Keying them
+//! like any other program is a simplification. Handling it properly means
+//! letting a spec say "I am a wrapper, re-dispatch on `argv[n..]`", which
+//! is a question about the shape of [`super::ReproducibilitySpec`], not
+//! about identity.
 
 use std::fmt;
 
 /// Where a program comes from, with unstable naming normalized away.
 #[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub enum Origin {
-    /// The main repository — the workspace being analyzed. `extension` is set
-    /// when the program lives in a repository generated by an extension that
-    /// the main repository itself defines.
+    /// The main repository—the workspace being analyzed. `extension` is set
+    /// when the program lives in a repository generated by an extension
+    /// that the main repository itself defines.
     Main {
         /// The module extension that generated the repository, if any.
         extension: Option<String>,
     },
-    /// An external Bazel module, named as it is in the registry (`rules_rust`,
-    /// `llvm`) — never by the apparent name a `bazel_dep` may have bound it to.
+    /// An external Bazel module, named as it is in the registry
+    /// (`rules_rust`, `llvm`)—never by the apparent name a `bazel_dep` may
+    /// have bound it to.
     Module {
         /// The module name, i.e. its `module(name = …)`.
         name: String,
         /// The module extension that generated the repository, if any.
         extension: Option<String>,
     },
-    /// Outside the execution root: an absolute path to a tool on the host, or a
-    /// bare command name resolved through `PATH`. Either way the program is not
-    /// part of the build, which is itself a hermeticity signal.
+    /// Outside the execution root: an absolute path to a tool on the host,
+    /// or a bare command name resolved through `PATH`. Either way the
+    /// program is not part of the build, which is itself a hermeticity
+    /// signal.
     System,
 }
 
-impl Origin {
-    /// The module this program belongs to, or `None` for the main repository
-    /// and for system tools.
-    pub fn module(&self) -> Option<&str> {
-        match self {
-            Origin::Module { name, .. } => Some(name),
-            Origin::Main { .. } | Origin::System => None,
-        }
-    }
-
-    /// The module extension that generated the program's repository, if any.
-    pub fn extension(&self) -> Option<&str> {
-        match self {
-            Origin::Main { extension } | Origin::Module { extension, .. } => extension.as_deref(),
-            Origin::System => None,
-        }
-    }
-}
-
 /// A stable key identifying the program an action runs.
-///
-/// Build it with [`ProgramId::of`] from an action's `argv[0]`. Two invocations
-/// of the same tool yield equal ids regardless of compilation mode, Bazel
-/// version, or dependency versions, which is what makes it usable as a lookup
-/// key in [`super::hardcoded`].
-///
-/// To *name* a program in source — writing a spec, or saying one program is a
-/// synonym for another — use [`main`](Self::main), [`module`](Self::module),
-/// [`extension`](Self::extension) or [`system`](Self::system) rather than
-/// spelling out an exec path for [`of`](Self::of) to take apart again. Both this
-/// struct and [`Origin`] have public fields, so any shape those constructors do
-/// not cover can be written directly.
 #[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub struct ProgramId {
     /// The repository the program comes from.
     pub origin: Origin,
     /// The program's path within that repository, e.g.
-    /// `util/process_wrapper/process_wrapper`. For [`Origin::System`] this is
-    /// the path or command name as it appeared in `argv[0]`.
+    /// `util/process_wrapper/process_wrapper`. For [`Origin::System`] this
+    /// is the path or command name as it appeared in `argv[0]`.
     pub path: String,
 }
 
+/// Constructors for *naming* a program in source, as [`super::hardcoded`] does
+/// when a spec or a synonym is written against one.
+#[allow(dead_code)]
 impl ProgramId {
-    /// A program in the main repository, e.g. `//src/tools/gen`.
-    pub fn main(path: &str) -> ProgramId {
-        ProgramId {
-            origin: Origin::Main { extension: None },
-            path: path.to_owned(),
-        }
-    }
-
     /// A program in a Bazel module's own repository, e.g.
     /// `@rules_rust//util/process_wrapper/process_wrapper`. `module` is the
-    /// module's registry name — never an apparent name a `bazel_dep` bound it to.
+    /// module's registry name—never an apparent name a `bazel_dep` bound it
+    /// to.
     pub fn module(module: &str, path: &str) -> ProgramId {
         ProgramId {
             origin: Origin::Module {
@@ -235,12 +202,14 @@ impl ProgramId {
         }
     }
 
-    /// A program in a repository generated by one of a module's extensions, e.g.
-    /// `@llvm+llvm_toolchain_minimal//bin/clang`. `extension` is the extension's
-    /// exported symbol name in the module that defines it. The generated
-    /// repository's own name is deliberately not part of a [`ProgramId`] — see
-    /// the module docs.
-    pub fn extension(module: &str, extension: &str, path: &str) -> ProgramId {
+    /// A program in a repository generated by one of a module's extensions,
+    /// e.g. `@llvm+llvm_toolchain_minimal//bin/clang`. `extension` is the
+    /// extension's exported symbol name in the module that defines it.
+    pub fn extension(
+        module: &str,
+        extension: &str,
+        path: &str,
+    ) -> ProgramId {
         ProgramId {
             origin: Origin::Module {
                 name: module.to_owned(),
@@ -249,25 +218,11 @@ impl ProgramId {
             path: path.to_owned(),
         }
     }
+}
 
-    /// A tool from outside the execution root: an absolute path such as
-    /// `/usr/bin/gcc`, or a bare command name resolved through `PATH`.
-    pub fn system(path: &str) -> ProgramId {
-        ProgramId {
-            origin: Origin::System,
-            path: path.to_owned(),
-        }
-    }
-
+impl ProgramId {
     /// Identify the program an action runs from its executable path (`argv[0]`).
-    ///
-    /// Absolute paths and bare command names are [`Origin::System`]; everything
-    /// else is interpreted relative to the execution root, stripping the
-    /// `bazel-out/<configuration>/<root>` prefix, any enclosing runfiles tree,
-    /// and the `external/` marker before decoding the repository name.
     pub fn of(executable: &str) -> ProgramId {
-        // Absolute paths are outside the execroot, and a name with no separator
-        // at all is resolved through PATH. Neither is a repository-relative path.
         if executable.starts_with('/') || !executable.contains('/') {
             return ProgramId {
                 origin: Origin::System,
@@ -277,8 +232,9 @@ impl ProgramId {
 
         let path = strip_output_prefix(executable);
 
-        // In a runfiles tree the repository name is a plain path segment rather
-        // than something under `external/`, so it has to be split off first.
+        // In a runfiles tree the repository name is a plain path segment
+        // rather than something under `external/`, so it has to be split
+        // off first.
         if let Some(rest) = strip_runfiles_prefix(path) {
             if let Some((repo, tail)) = rest.split_once('/') {
                 return ProgramId {
@@ -312,7 +268,9 @@ impl fmt::Display for ProgramId {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match &self.origin {
             Origin::System => write!(f, "{}", self.path),
-            Origin::Main { extension: None } => write!(f, "//{}", self.path),
+            Origin::Main { extension: None } => {
+                write!(f, "//{}", self.path)
+            }
             Origin::Main {
                 extension: Some(extension),
             } => write!(f, "@+{extension}//{}", self.path),
@@ -329,9 +287,7 @@ impl fmt::Display for ProgramId {
 }
 
 /// Strip a leading `bazel-out/<configuration>/<root>/`, e.g.
-/// `bazel-out/k8-opt-exec/bin/`. The configuration segment is deliberately not
-/// inspected: it varies with CPU, compilation mode, exec-vs-target, and can
-/// carry a `-ST-<hash>` suffix, but the three-segment *shape* is fixed.
+/// `bazel-out/k8-opt-exec/bin/`.
 fn strip_output_prefix(path: &str) -> &str {
     let Some(rest) = path.strip_prefix("bazel-out/") else {
         return path;
@@ -345,17 +301,17 @@ fn strip_output_prefix(path: &str) -> &str {
 
 /// Strip everything up to and including a `<binary>.runfiles/` segment,
 /// returning `None` when the path does not run through a runfiles tree. The
-/// last occurrence wins, so a runfiles tree nested inside another resolves to
-/// the innermost one.
+/// last occurrence wins, so a runfiles tree nested inside another resolves
+/// to the innermost one.
 fn strip_runfiles_prefix(path: &str) -> Option<&str> {
     const MARKER: &str = ".runfiles/";
     let start = path.rmatch_indices(MARKER).next()?.0;
     Some(&path[start + MARKER.len()..])
 }
 
-/// Split a repository-qualified path into `(repository, tail)`. External paths
-/// appear as `external/<repo>/…` in the execution root and as `../<repo>/…` when
-/// written relative to a runfiles directory.
+/// Split a repository-qualified path into `(repository, tail)`. External
+/// paths appear as `external/<repo>/…` in the execution root and as
+/// `../<repo>/…` when written relative to a runfiles directory.
 fn split_external(path: &str) -> Option<(&str, &str)> {
     let rest = path
         .strip_prefix("external/")
@@ -367,24 +323,25 @@ fn split_external(path: &str) -> Option<(&str, &str)> {
     Some((repo, tail))
 }
 
-/// Decode a canonical repository name into an [`Origin`], discarding the module
-/// version and the generated repository name. See the module docs for the
-/// grammar; both the Bazel 8+ `+` separator and the older `~` are accepted.
+/// Decode a canonical repository name into an [`Origin`], discarding the
+/// module version and the generated repository name. See the module docs
+/// for the grammar; both the Bazel 8+ `+` separator and the older `~` are
+/// accepted.
 fn decode_repo(repo: &str) -> Origin {
     let separator = if repo.contains('+') { '+' } else { '~' };
     let fields: Vec<&str> = repo.split(separator).collect();
 
-    // With three or more fields the last two are always the module extension and
-    // the repository it generated. Fewer fields means a module repository, whose
-    // trailing field (if present) is the version.
+    // With three or more fields the last two are always the module
+    // extension and the repository it generated. Fewer fields means a
+    // module repository, whose trailing field (if present) is the version.
     let extension = if fields.len() >= 3 {
         Some(fields[fields.len() - 2].to_owned())
     } else {
         None
     };
 
-    // Bazel spells the main repository `_main`; an extension defined by the main
-    // module leaves the module field empty. Accept both.
+    // Bazel spells the main repository `_main`; an extension defined by the
+    // main module leaves the module field empty. Accept both.
     let module = fields[0];
     if module.is_empty() || module == "_main" {
         Origin::Main { extension }
@@ -456,8 +413,12 @@ mod tests {
     fn the_configuration_segment_is_not_inspected() {
         // Compilation mode, exec-vs-target and the Bazel 8 `-ST-<hash>` suffix
         // all vary; only the three-segment shape is relied upon.
-        for configuration in ["k8-fastbuild", "k8-opt-exec", "k8-opt-exec-ST-1a2b3c4d"] {
-            let path = format!("bazel-out/{configuration}/bin/external/rules_rust+/util/x");
+        for configuration in
+            ["k8-fastbuild", "k8-opt-exec", "k8-opt-exec-ST-1a2b3c4d"]
+        {
+            let path = format!(
+                "bazel-out/{configuration}/bin/external/rules_rust+/util/x"
+            );
             let id = ProgramId::of(&path);
             assert_eq!(id.origin, module("rules_rust"), "{configuration}");
             assert_eq!(id.path, "util/x", "{configuration}");
@@ -489,13 +450,18 @@ mod tests {
     #[test]
     fn programs_differing_only_in_repository_path_are_distinct() {
         // The whole point of not keying on the base name.
-        let a = ProgramId::of("bazel-out/k8-fastbuild/bin/external/rules_rust+/util/process_wrapper/process_wrapper");
-        let b = ProgramId::of("bazel-out/k8-fastbuild/bin/external/some_module+/baz/quux/process_wrapper");
+        let a = ProgramId::of(
+            "bazel-out/k8-fastbuild/bin/external/rules_rust+/util/process_wrapper/process_wrapper",
+        );
+        let b = ProgramId::of(
+            "bazel-out/k8-fastbuild/bin/external/some_module+/baz/quux/process_wrapper",
+        );
         assert_ne!(a, b);
     }
 
     #[test]
-    fn extension_repository_keeps_module_and_extension_but_drops_the_repository() {
+    fn extension_repository_keeps_module_and_extension_but_drops_the_repository()
+     {
         let id = ProgramId::of(
             "bazel-out/k8-fastbuild/bin/external/rules_rust++crate+crates__anyhow-1.0.104/_bs.out_dir",
         );
@@ -526,7 +492,10 @@ mod tests {
             module_ext("bazel_tools", "winsdk_configure")
         );
         assert_eq!(
-            ProgramId::of("external/platforms+host_platform+host_platform/bin/x").origin,
+            ProgramId::of(
+                "external/platforms+host_platform+host_platform/bin/x"
+            )
+            .origin,
             module_ext("platforms", "host_platform")
         );
         assert_eq!(
@@ -606,18 +575,23 @@ mod tests {
 
     #[test]
     fn runfiles_paths_resolve_through_the_repository_segment() {
-        let id = ProgramId::of("bazel-out/k8-fastbuild/bin/ahab.runfiles/_main/ahab");
+        let id = ProgramId::of(
+            "bazel-out/k8-fastbuild/bin/ahab.runfiles/_main/ahab",
+        );
         assert_eq!(id.origin, Origin::Main { extension: None });
         assert_eq!(id.path, "ahab");
 
-        let id = ProgramId::of("ahab.runfiles/rules_rust+/util/process_wrapper/process_wrapper");
+        let id = ProgramId::of(
+            "ahab.runfiles/rules_rust+/util/process_wrapper/process_wrapper",
+        );
         assert_eq!(id.origin, module("rules_rust"));
         assert_eq!(id.path, "util/process_wrapper/process_wrapper");
     }
 
     #[test]
     fn the_innermost_runfiles_tree_wins() {
-        let id = ProgramId::of("a.runfiles/_main/b.runfiles/rules_rust+/util/x");
+        let id =
+            ProgramId::of("a.runfiles/_main/b.runfiles/rules_rust+/util/x");
         assert_eq!(id.origin, module("rules_rust"));
         assert_eq!(id.path, "util/x");
     }
@@ -625,7 +599,9 @@ mod tests {
     #[test]
     fn a_segment_merely_containing_runfiles_is_not_a_runfiles_tree() {
         // `.runfiles` must end the segment.
-        let id = ProgramId::of("bazel-out/k8-fastbuild/bin/x.runfilesy/_main/tool");
+        let id = ProgramId::of(
+            "bazel-out/k8-fastbuild/bin/x.runfilesy/_main/tool",
+        );
         assert_eq!(id.origin, Origin::Main { extension: None });
         assert_eq!(id.path, "x.runfilesy/_main/tool");
     }
@@ -633,7 +609,9 @@ mod tests {
     #[test]
     fn runfiles_relative_external_paths_are_understood() {
         // Written relative to a runfiles directory rather than the execroot.
-        let id = ProgramId::of("../rules_rust+/util/process_wrapper/process_wrapper");
+        let id = ProgramId::of(
+            "../rules_rust+/util/process_wrapper/process_wrapper",
+        );
         assert_eq!(id.origin, module("rules_rust"));
         assert_eq!(id.path, "util/process_wrapper/process_wrapper");
     }
@@ -647,67 +625,16 @@ mod tests {
         assert_eq!(id.path, "external/rules_rust+");
     }
 
-    #[test]
-    fn origin_accessors_report_module_and_extension() {
-        let id = ProgramId::of("external/rules_rust++crate+crates__anyhow-1.0.104/_bs.out_dir");
-        assert_eq!(id.origin.module(), Some("rules_rust"));
-        assert_eq!(id.origin.extension(), Some("crate"));
-
-        let id = ProgramId::of("/usr/bin/gcc");
-        assert_eq!(id.origin.module(), None);
-        assert_eq!(id.origin.extension(), None);
-
-        let id = ProgramId::of("bazel-out/k8-fastbuild/bin/src/tools/gen");
-        assert_eq!(id.origin.module(), None);
-        assert_eq!(id.origin.extension(), None);
-    }
-
     // ---- naming a program in source ----
-
-    #[test]
-    fn constructors_agree_with_parsing_an_exec_path() {
-        // The two ways to build an id must not drift apart: naming a program in
-        // source has to produce exactly what parsing its exec path produces.
-        assert_eq!(
-            ProgramId::module("rules_rust", "util/process_wrapper/process_wrapper"),
-            ProgramId::of(
-                "bazel-out/k8-opt-exec/bin/external/rules_rust+/util/process_wrapper/process_wrapper"
-            )
-        );
-        assert_eq!(
-            ProgramId::extension("llvm", "llvm_toolchain_minimal", "bin/clang"),
-            ProgramId::of(
-                "external/llvm++llvm_toolchain_minimal+llvm-toolchain-minimal-22.1.8-linux-amd64/bin/clang"
-            )
-        );
-        assert_eq!(
-            ProgramId::main("src/tools/gen"),
-            ProgramId::of("bazel-out/k8-fastbuild/bin/src/tools/gen")
-        );
-        assert_eq!(ProgramId::system("/usr/bin/gcc"), ProgramId::of("/usr/bin/gcc"));
-        assert_eq!(ProgramId::system("clang"), ProgramId::of("clang"));
-    }
-
-    #[test]
-    fn constructors_round_trip_through_display() {
-        assert_eq!(
-            ProgramId::module("rules_rust", "util/process_wrapper/process_wrapper").to_string(),
-            "@rules_rust//util/process_wrapper/process_wrapper"
-        );
-        assert_eq!(
-            ProgramId::extension("llvm", "llvm_toolchain_minimal", "bin/clang").to_string(),
-            "@llvm+llvm_toolchain_minimal//bin/clang"
-        );
-        assert_eq!(ProgramId::main("src/tools/gen").to_string(), "//src/tools/gen");
-        assert_eq!(ProgramId::system("/usr/bin/gcc").to_string(), "/usr/bin/gcc");
-    }
 
     #[test]
     fn ids_are_usable_as_map_keys() {
         use std::collections::HashMap;
         let mut specs = HashMap::new();
         specs.insert(
-            ProgramId::of("external/rules_rust+/util/process_wrapper/process_wrapper"),
+            ProgramId::of(
+                "external/rules_rust+/util/process_wrapper/process_wrapper",
+            ),
             "wrapper",
         );
         // A different configuration and Bazel version, same program.

@@ -1,86 +1,27 @@
-//! The hardcoded library of known [`ReproducibilitySpec`]s, keyed by program.
-//!
-//! Over time this will accumulate hundreds of entries — one per tool whose
-//! reproducibility we understand (compilers, linkers, archivers, code
-//! generators, …). It starts empty: until a program is added here, Ahab has no
-//! reproducibility knowledge of it and [`lookup`] returns `None`, which the
-//! reproducibility check treats conservatively as an error rather than a pass.
-//!
-//! # Keys
-//!
-//! Entries are keyed by [`ProgramId`], so a spec is stated against a normalized
-//! identity rather than a raw exec path. See [`super::program_id`] for what that
-//! normalization removes and why; the practical consequence for spec authors is
-//! that a key never mentions a compilation mode, a Bazel version, a dependency
-//! version, a host platform, or a repository name the analyzed project chose.
-//!
-//! Programs are named with the [`ProgramId`] constructors, so the module,
-//! extension and path each sit in their own typed position instead of being
-//! spelled out as one string for the parser to take apart again.
-//!
-//! # Synonyms
-//!
-//! Many programs are not worth describing twice. A compiler wrapper is
-//! reproducible under exactly the conditions of the compiler it wraps; `clang++`
-//! answers to the same flags as `clang`; a toolchain may ship the same binary
-//! under several paths. [`Entry::SameAs`] expresses that directly — "this
-//! program's spec is the spec of that program" — so the conditions live in one
-//! place and cannot drift apart as they are refined.
-//!
-//! Synonyms are directed and may chain: an alias may point at another alias, and
-//! resolution follows the links until it reaches a program that carries its own
-//! spec. A synonym asserts that two programs share reproducibility *conditions*;
-//! it says nothing about them being the same binary, so aliasing a wrapper onto
-//! its wrapped tool is legitimate even though the two are distinct programs.
-//!
-//! Note that this is a different mechanism from resolving what a wrapper is
-//! wrapping at analysis time. `SameAs` is a static, library-level statement; a
-//! wrapper whose behaviour depends on the command it is handed — as
-//! `process_wrapper` does, taking its real tool in its arguments — needs
-//! dispatch on the invocation, which the spec model does not yet express.
-//!
-//! # Shape of the library
-//!
-//! Entries are authored as a list by [`entries`] and indexed into a map once, on
-//! first use. The library is deliberately *not* a `static` table: keeping it out
-//! of const context is what lets a key and a synonym both be a real
-//! [`ProgramId`] and a spec be a real [`ReproducibilitySpec`], rather than
-//! strings and constructor functions standing in for them.
-//!
-//! Because a bad synonym would silently make a program unknown rather than fail
-//! loudly, the library is validated by the tests below: every alias must reach a
-//! real spec, and no key may appear twice.
+//! The hardcoded library of known [`ReproducibilitySpec`]s, keyed by
+//! program.
 
 use std::collections::HashMap;
 use std::sync::OnceLock;
 
-use super::program_id::ProgramId;
 use super::ReproducibilitySpec;
+use super::program_id::ProgramId;
 
 /// What the library knows about one program.
+#[allow(dead_code)]
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum Entry {
     /// The program has its own spec.
     Spec(ReproducibilitySpec),
-    /// The program is reproducible under exactly the same conditions as this
-    /// other program. Look that one up instead.
+    /// The program is reproducible under exactly the same conditions as
+    /// this other program. Look that one up instead.
     SameAs(ProgramId),
 }
 
 /// How many [`Entry::SameAs`] hops to follow before giving up.
-///
-/// Synonym chains are meant to be short — usually one hop. The bound exists so
-/// that a cycle accidentally introduced into the library degrades to "unknown
-/// program", which the reproducibility check already treats conservatively,
-/// rather than hanging a user's analysis. The tests reject such a cycle
-/// outright, so it should never be reached in practice.
 const MAX_SYNONYM_HOPS: usize = 16;
 
 /// The library as authored, in source order.
-///
-/// Intentionally empty for now; specs are added one tool at a time. Keys must be
-/// unique — indexing keeps the last of a repeated key and silently drops the
-/// rest, which `no_key_appears_twice` rejects.
 fn entries() -> Vec<(ProgramId, Entry)> {
     Vec::new()
 }
@@ -93,32 +34,20 @@ fn library() -> &'static HashMap<ProgramId, Entry> {
 
 /// Look up the reproducibility spec for `program`, following any synonyms.
 ///
-/// Returns the program that actually carried the spec together with the spec
-/// itself. That program is `program` when it has its own entry, and the far end
-/// of its synonym chain otherwise — so comparing the two tells a caller whether
-/// a synonym was resolved, and which one answered.
+/// Returns the program that actually carried the spec together with the
+/// spec itself. That program is `program` when it has its own entry, and
+/// the far end of its synonym chain otherwise—so comparing the two tells a
+/// caller whether a synonym was resolved, and which one answered.
 ///
-/// Returns `None` when we have no spec for that program — callers must treat an
-/// unknown program conservatively.
+/// Returns `None` when we have no spec for that program.
 pub fn lookup(
     program: &ProgramId,
 ) -> Option<(&'static ProgramId, &'static ReproducibilitySpec)> {
     resolve(library(), program)
 }
 
-/// Follow [`Entry::SameAs`] links from `program` until reaching one that carries
-/// its own spec, returning that program and its spec.
-///
-/// `None` when `program` is not in the library, when a synonym points at a
-/// program that is not in the library, or when the chain does not settle within
-/// [`MAX_SYNONYM_HOPS`] — which, for a library containing a cycle, is how the
-/// cycle is escaped.
-///
-/// Takes the library as a parameter rather than reading [`library`] directly so
-/// that the tests can inject synthetic ones. The real library is empty, and
-/// populating it with fixtures to exercise chains, cycles and the hop limit
-/// would mean shipping test data to users; this seam keeps that behaviour
-/// testable without it.
+/// Follow [`Entry::SameAs`] links from `program` until reaching one that
+/// carries its own spec, returning that program and its spec.
 fn resolve<'a>(
     library: &'a HashMap<ProgramId, Entry>,
     program: &ProgramId,
@@ -146,17 +75,26 @@ mod tests {
     use super::*;
     use crate::reproducibility_spec::Reproducibility;
 
-    // Two distinguishable specs, so a test can tell which entry answered.
     fn always() -> ReproducibilitySpec {
-        ReproducibilitySpec::new(Reproducibility::Always, [] as [&str; 0], [] as [&str; 0])
+        ReproducibilitySpec::new(
+            Reproducibility::Always,
+            [] as [&str; 0],
+            [] as [&str; 0],
+        )
     }
 
     fn never() -> ReproducibilitySpec {
-        ReproducibilitySpec::new(Reproducibility::Never, [] as [&str; 0], [] as [&str; 0])
+        ReproducibilitySpec::new(
+            Reproducibility::Never,
+            [] as [&str; 0],
+            [] as [&str; 0],
+        )
     }
 
     /// Index a list of entries the way [`library`] does.
-    fn index(entries: Vec<(ProgramId, Entry)>) -> HashMap<ProgramId, Entry> {
+    fn index(
+        entries: Vec<(ProgramId, Entry)>,
+    ) -> HashMap<ProgramId, Entry> {
         entries.into_iter().collect()
     }
 
@@ -194,7 +132,9 @@ mod tests {
     #[test]
     fn library_is_empty_so_everything_is_unknown() {
         assert!(lookup(&ProgramId::of("/usr/bin/gcc")).is_none());
-        assert!(lookup(&ProgramId::of("external/llvm+/bin/clang")).is_none());
+        assert!(
+            lookup(&ProgramId::of("external/llvm+/bin/clang")).is_none()
+        );
         assert!(lookup(&ProgramId::of("")).is_none());
     }
 
@@ -223,8 +163,14 @@ mod tests {
         );
         // Name it, so the failure above is actionable.
         for (i, (program, _)) in authored.iter().enumerate() {
-            let duplicate = authored.iter().skip(i + 1).any(|(other, _)| other == program);
-            assert!(!duplicate, "{program} appears more than once in the library");
+            let duplicate = authored
+                .iter()
+                .skip(i + 1)
+                .any(|(other, _)| other == program);
+            assert!(
+                !duplicate,
+                "{program} appears more than once in the library"
+            );
         }
     }
 
@@ -245,8 +191,16 @@ mod tests {
     #[test]
     fn a_synonym_resolves_to_its_targets_spec() {
         // The motivating case: a wrapper sharing its compiler's conditions.
-        let clang = ProgramId::extension("llvm", "llvm_toolchain_minimal", "bin/clang");
-        let clangxx = ProgramId::extension("llvm", "llvm_toolchain_minimal", "bin/clang++");
+        let clang = ProgramId::extension(
+            "llvm",
+            "llvm_toolchain_minimal",
+            "bin/clang",
+        );
+        let clangxx = ProgramId::extension(
+            "llvm",
+            "llvm_toolchain_minimal",
+            "bin/clang++",
+        );
         let library = index(vec![
             (clang.clone(), Entry::Spec(never())),
             (clangxx.clone(), Entry::SameAs(clang.clone())),
@@ -286,7 +240,10 @@ mod tests {
 
     #[test]
     fn a_synonym_cycle_terminates() {
-        let library = index(vec![(a(), Entry::SameAs(b())), (b(), Entry::SameAs(a()))]);
+        let library = index(vec![
+            (a(), Entry::SameAs(b())),
+            (b(), Entry::SameAs(a())),
+        ]);
         assert_eq!(lookup_in(&library, &a()), None);
     }
 
@@ -315,7 +272,8 @@ mod tests {
     fn a_chain_longer_than_the_hop_limit_gives_up() {
         // A chain of links numbered 0..=n, with the spec at the far end.
         let chain = |links: usize| {
-            let hop = |i: usize| ProgramId::module("m", &format!("bin/{i}"));
+            let hop =
+                |i: usize| ProgramId::module("m", &format!("bin/{i}"));
             let mut entries: Vec<(ProgramId, Entry)> = (0..links)
                 .map(|i| (hop(i), Entry::SameAs(hop(i + 1))))
                 .collect();

@@ -1,12 +1,12 @@
 //! Command-line interface and top-level orchestration for Ahab.
 
-use anyhow::{bail, Result};
+use anyhow::{Result, bail};
 use clap::Parser;
 
 use crate::aquery::{random_token, run_aquery};
 use std::collections::BTreeMap;
 
-use crate::checks::{check_all, Violation};
+use crate::checks::{Violation, check_all};
 use crate::melville;
 
 /// Command-line interface for Ahab.
@@ -17,8 +17,8 @@ use crate::melville;
     version
 )]
 pub struct Cli {
-    /// A `--config=<name>` to forward to `bazel aquery`. May be repeated zero
-    /// or more times; each value is passed through verbatim.
+    /// A `--config=<name>` to forward to `bazel aquery`. May be repeated
+    /// zero or more times; each value is passed through verbatim.
     #[arg(long = "config", value_name = "NAME")]
     pub configs: Vec<String>,
 
@@ -26,8 +26,8 @@ pub struct Cli {
     #[arg(value_name = "LABEL")]
     pub label: String,
 
-    /// Print every action we analyze (useful for debugging). Other parts of the
-    /// parsed action graph are omitted, as the checks don't use them.
+    /// Print every action we analyze (useful for debugging). Other parts of
+    /// the parsed action graph are omitted, as the checks don't use them.
     #[arg(short, long)]
     pub verbose: bool,
 
@@ -41,19 +41,15 @@ impl Cli {
     /// environment, run the pure hermeticity checks over it, and turn any
     /// violations into a non-zero exit.
     pub fn run(&self) -> Result<()> {
-        // Generate sentinel values for USER and HOSTNAME and hand them to the
-        // aquery subprocess. If Bazel bakes the invoking user's identity into any
-        // action, these sentinels — being what the environment actually holds —
-        // are what would leak into the action graph.
         let user = random_token("ahab-user");
         let hostname = random_token("ahab-host");
-
-        let env = [("USER", user.as_str()), ("HOSTNAME", hostname.as_str())];
-
+        let env =
+            [("USER", user.as_str()), ("HOSTNAME", hostname.as_str())];
         let container = run_aquery(&self.configs, &self.label, &env)?;
 
-        // For debugging, dump every action we're about to analyze. We print only
-        // the actions; the other parts of the container aren't used by the checks.
+        // For debugging, dump every action we're about to analyze. We print
+        // only the actions; the other parts of the container aren't used by
+        // the checks.
         if self.verbose {
             println!("analyzing {} action(s):", container.actions.len());
             for (i, action) in container.actions.iter().enumerate() {
@@ -74,11 +70,12 @@ impl Cli {
     }
 }
 
-/// Format one or more violations into a numbered, human-readable report. The
-/// caller guarantees `violations` is non-empty. Each distinct violation is
-/// listed once, prefixed with `×N` when it occurred more than once. When `quote`
-/// is set, a Moby-Dick line is appended as a sign-off; `--shut-up` clears it.
-fn report_violations(violations: &BTreeMap<Violation, usize>, quote: bool) -> String {
+/// Format one or more violations into a numbered, human-readable report.
+/// The caller guarantees `violations` is non-empty.
+fn report_violations(
+    violations: &BTreeMap<Violation, usize>,
+    quote: bool,
+) -> String {
     let distinct = violations.len();
     let occurrences: usize = violations.values().sum();
     let noun = if distinct == 1 {
@@ -87,20 +84,14 @@ fn report_violations(violations: &BTreeMap<Violation, usize>, quote: bool) -> St
         "violations"
     };
 
-    // Identical violations are collapsed, so say how many were found *and* how
-    // many times they occurred — but only when those differ, since on a report
-    // with no repeats the second number would just be noise.
     let mut report = if distinct == occurrences {
         format!("found {distinct} hermeticity {noun}:")
     } else {
-        format!("found {distinct} distinct hermeticity {noun} ({occurrences} occurrences):")
+        format!(
+            "found {distinct} distinct hermeticity {noun} ({occurrences} occurrences):"
+        )
     };
 
-    // We collect every violation across all checks, so report them all as a
-    // numbered list rather than stopping at the first. The multiplicity goes
-    // immediately after the number rather than at the end of the line: a
-    // violation quotes the offending argument, which routinely runs to hundreds
-    // of characters, and a trailing marker would be invisible.
     for (i, (violation, count)) in violations.iter().enumerate() {
         let multiplicity = if *count == 1 {
             String::new()
@@ -115,11 +106,11 @@ fn report_violations(violations: &BTreeMap<Violation, usize>, quote: bool) -> St
         ));
     }
 
-    // Sign off with a displeased line from the novel, chosen deterministically
-    // from the violations so the same problems always draw the same quote —
-    // unless the caller asked us to keep quiet.
     if quote {
-        report.push_str(&format!("\n\n  {}", melville::quote_for(&violations)));
+        report.push_str(&format!(
+            "\n\n  {}",
+            melville::quote_for(&violations)
+        ));
     }
     report
 }
@@ -139,14 +130,22 @@ mod tests {
         }
     }
 
-    fn once<const N: usize>(violations: [Violation; N]) -> BTreeMap<Violation, usize> {
+    fn once<const N: usize>(
+        violations: [Violation; N],
+    ) -> BTreeMap<Violation, usize> {
         violations.into_iter().map(|v| (v, 1)).collect()
     }
 
     #[test]
     fn single_violation_uses_singular_noun_and_is_numbered() {
-        let report = report_violations(&once([bad_path("CppCompile", 1, "/bin")]), true);
-        assert!(report.starts_with("found 1 hermeticity violation:\n"), "{report}");
+        let report = report_violations(
+            &once([bad_path("CppCompile", 1, "/bin")]),
+            true,
+        );
+        assert!(
+            report.starts_with("found 1 hermeticity violation:\n"),
+            "{report}"
+        );
         assert!(report.contains("\n  1. "), "{report}");
     }
 
@@ -159,7 +158,10 @@ mod tests {
             ]),
             true,
         );
-        assert!(report.starts_with("found 2 hermeticity violations:\n"), "{report}");
+        assert!(
+            report.starts_with("found 2 hermeticity violations:\n"),
+            "{report}"
+        );
         // Each violation appears on its own numbered line.
         assert!(report.contains("\n  1. "), "{report}");
         assert!(report.contains("\n  2. "), "{report}");
@@ -169,7 +171,10 @@ mod tests {
 
     #[test]
     fn a_violation_occurring_once_carries_no_multiplicity_marker() {
-        let report = report_violations(&once([bad_path("CppCompile", 1, "/bin")]), false);
+        let report = report_violations(
+            &once([bad_path("CppCompile", 1, "/bin")]),
+            false,
+        );
         assert!(!report.contains('×'), "{report}");
         // With no repeats the occurrence count would only be noise.
         assert!(!report.contains("occurrences"), "{report}");
@@ -178,7 +183,9 @@ mod tests {
     #[test]
     fn a_repeated_violation_is_listed_once_with_its_count() {
         let violations: BTreeMap<Violation, usize> =
-            [(bad_path("CppCompile", 1, "/bin"), 342)].into_iter().collect();
+            [(bad_path("CppCompile", 1, "/bin"), 342)]
+                .into_iter()
+                .collect();
         let report = report_violations(&violations, false);
 
         // One numbered line, carrying the multiplicity.
@@ -186,7 +193,10 @@ mod tests {
             report.starts_with("found 1 distinct hermeticity violation (342 occurrences):\n"),
             "{report}",
         );
-        assert!(report.contains("\n  1. ×342 hermeticity violation:"), "{report}");
+        assert!(
+            report.contains("\n  1. ×342 hermeticity violation:"),
+            "{report}"
+        );
         assert!(!report.contains("\n  2. "), "{report}");
     }
 
@@ -200,7 +210,9 @@ mod tests {
         .collect();
         let report = report_violations(&violations, false);
         assert!(
-            report.starts_with("found 2 distinct hermeticity violations (7 occurrences):\n"),
+            report.starts_with(
+                "found 2 distinct hermeticity violations (7 occurrences):\n"
+            ),
             "{report}",
         );
     }
@@ -227,7 +239,10 @@ mod tests {
         let violations = once([bad_path("CppCompile", 1, "/bin")]);
         let report = report_violations(&violations, false);
         // The violations are still reported...
-        assert!(report.starts_with("found 1 hermeticity violation:\n"), "{report}");
+        assert!(
+            report.starts_with("found 1 hermeticity violation:\n"),
+            "{report}"
+        );
         assert!(report.contains("\n  1. "), "{report}");
         // ...but no quote and no sign-off separator are appended.
         assert!(!report.contains("  — "), "{report}");

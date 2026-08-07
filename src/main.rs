@@ -3,7 +3,7 @@
 use anyhow::Result;
 use clap::Parser;
 
-use ahab::Cli;
+use ahab::cli::Cli;
 
 fn main() -> Result<()> {
     let cli = Cli::parse();

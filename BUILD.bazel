@@ -1,6 +1,15 @@
-load("@rules_rust//rust:defs.bzl", "rust_binary", "rust_library", "rust_test")
+load(
+    "@rules_rust//rust:defs.bzl",
+    "rust_binary",
+    "rust_clippy",
+    "rust_library",
+    "rust_test",
+    "rustfmt_test",
+)
 
 package(default_visibility = ["//visibility:public"])
+
+exports_files([".rustfmt.toml"])
 
 rust_library(
     name = "ahab_lib",
@@ -34,9 +43,6 @@ rust_binary(
     ],
 )
 
-# Unit tests for the hermeticity checks. Compiling into the `ahab_lib` crate
-# (like `cargo test`) lets the #[cfg(test)] module reach the crate's private
-# items (check_environment_leaks, check_path, EXPECTED_PATH, random_token).
 rust_test(
     name = "ahab_lib_test",
     crate = ":ahab_lib",
@@ -46,4 +52,28 @@ rust_test(
         "@crates//:anyhow",
         "@crates//:clap",
     ],
+)
+
+rust_clippy(
+    name = "clippy",
+    testonly = True,
+    deps = [
+        ":ahab",
+        ":ahab_lib",
+        ":ahab_lib_test",
+    ],
+)
+
+rustfmt_test(
+    name = "rustfmt_test",
+    targets = [
+        ":ahab",
+        ":ahab_lib",
+        ":ahab_lib_test",
+    ],
+)
+
+alias(
+    name = "format",
+    actual = "@rules_rust//tools/rustfmt",
 )
