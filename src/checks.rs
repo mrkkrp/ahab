@@ -646,6 +646,60 @@ fn glued_onto_flag(bytes: &[u8], slash: usize) -> bool {
     })
 }
 
+/// Placeholders that stand for a location inside the build, and that
+/// therefore say nothing about the machine the build runs on.
+///
+/// All three are substituted by rules_rust's `process_wrapper` (see the
+/// `--subst pwd=${pwd}` arguments it is handed) and name the execution
+/// root, the source root under it, and the output base. A path written
+/// against one of these is as machine-independent as a relative path.
+///
+/// The list is closed on purpose.
+const BUILD_PLACEHOLDERS: &[&str] = &["pwd", "exec_root", "output_base"];
+
+/// Whether the character just before `slash` closes a `${…}` or `$(…)`
+/// naming one of [`BUILD_PLACEHOLDERS`].
+///
+/// rules_rust sets `CLIPPY_CONF_DIR=${pwd}/external/…` and
+/// `CARGO_MANIFEST_DIR=${pwd}/proto`. The `/` after the closing brace is
+/// not the root of anything: it separates segments of a path relative to
+/// wherever the placeholder lands at execution time. The action records the
+/// placeholder rather than the directory it will become, so nothing about
+/// the machine is baked in.
+fn closes_build_placeholder(bytes: &[u8], slash: usize) -> bool {
+    let open = match bytes.get(slash.wrapping_sub(1)) {
+        Some(b'}') => b'{',
+        Some(b')') => b'(',
+        _ => return false,
+    };
+
+    // A placeholder name is a plain identifier, so the opening bracket is
+    // however far back the identifier characters run. Scanning for that
+    // rather than balancing brackets also rejects a command substitution
+    // like `$(realpath x)`, whose contents are not an identifier at all.
+    let close_at = slash - 1;
+    let mut start = close_at;
+    while start > 0 {
+        let byte = bytes[start - 1];
+        if byte.is_ascii_alphanumeric() || byte == b'_' {
+            start -= 1;
+        } else {
+            break;
+        }
+    }
+
+    // `start < 2` leaves no room for the `$` and the bracket that must
+    // precede the name.
+    if start < 2 || bytes[start - 1] != open || bytes[start - 2] != b'$' {
+        return false;
+    }
+
+    let name = &bytes[start..close_at];
+    BUILD_PLACEHOLDERS
+        .iter()
+        .any(|known| known.as_bytes() == name)
+}
+
 /// Extract every absolute path embedded in `text`. A run begins at a `/` that
 ///
 /// * is followed by at least one path character,
@@ -674,10 +728,17 @@ fn absolute_paths(text: &str) -> Vec<String> {
 
             // A `/` is an absolute-path start if it's at a separator
             // boundary (start of string or preceded by a non-path char) or
-            // glued onto a flag prefix.
-            let boundary = i == 0
-                || !is_path_char(bytes[i - 1] as char)
-                || glued_onto_flag(bytes, i);
+            // glued onto a flag prefix—unless what precedes it is a
+            // build-internal placeholder, which makes the path relative to
+            // that placeholder however separator-like the `}` looks.
+            let boundary = if i == 0 {
+                true
+            } else if closes_build_placeholder(bytes, i) {
+                false
+            } else {
+                !is_path_char(bytes[i - 1] as char)
+                    || glued_onto_flag(bytes, i)
+            };
 
             if followed_by_path_char && not_double_slash && boundary {
                 let start = i;
@@ -1455,6 +1516,98 @@ mod tests {
             &["-Irelative/include", "//pkg:target", "foo.o"],
         )]);
         assert!(check_absolute_paths(&c).is_empty());
+    }
+
+    #[test]
+    fn a_path_under_a_variable_expansion_is_not_absolute() {
+        // rules_rust writes exactly these. `${pwd}` becomes the execution
+        // root at run time, so nothing machine-specific is recorded.
+        let c = container(vec![action_with_env(
+            "Clippy",
+            1,
+            &[
+                (
+                    "CLIPPY_CONF_DIR",
+                    "${pwd}/external/rules_rust+/rust/settings",
+                ),
+                ("CARGO_MANIFEST_DIR", "${pwd}/proto"),
+            ],
+        )]);
+        assert!(check_absolute_paths(&c).is_empty());
+    }
+
+    #[test]
+    fn every_build_placeholder_is_understood() {
+        let c = container(vec![action_with_args(
+            "A",
+            1,
+            &[
+                "tool",
+                "--remap-path-prefix=${pwd}=.",
+                "-I${output_base}/include",
+                "$(exec_root)/gen",
+                // A bare `$name` was never picked up, since the `/` sits
+                // right after a path character; pinned so it stays that way.
+                "$pwd/external/thing",
+            ],
+        )]);
+        let found = check_absolute_paths(&c);
+        assert!(found.is_empty(), "{found:?}");
+    }
+
+    #[test]
+    fn an_unrecognized_expansion_is_not_trusted() {
+        // The whole point of the allow-list. `${HOME}` expands to a
+        // host-specific absolute path, and a project's own placeholder
+        // could expand to anything at all, so neither is excused: an
+        // unknown name has to be reported rather than assumed harmless.
+        let c = container(vec![action_with_args(
+            "A",
+            1,
+            &[
+                "tool",
+                "${HOME}/lib",
+                "${foobar}/usr/lib",
+                "$(realpath x)/y",
+            ],
+        )]);
+        let found = check_absolute_paths(&c);
+        assert_eq!(found.len(), 3, "{found:?}");
+    }
+
+    #[test]
+    fn a_closing_brace_alone_does_not_excuse_an_absolute_path() {
+        // Even a known name needs the `$`: brackets that merely happen to
+        // precede a `/` are just brackets.
+        let c = container(vec![action_with_args(
+            "A",
+            1,
+            &["tool", "[pwd]/usr/lib", "{pwd}/opt/tool"],
+        )]);
+        let found = check_absolute_paths(&c);
+        assert_eq!(found.len(), 2, "{found:?}");
+    }
+
+    #[test]
+    fn an_absolute_path_after_an_expansion_is_still_reported() {
+        // The expansion excuses the path glued to it, not the whole
+        // argument: a genuine absolute path later on still counts.
+        let c = container(vec![action_with_args(
+            "A",
+            1,
+            &["tool", "${pwd}/external/ok:/usr/lib"],
+        )]);
+        let found = check_absolute_paths(&c);
+        assert_eq!(found.len(), 1, "{found:?}");
+        assert_abs_path(
+            &found[0],
+            "A",
+            1,
+            "/usr/lib",
+            LeakSite::Argument {
+                value: "${pwd}/external/ok:/usr/lib".to_owned(),
+            },
+        );
     }
 
     #[test]

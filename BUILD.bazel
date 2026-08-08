@@ -113,12 +113,5 @@ buildifier(
 
 ahab(
     name = "hermeticity",
-    exceptions = [
-        {
-            "reason": "rules_rust vendors the Rust toolchain and Ahab has no spec for it yet",
-            "kind": "unknown_program",
-            "program": "@rules_rust+rust//rust_toolchain/bin/*",
-        },
-    ],
     label = "//...",
 )
