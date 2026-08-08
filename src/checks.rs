@@ -284,7 +284,104 @@ pub(crate) enum Violation {
     },
 }
 
+/// A violation flattened into the handful of dimensions something outside
+/// the checks might want to ask about, with the fields a given kind does
+/// not have left as `None`.
+///
+/// This exists so that [`crate::exceptions`] can match on a violation
+/// without restating the shape of every variant. Producing it is one
+/// exhaustive `match`, so a variant added later cannot be quietly left out
+/// of the answer—the compiler asks what its facets are.
+pub(crate) struct Facets<'a> {
+    /// The variant's serialization tag, e.g. `absolute_path`.
+    pub kind: &'static str,
+    /// The action responsible.
+    pub action: &'a ActionRef,
+    /// The program judged, for the variants that judge one.
+    pub program: Option<&'a ProgramId>,
+    /// The absolute path found, for [`Violation::AbsolutePath`].
+    pub path: Option<&'a str>,
+    /// The offending `PATH`, for [`Violation::BadPath`].
+    pub actual: Option<&'a str>,
+    /// The environment source, for [`Violation::EnvironmentLeak`].
+    pub source: Option<EnvSource>,
+    /// Where in the action it was found, for the variants that record it.
+    pub site: Option<&'a LeakSite>,
+}
+
 impl Violation {
+    /// Flatten the violation into the dimensions an exception can match.
+    pub(crate) fn facets(&self) -> Facets<'_> {
+        // A base value so each arm states only what makes it different.
+        let bare = |kind, action| Facets {
+            kind,
+            action,
+            program: None,
+            path: None,
+            actual: None,
+            source: None,
+            site: None,
+        };
+
+        match self {
+            Violation::EnvironmentLeak {
+                action,
+                source,
+                sentinel: _,
+                site,
+            } => Facets {
+                source: Some(*source),
+                site: Some(site),
+                ..bare("environment_leak", action)
+            },
+            Violation::BadPath { action, actual } => Facets {
+                actual: Some(actual),
+                ..bare("bad_path", action)
+            },
+            Violation::AbsolutePath { action, path, site } => Facets {
+                path: Some(path),
+                site: Some(site),
+                ..bare("absolute_path", action)
+            },
+            Violation::SystemProgram {
+                action,
+                program,
+                wrappers: _,
+            } => Facets {
+                program: Some(program),
+                ..bare("system_program", action)
+            },
+            Violation::UnknownProgram {
+                action,
+                program,
+                wrappers: _,
+            } => Facets {
+                program: Some(program),
+                ..bare("unknown_program", action)
+            },
+            Violation::NeverReproducible {
+                action,
+                program,
+                wrappers: _,
+                synonym: _,
+            } => Facets {
+                program: Some(program),
+                ..bare("never_reproducible", action)
+            },
+            Violation::ConditionalReproducibility {
+                action,
+                program,
+                wrappers: _,
+                synonym: _,
+                missing_required: _,
+                present_breaking: _,
+            } => Facets {
+                program: Some(program),
+                ..bare("conditional_reproducibility", action)
+            },
+        }
+    }
+
     /// Pretty-print the violation into a single human-readable line.
     pub(crate) fn render(&self, palette: Palette) -> String {
         let hermeticity = "hermeticity violation";

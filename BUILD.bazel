@@ -18,6 +18,7 @@ rust_library(
         "src/aquery.rs",
         "src/checks.rs",
         "src/cli.rs",
+        "src/exceptions.rs",
         "src/lib.rs",
         "src/melville.rs",
         "src/param_files.rs",

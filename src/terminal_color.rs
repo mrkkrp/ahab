@@ -23,6 +23,16 @@ pub(crate) fn stderr_supports_color() -> bool {
         && std::io::stderr().is_terminal()
 }
 
+/// Whether output to stdout should be colored, on the same terms.
+///
+/// Only the "checks passed" line goes to stdout, so this is asked far less
+/// often than [`stderr_supports_color`]—but it has to be asked separately,
+/// since a pipeline that captures one stream and not the other is ordinary.
+pub(crate) fn stdout_supports_color() -> bool {
+    std::env::var_os("NO_COLOR").is_none()
+        && std::io::stdout().is_terminal()
+}
+
 /// How to style a piece of output, or that it should not be styled.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub(crate) struct Palette {
@@ -43,6 +53,15 @@ impl Palette {
     /// A palette that colors only if stderr can show it.
     pub(crate) fn for_stderr() -> Palette {
         if stderr_supports_color() {
+            Palette::color()
+        } else {
+            Palette::plain()
+        }
+    }
+
+    /// A palette that colors only if stdout can show it.
+    pub(crate) fn for_stdout() -> Palette {
+        if stdout_supports_color() {
             Palette::color()
         } else {
             Palette::plain()

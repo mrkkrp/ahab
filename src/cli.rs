@@ -12,6 +12,9 @@ use similar::TextDiff;
 use crate::aquery::{random_token, run_aquery};
 
 use crate::checks::{Violation, check_all};
+use crate::exceptions::{
+    Exception, Exceptions, Suppressed, parse_exceptions, stale_warning,
+};
 use crate::melville;
 use crate::reproducibility_spec::library::{Entry, Library, parse_entries};
 use crate::reproducibility_spec::program_id::ProgramId;
@@ -76,6 +79,11 @@ pub struct Cli {
     /// anyone else's. A file given later overrides one given earlier.
     #[arg(long = "repro-specs", value_name = "FILENAME")]
     pub repro_specs: Vec<PathBuf>,
+
+    /// Load exceptions from a JSON file, filtering out the violations they
+    /// excuse. May be repeated.
+    #[arg(long = "exceptions-json", value_name = "FILENAME")]
+    pub exceptions_json: Vec<PathBuf>,
 }
 
 impl Cli {
@@ -86,7 +94,7 @@ impl Cli {
         if let Some(path) = &self.explain_json {
             let path =
                 resolve_output_path(path, invocation_dir().as_deref());
-            self.report(&read_json(&path)?)?;
+            self.report(&read_json(&path)?, Suppressed::default())?;
             return Ok(ExitCode::SUCCESS);
         }
 
@@ -118,6 +126,20 @@ impl Cli {
 
         let violations = check_all(&container, &user, &hostname, &library);
 
+        let mut exceptions = Vec::new();
+        for path in &self.exceptions_json {
+            let path =
+                resolve_output_path(path, invocation_dir().as_deref());
+            exceptions.extend(read_exceptions(&path)?);
+        }
+        let filtered = Exceptions::new(exceptions).filter(violations);
+
+        if let Some(warning) = stale_warning(&filtered.unused) {
+            eprintln!("{warning}");
+        }
+
+        let violations = filtered.kept;
+
         if let Some(path) = &self.write_json {
             let path =
                 resolve_output_path(path, invocation_dir().as_deref());
@@ -128,7 +150,7 @@ impl Cli {
             return self.expect(path, &violations);
         }
 
-        self.report(&violations)?;
+        self.report(&violations, filtered.suppressed)?;
         Ok(ExitCode::SUCCESS)
     }
 
@@ -155,19 +177,29 @@ impl Cli {
     fn report(
         &self,
         violations: &BTreeMap<Violation, usize>,
+        suppressed: Suppressed,
     ) -> Result<()> {
         if !violations.is_empty() {
             bail!(
                 "{}",
                 report_violations(
                     violations,
+                    suppressed,
                     !self.shut_up,
                     Palette::for_stderr(),
                 )
             );
         }
 
-        println!("All hermeticity checks passed.");
+        let palette = Palette::for_stdout();
+        let mut passed = "All hermeticity checks passed.".to_owned();
+        if !suppressed.is_empty() {
+            passed.push_str(&format!(
+                "\n  {}",
+                palette.faint(&{ suppressed.note() })
+            ));
+        }
+        println!("{passed}");
         Ok(())
     }
 }
@@ -216,6 +248,19 @@ fn read_specs(path: &Path) -> Result<Vec<(ProgramId, Entry)>> {
         format!("failed to read specs from {}", path.display())
     })?;
     parse_entries(&text)
+        .map_err(|why| anyhow::anyhow!("{}: {why}", path.display()))
+}
+
+/// Read exceptions from `path`.
+fn read_exceptions(path: &Path) -> Result<Vec<Exception>> {
+    let text = std::fs::read_to_string(path).with_context(|| {
+        format!("failed to read exceptions from {}", path.display())
+    })?;
+    let origin = path.file_name().map_or_else(
+        || path.display().to_string(),
+        |name| name.to_string_lossy().into_owned(),
+    );
+    parse_exceptions(&text, &origin)
         .map_err(|why| anyhow::anyhow!("{}: {why}", path.display()))
 }
 
@@ -296,6 +341,7 @@ fn render_diff(
 /// The caller guarantees `violations` is non-empty.
 fn report_violations(
     violations: &BTreeMap<Violation, usize>,
+    suppressed: Suppressed,
     quote: bool,
     palette: Palette,
 ) -> String {
@@ -331,6 +377,13 @@ fn report_violations(
         ));
     }
 
+    if !suppressed.is_empty() {
+        report.push_str(&format!(
+            "\n  {}",
+            palette.faint(&suppressed.note())
+        ));
+    }
+
     if quote {
         report.push_str(&format!(
             "\n\n  {}",
@@ -347,6 +400,19 @@ mod tests {
     use crate::reproducibility_spec::Reproducibility;
     use crate::reproducibility_spec::library::Transition;
     use crate::reproducibility_spec::program_id::ProgramId;
+
+    fn report_violations(
+        violations: &BTreeMap<Violation, usize>,
+        quote: bool,
+        palette: Palette,
+    ) -> String {
+        super::report_violations(
+            violations,
+            Suppressed::default(),
+            quote,
+            palette,
+        )
+    }
 
     fn bad_path(mnemonic: &str, target_id: u32, actual: &str) -> Violation {
         Violation::BadPath {
@@ -1123,6 +1189,42 @@ mod tests {
             ),
             "{report}",
         );
+    }
+
+    #[test]
+    fn the_report_notes_what_exceptions_suppressed() {
+        let suppressed = Suppressed {
+            distinct: 1,
+            occurrences: 3,
+            exceptions: 1,
+        };
+        let report = super::report_violations(
+            &once([bad_path("CppCompile", 1, "/bin")]),
+            suppressed,
+            false,
+            Palette::plain(),
+        );
+        // The finding still leads; the note is a footnote under it.
+        assert!(
+            report.starts_with("found 1 hermeticity violation:\n"),
+            "{report}"
+        );
+        assert!(
+            report
+                .ends_with("\n  (3 violations suppressed by 1 exception)"),
+            "{report}"
+        );
+    }
+
+    #[test]
+    fn the_report_is_silent_when_nothing_was_suppressed() {
+        let report = super::report_violations(
+            &once([bad_path("CppCompile", 1, "/bin")]),
+            Suppressed::default(),
+            false,
+            Palette::plain(),
+        );
+        assert!(!report.contains("suppressed"), "{report}");
     }
 
     #[test]
