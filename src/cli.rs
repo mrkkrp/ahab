@@ -101,8 +101,7 @@ impl Cli {
     /// violations into a non-zero exit.
     pub fn run(&self) -> Result<ExitCode> {
         if let Some(path) = &self.explain_json {
-            let path =
-                resolve_output_path(path, invocation_dir().as_deref());
+            let path = resolve_against_invocation_dir(path);
             self.report(&read_json(&path)?, Suppressed::default())?;
             return Ok(ExitCode::SUCCESS);
         }
@@ -128,8 +127,7 @@ impl Cli {
         // deterministic order regardless of how Bazel ordered the actions.
         let mut library = Library::builtin();
         for path in &self.repro_specs {
-            let path =
-                resolve_output_path(path, invocation_dir().as_deref());
+            let path = resolve_against_invocation_dir(path);
             library.extend(read_specs(&path)?);
         }
 
@@ -137,8 +135,7 @@ impl Cli {
 
         let mut exceptions = Vec::new();
         for path in &self.exceptions_json {
-            let path =
-                resolve_output_path(path, invocation_dir().as_deref());
+            let path = resolve_against_invocation_dir(path);
             exceptions.extend(read_exceptions(&path)?);
         }
         let filtered = Exceptions::new(exceptions).filter(violations);
@@ -150,8 +147,7 @@ impl Cli {
         let violations = filtered.kept;
 
         if let Some(path) = &self.write_json {
-            let path =
-                resolve_output_path(path, invocation_dir().as_deref());
+            let path = resolve_against_invocation_dir(path);
             write_json(&path, &violations)?;
         }
 
@@ -170,7 +166,7 @@ impl Cli {
         path: &Path,
         found: &BTreeMap<Violation, usize>,
     ) -> Result<ExitCode> {
-        let path = resolve_output_path(path, invocation_dir().as_deref());
+        let path = resolve_against_invocation_dir(path);
         let expected = read_json(&path)?;
 
         if *found == expected {
@@ -224,12 +220,17 @@ fn invocation_dir() -> Option<PathBuf> {
     std::env::var_os("BUILD_WORKING_DIRECTORY").map(PathBuf::from)
 }
 
-/// Resolve a path the user gave us against the directory they gave it in.
+/// Resolve a path the user gave us against the directory they typed it in.
 fn resolve_output_path(path: &Path, base: Option<&Path>) -> PathBuf {
     match base {
         Some(base) if path.is_relative() => base.join(path),
         _ => path.to_path_buf(),
     }
+}
+
+/// A path as the user gave it, resolved against the invocation directory.
+fn resolve_against_invocation_dir(path: &Path) -> PathBuf {
+    resolve_output_path(path, invocation_dir().as_deref())
 }
 
 /// One violation as it appears in the JSON report: the violation's own

@@ -16,7 +16,7 @@ use crate::reproducibility_spec::{
 use crate::terminal_color::Palette;
 
 /// The exact value of `PATH` that every action is required to use.
-pub(crate) const EXPECTED_PATH: &str = "/bin:/usr/bin:/usr/local/bin";
+const EXPECTED_PATH: &str = "/bin:/usr/bin:/usr/local/bin";
 
 /// The identity of the action responsible for a violation.
 #[derive(
@@ -542,7 +542,7 @@ pub(crate) fn check_all(
 /// Find every place where a sentinel leaks into an action's command line,
 /// into one of its param files, or into the value of any of its
 /// `environment_variables`, and return one [`Violation`] per leak.
-pub(crate) fn check_environment_leaks(
+fn check_environment_leaks(
     container: &ActionGraphContainer,
     user: &str,
     hostname: &str,
@@ -590,9 +590,7 @@ pub(crate) fn check_environment_leaks(
 
 /// Find every action that sets `PATH` to anything other than
 /// [`EXPECTED_PATH`], and return one [`Violation`] per deviation.
-pub(crate) fn check_path(
-    container: &ActionGraphContainer,
-) -> Vec<Violation> {
+fn check_path(container: &ActionGraphContainer) -> Vec<Violation> {
     let mut violations = Vec::new();
     let targets = target_labels(container);
 
@@ -776,7 +774,7 @@ fn is_allowed_absolute_path(path: &str) -> bool {
 /// expected to hold absolute paths and is governed separately by
 /// [`check_path`]. Paths in [`ALLOWED_ABSOLUTE_PATHS`] (such as
 /// `/dev/null`) are also skipped.
-pub(crate) fn check_absolute_paths(
+fn check_absolute_paths(
     container: &ActionGraphContainer,
 ) -> Vec<Violation> {
     let mut violations = Vec::new();
@@ -825,7 +823,7 @@ pub(crate) fn check_absolute_paths(
 
 /// Check each action's program against the library of reproducibility
 /// specs.
-pub(crate) fn check_reproducibility(
+fn check_reproducibility(
     container: &ActionGraphContainer,
     library: &Library,
 ) -> Vec<Violation> {

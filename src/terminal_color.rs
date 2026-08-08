@@ -12,25 +12,14 @@
 
 use std::io::IsTerminal;
 
-/// Whether output to stderr should be colored.
+/// Whether output to `stream` should be colored.
 ///
-/// Ahab's reports and diffs go to stderr, so that is what is tested. Color
-/// only when it is a terminal, so redirected output stays plain text; and
-/// never when `NO_COLOR` is set, which is the convention for turning color
-/// off regardless.
-pub(crate) fn stderr_supports_color() -> bool {
-    std::env::var_os("NO_COLOR").is_none()
-        && std::io::stderr().is_terminal()
-}
-
-/// Whether output to stdout should be colored, on the same terms.
-///
-/// Only the "checks passed" line goes to stdout, so this is asked far less
-/// often than [`stderr_supports_color`]—but it has to be asked separately,
-/// since a pipeline that captures one stream and not the other is ordinary.
-pub(crate) fn stdout_supports_color() -> bool {
-    std::env::var_os("NO_COLOR").is_none()
-        && std::io::stdout().is_terminal()
+/// Color only when the stream is a terminal, so redirected output stays
+/// plain text; and never when `NO_COLOR` is set, which is the convention
+/// for turning color off regardless. Each stream is asked separately,
+/// since a pipeline that captures one and not the other is ordinary.
+fn supports_color(stream: impl IsTerminal) -> bool {
+    std::env::var_os("NO_COLOR").is_none() && stream.is_terminal()
 }
 
 /// How to style a piece of output, or that it should not be styled.
@@ -52,16 +41,16 @@ impl Palette {
 
     /// A palette that colors only if stderr can show it.
     pub(crate) fn for_stderr() -> Palette {
-        if stderr_supports_color() {
-            Palette::color()
-        } else {
-            Palette::plain()
-        }
+        Palette::of(supports_color(std::io::stderr()))
     }
 
     /// A palette that colors only if stdout can show it.
     pub(crate) fn for_stdout() -> Palette {
-        if stdout_supports_color() {
+        Palette::of(supports_color(std::io::stdout()))
+    }
+
+    fn of(enabled: bool) -> Palette {
+        if enabled {
             Palette::color()
         } else {
             Palette::plain()

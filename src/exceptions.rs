@@ -11,7 +11,7 @@ use crate::glob::Glob;
 /// The kind of violation an exception applies to, named as the JSON report
 /// names it so that one can be copied straight out of the other.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub(crate) enum Kind {
+enum Kind {
     EnvironmentLeak,
     BadPath,
     AbsolutePath,
@@ -34,7 +34,7 @@ impl Kind {
     ];
 
     /// The tag [`Violation`]'s serialization uses.
-    pub(crate) fn as_str(self) -> &'static str {
+    fn as_str(self) -> &'static str {
         match self {
             Kind::EnvironmentLeak => "environment_leak",
             Kind::BadPath => "bad_path",
@@ -66,27 +66,32 @@ impl Kind {
     }
 }
 
-/// Parse a kind, listing the alternatives when it is not one of them. The
-/// list is worth the noise: the names are the only closed vocabulary in the
-/// file, so a typo here is the easiest mistake to make and the easiest to
-/// fix once seen.
-fn parse_kind(text: &str) -> Result<Kind, String> {
-    Kind::ALL
-        .into_iter()
-        .find(|kind| kind.as_str() == text)
+/// Parse `text` as one of a closed vocabulary, listing the alternatives
+/// when it is not one of them.
+fn parse_one_of<T: Copy>(
+    what: &str,
+    text: &str,
+    values: &[T],
+    name: fn(T) -> &'static str,
+) -> Result<T, String> {
+    values
+        .iter()
+        .copied()
+        .find(|value| name(*value) == text)
         .ok_or_else(|| {
             let known: Vec<&str> =
-                Kind::ALL.iter().map(|k| k.as_str()).collect();
-            format!("unknown kind {text:?}, expected one of: {}", {
-                known.join(", ")
-            })
+                values.iter().map(|value| name(*value)).collect();
+            format!(
+                "unknown {what} {text:?}, expected one of: {}",
+                known.join(", "),
+            )
         })
 }
 
 /// Where in an action a violation was found, as an exception names it.
 /// Mirrors the `location` tag of [`LeakSite`].
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub(crate) enum Location {
+enum Location {
     Argument,
     ParamFile,
     EnvVar,
@@ -114,28 +119,8 @@ impl Location {
     }
 }
 
-fn parse_location(text: &str) -> Result<Location, String> {
-    Location::ALL
-        .into_iter()
-        .find(|location| location.as_str() == text)
-        .ok_or_else(|| {
-            let known: Vec<&str> =
-                Location::ALL.iter().map(|l| l.as_str()).collect();
-            format!("unknown location {text:?}, expected one of: {}", {
-                known.join(", ")
-            })
-        })
-}
-
-fn parse_source(text: &str) -> Result<EnvSource, String> {
-    match text {
-        "user" => Ok(EnvSource::User),
-        "hostname" => Ok(EnvSource::Hostname),
-        _ => Err(format!(
-            "unknown source {text:?}, expected one of: user, hostname"
-        )),
-    }
-}
+/// The sources an exception file may name, for [`parse_one_of`].
+const SOURCES: [EnvSource; 2] = [EnvSource::User, EnvSource::Hostname];
 
 /// How an exception file spells a source. Its own function rather than
 /// [`EnvSource`]'s, whose `as_str` answers a different question—the name of
@@ -453,19 +438,21 @@ fn compile(
     let kind = entry
         .kind
         .as_deref()
-        .map(parse_kind)
+        .map(|text| parse_one_of("kind", text, &Kind::ALL, Kind::as_str))
         .transpose()
         .map_err(at)?;
     let source = entry
         .source
         .as_deref()
-        .map(parse_source)
+        .map(|text| parse_one_of("source", text, &SOURCES, source_name))
         .transpose()
         .map_err(at)?;
     let location = entry
         .location
         .as_deref()
-        .map(parse_location)
+        .map(|text| {
+            parse_one_of("location", text, &Location::ALL, Location::as_str)
+        })
         .transpose()
         .map_err(at)?;
 

@@ -3,7 +3,7 @@ use super::super::program_id::ProgramId;
 use super::super::{Reproducibility, ReproducibilitySpec};
 
 /// The Rust toolchain, as rules_rust's `rust` extension lays it out.
-pub(in crate::reproducibility_spec) fn rust_tool(name: &str) -> ProgramId {
+fn rust_tool(name: &str) -> ProgramId {
     ProgramId::extension(
         "rules_rust",
         "rust",

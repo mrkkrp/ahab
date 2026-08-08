@@ -110,7 +110,6 @@ impl ReproducibilitySpec {
     }
 
     /// Set the recognizer, returning the updated spec.
-    #[allow(dead_code)]
     pub fn with_recognizer(
         mut self,
         recognize: fn(&str) -> Option<String>,
