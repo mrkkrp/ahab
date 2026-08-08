@@ -14,6 +14,16 @@ bazel_dep(name = "rules_proto", version = "7.1.0")
 bazel_dep(name = "protobuf", version = "35.1")
 
 ###############################################################################
+# Starlark formatting
+###############################################################################
+
+bazel_dep(
+    name = "buildifier_prebuilt",
+    version = "8.5.1.3",
+    dev_dependency = True,
+)
+
+###############################################################################
 # Hermetic C/C++ toolchain
 ###############################################################################
 
@@ -22,6 +32,7 @@ bazel_dep(name = "protobuf", version = "35.1")
 # llvm module provides a zero-sysroot, fully hermetic LLVM-based cc toolchain.
 
 bazel_dep(name = "llvm", version = "0.8.14")
+
 register_toolchains("@llvm//toolchain:all")
 
 ###############################################################################
@@ -34,6 +45,7 @@ rust.toolchain(
     versions = ["1.86.0"],
 )
 use_repo(rust, "rust_toolchains")
+
 register_toolchains("@rust_toolchains//:all")
 
 ###############################################################################
@@ -42,11 +54,11 @@ register_toolchains("@rust_toolchains//:all")
 
 crate = use_extension("@rules_rust//crate_universe:extensions.bzl", "crate")
 crate.spec(
-    package = "clap",
     features = [
         "derive",
         "wrap_help",
     ],
+    package = "clap",
     version = "4",
 )
 crate.spec(
@@ -54,8 +66,8 @@ crate.spec(
     version = "1",
 )
 crate.spec(
-    package = "serde",
     features = ["derive"],
+    package = "serde",
     version = "1",
 )
 crate.spec(

@@ -1,3 +1,4 @@
+load("@buildifier_prebuilt//:rules.bzl", "buildifier", "buildifier_test")
 load(
     "@rules_rust//rust:defs.bzl",
     "rust_binary",
@@ -20,17 +21,17 @@ rust_library(
         "src/lib.rs",
         "src/melville.rs",
         "src/param_files.rs",
-        "src/terminal_color.rs",
         "src/reproducibility_spec/library.rs",
         "src/reproducibility_spec/mod.rs",
         "src/reproducibility_spec/program_id.rs",
+        "src/terminal_color.rs",
     ],
     crate_name = "ahab",
     deps = [
         "//proto:analysis_v2_rs_proto",
-        "@crates//:prost",
         "@crates//:anyhow",
         "@crates//:clap",
+        "@crates//:prost",
         "@crates//:serde",
         "@crates//:serde_json",
         "@crates//:similar",
@@ -52,9 +53,9 @@ rust_test(
     crate = ":ahab_lib",
     deps = [
         "//proto:analysis_v2_rs_proto",
-        "@crates//:prost",
         "@crates//:anyhow",
         "@crates//:clap",
+        "@crates//:prost",
         "@crates//:serde",
         "@crates//:serde_json",
         "@crates//:similar",
@@ -83,4 +84,27 @@ rustfmt_test(
 alias(
     name = "format",
     actual = "@rules_rust//tools/rustfmt",
+)
+
+buildifier_test(
+    name = "buildifier_test",
+    size = "small",
+    exclude_patterns = [
+        "./.direnv/*",
+        "./.git/*",
+    ],
+    lint_mode = "warn",
+    mode = "diff",
+    no_sandbox = True,
+    workspace = "//:MODULE.bazel",
+)
+
+buildifier(
+    name = "buildifier",
+    exclude_patterns = [
+        "./.direnv/*",
+        "./.git/*",
+    ],
+    lint_mode = "fix",
+    mode = "fix",
 )
