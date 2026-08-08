@@ -7,6 +7,7 @@ load(
     "rust_test",
     "rustfmt_test",
 )
+load("//:defs.bzl", "ahab")
 
 package(default_visibility = ["//visibility:public"])
 
@@ -108,4 +109,16 @@ buildifier(
     ],
     lint_mode = "fix",
     mode = "fix",
+)
+
+ahab(
+    name = "hermeticity",
+    exceptions = [
+        {
+            "reason": "rules_rust vendors the Rust toolchain and Ahab has no spec for it yet",
+            "kind": "unknown_program",
+            "program": "@rules_rust+rust//rust_toolchain/bin/*",
+        },
+    ],
+    label = "//...",
 )

@@ -50,6 +50,15 @@ pub struct Cli {
     #[arg(long = "shut-up")]
     pub shut_up: bool,
 
+    /// Report the violations as usual, but exit 0 even when there are some.
+    ///
+    /// For recording rather than judging: writing a baseline with
+    /// `--write-json` is not a failure just because the build it describes
+    /// has violations in it. Refused together with `--expect-json`, whose
+    /// entire purpose is the exit code.
+    #[arg(long = "no-fail", conflicts_with = "expect_json")]
+    pub no_fail: bool,
+
     /// Write the violations to this file as JSON, while still printing the
     /// usual output on the screen.
     #[arg(long = "write-json", value_name = "FILENAME")]
@@ -180,15 +189,17 @@ impl Cli {
         suppressed: Suppressed,
     ) -> Result<()> {
         if !violations.is_empty() {
-            bail!(
-                "{}",
-                report_violations(
-                    violations,
-                    suppressed,
-                    !self.shut_up,
-                    Palette::for_stderr(),
-                )
+            let report = report_violations(
+                violations,
+                suppressed,
+                !self.shut_up,
+                Palette::for_stderr(),
             );
+            if self.no_fail {
+                eprintln!("{report}");
+                return Ok(());
+            }
+            bail!("{report}");
         }
 
         let palette = Palette::for_stdout();
@@ -1188,6 +1199,52 @@ mod tests {
                 "found 2 distinct hermeticity violations (7 occurrences):\n"
             ),
             "{report}",
+        );
+    }
+
+    #[test]
+    fn the_command_line_definition_is_well_formed() {
+        // clap's own audit of the option definitions: duplicate names,
+        // conflicts naming arguments that do not exist, and so on.
+        use clap::CommandFactory;
+        Cli::command().debug_assert();
+    }
+
+    #[test]
+    fn no_fail_is_refused_together_with_expect_json() {
+        // `--expect-json` exists to produce an exit code, so asking for it
+        // and then asking not to fail is a contradiction rather than a
+        // preference.
+        let both = Cli::try_parse_from([
+            "ahab",
+            "//...",
+            "--no-fail",
+            "--expect-json",
+            "base.json",
+        ]);
+        assert!(both.is_err(), "{both:?}");
+
+        // Each on its own is fine.
+        assert!(
+            Cli::try_parse_from(["ahab", "//...", "--no-fail"]).is_ok()
+        );
+        assert!(
+            Cli::try_parse_from([
+                "ahab",
+                "//...",
+                "--expect-json",
+                "base.json"
+            ])
+            .is_ok()
+        );
+    }
+
+    #[test]
+    fn a_label_is_required_unless_a_report_is_being_explained() {
+        assert!(Cli::try_parse_from(["ahab"]).is_err());
+        assert!(
+            Cli::try_parse_from(["ahab", "--explain-json", "saved.json"])
+                .is_ok()
         );
     }
 
