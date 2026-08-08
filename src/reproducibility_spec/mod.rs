@@ -8,7 +8,10 @@ use std::sync::Arc;
 
 use serde::{Deserialize, Serialize};
 
+use crate::glob::Glob;
+
 pub mod library;
+pub mod per_lang;
 pub mod program_id;
 
 /// When a program behaves reproducibly.
@@ -36,10 +39,11 @@ pub type Recognize = Arc<dyn Fn(&str) -> Option<String> + Send + Sync>;
 pub struct ReproducibilitySpec {
     /// The baseline reproducibility of the program.
     pub reproducibility: Reproducibility,
-    /// Flags that are required for the program to be reproducible.
-    pub required_flags: BTreeSet<String>,
-    /// Flags that break the program's reproducibility.
-    pub breaking_flags: BTreeSet<String>,
+    /// Patterns an invocation must match for the program to be
+    /// reproducible.
+    pub required_flags: BTreeSet<Glob>,
+    /// Patterns whose match breaks the program's reproducibility.
+    pub breaking_flags: BTreeSet<Glob>,
     /// Map a raw argument to the canonical option it represents, or `None`
     /// if it is not recognized as an option of this program.
     pub recognize: Recognize,
@@ -95,11 +99,11 @@ impl ReproducibilitySpec {
             reproducibility,
             required_flags: required_flags
                 .into_iter()
-                .map(Into::into)
+                .map(|flag| Glob::new(&flag.into()))
                 .collect(),
             breaking_flags: breaking_flags
                 .into_iter()
-                .map(Into::into)
+                .map(|flag| Glob::new(&flag.into()))
                 .collect(),
             recognize: Arc::new(|arg: &str| Some(arg.to_owned())),
         }
@@ -154,12 +158,20 @@ impl ReproducibilitySpec {
 
                 let missing_required: BTreeSet<String> = self
                     .required_flags
-                    .difference(&present)
-                    .cloned()
+                    .iter()
+                    .filter(|required| {
+                        !present.iter().any(|arg| required.matches(arg))
+                    })
+                    .map(ToString::to_string)
                     .collect();
-                let present_breaking: BTreeSet<String> = self
-                    .breaking_flags
-                    .intersection(&present)
+
+                let present_breaking: BTreeSet<String> = present
+                    .iter()
+                    .filter(|arg| {
+                        self.breaking_flags
+                            .iter()
+                            .any(|breaking| breaking.matches(arg))
+                    })
                     .cloned()
                     .collect();
 

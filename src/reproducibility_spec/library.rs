@@ -65,26 +65,49 @@ impl Transition {
 /// wrapper transitions alike. Bounds a library that accidentally loops.
 const MAX_RESOLUTION_STEPS: usize = 16;
 
-/// The library as authored, in source order.
+/// A spec for a program whose output is a function of its inputs however it
+/// is invoked.
+pub(super) fn always() -> ReproducibilitySpec {
+    ReproducibilitySpec::new(
+        Reproducibility::Always,
+        [] as [&str; 0],
+        [] as [&str; 0],
+    )
+}
+
+/// A spec for a program no set of flags can make reproducible.
+#[allow(dead_code)]
+pub(super) fn never() -> ReproducibilitySpec {
+    ReproducibilitySpec::new(
+        Reproducibility::Never,
+        [] as [&str; 0],
+        [] as [&str; 0],
+    )
+}
+
+/// The library Ahab ships with.
 fn entries() -> Vec<(ProgramId, Entry)> {
+    let mut entries = super::per_lang::rust::entries();
+    entries.extend(language_agnostic());
+    entries
+}
+
+/// Entries for tools no one language owns.
+fn language_agnostic() -> Vec<(ProgramId, Entry)> {
     vec![
+        // protoc is a pure function of the descriptors it is given.
         (
-            ProgramId::module(
-                "rules_rust",
-                "util/process_wrapper/process_wrapper",
-            ),
-            Entry::Wraps(Transition::AfterSeparator {
-                separator: "--".to_owned(),
-            }),
+            ProgramId::extension("protobuf", "protoc", "bin/protoc"),
+            Entry::Spec(always()),
         ),
+        // Bazel's test shim. Its outputs—the log and the JUnit XML—carry
+        // timings and so are never byte-identical, but they are terminal:
+        // no other action consumes them, so that variation cannot reach a
+        // build artifact. What the shim does to the build is run a binary
+        // the build already produced.
         (
-            ProgramId::module(
-                "rules_rust",
-                "util/process_wrapper/bootstrap_process_wrapper.sh",
-            ),
-            Entry::Wraps(Transition::AfterSeparator {
-                separator: "--".to_owned(),
-            }),
+            ProgramId::module("bazel_tools", "tools/test/test-setup.sh"),
+            Entry::Spec(always()),
         ),
     ]
 }
@@ -240,10 +263,12 @@ enum EntryFile {
 struct SpecFields {
     /// The baseline disposition.
     reproducibility: Reproducibility,
-    /// Flags required for the program to be reproducible.
+    /// Patterns an invocation must match for the program to be
+    /// reproducible.
     #[serde(default)]
     required_flags: BTreeSet<String>,
-    /// Flags that break its reproducibility.
+    /// Patterns whose match breaks its reproducibility, written the same
+    /// way.
     #[serde(default)]
     breaking_flags: BTreeSet<String>,
     /// Arguments that stand for a different option, as `argument -> option`.
@@ -304,23 +329,6 @@ pub fn parse_entries(
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::reproducibility_spec::Reproducibility;
-
-    fn always() -> ReproducibilitySpec {
-        ReproducibilitySpec::new(
-            Reproducibility::Always,
-            [] as [&str; 0],
-            [] as [&str; 0],
-        )
-    }
-
-    fn never() -> ReproducibilitySpec {
-        ReproducibilitySpec::new(
-            Reproducibility::Never,
-            [] as [&str; 0],
-            [] as [&str; 0],
-        )
-    }
 
     /// A library holding exactly these entries and nothing built in.
     fn index(entries: Vec<(ProgramId, Entry)>) -> Library {
