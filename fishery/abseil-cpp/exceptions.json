@@ -1,0 +1,19 @@
+{
+  "exceptions": [
+    {
+      "reason": "abseil builds with Bazel's autoconfigured non-hermetic C++ toolchain",
+      "kind": "system_program",
+      "program": "*/bin/gcc"
+    },
+    {
+      "reason": "abseil builds with Bazel's autoconfigured non-hermetic C++ toolchain",
+      "kind": "system_program",
+      "program": "*/bin/ar"
+    },
+    {
+      "reason": "abseil builds with Bazel's autoconfigured non-hermetic C++ toolchain",
+      "kind": "system_program",
+      "program": "*/bin/strip"
+    }
+  ]
+}
