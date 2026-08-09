@@ -1,0 +1,26 @@
+load("@buildifier_prebuilt//:rules.bzl", "buildifier", "buildifier_test")
+
+buildifier_test(
+    name = "buildifier_test",
+    size = "small",
+    exclude_patterns = [
+        "./.direnv/*",
+        "./.git/*",
+        "./fishery/*/work",
+    ],
+    lint_mode = "warn",
+    mode = "diff",
+    no_sandbox = True,
+    workspace = "//:MODULE.bazel",
+)
+
+buildifier(
+    name = "buildifier",
+    exclude_patterns = [
+        "./.direnv/*",
+        "./.git/*",
+        "./fishery/*/work",
+    ],
+    lint_mode = "fix",
+    mode = "fix",
+)

@@ -1,2 +1,4 @@
 .claude/
 .direnv/
+__pycache__/
+fishery/*/work/

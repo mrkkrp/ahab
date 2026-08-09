@@ -33,3 +33,6 @@ jobs:
       - name: Run clippy
         if: ${{ !cancelled() }}
         run: bazel build //:clippy
+      - name: Run the fishery
+        if: ${{ !cancelled() }}
+        run: python3 fishery/fishery.py ci

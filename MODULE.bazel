@@ -54,60 +54,35 @@ register_toolchains("@rust_toolchains//:all")
 ###############################################################################
 
 crate = use_extension("@rules_rust//crate_universe:extensions.bzl", "crate")
-crate.spec(
-    features = [
-        "derive",
-        "wrap_help",
-    ],
-    package = "clap",
-    version = "4",
-)
-crate.spec(
-    package = "anyhow",
-    version = "1",
-)
-crate.spec(
-    features = ["derive"],
-    package = "serde",
-    version = "1",
-)
-crate.spec(
-    package = "serde_json",
-    version = "1",
-)
-crate.spec(
-    package = "similar",
-    version = "2",
-)
-crate.spec(
-    package = "prost",
-    version = "0.13",
-)
-crate.spec(
-    package = "prost-types",
-    version = "0.13",
-)
-crate.spec(
-    package = "protoc-gen-prost",
-    version = "0.4",
+
+# `from_cargo` rather than `from_specs`: inline specs cannot be resolved by
+# crate_universe when Ahab is a dependency rather than the root module, so
+# `from_specs` makes the module unusable by anyone else. The manifest and
+# lockfile ship with the module and are read the same way from either side.
+#
+# The hub is named rather than left as the default `crates`, so that a
+# consumer with its own Rust dependencies is not sharing a repository name
+# with ours.
+crate.from_cargo(
+    name = "ahab_crates",
+    cargo_lockfile = "//:Cargo.lock",
+    # The crate_universe lockfile, distinct from Cargo's own: it records the
+    # resolved render, and shipping it is what lets a consumer use these
+    # crates without repinning, which bzlmod does not allow across a module
+    # boundary.
+    lockfile = "//:Cargo.Bazel.lock",
+    manifests = ["//:Cargo.toml"],
 )
 crate.annotation(
     crate = "protoc-gen-prost",
     gen_binaries = ["protoc-gen-prost"],
-)
-crate.spec(
-    package = "tonic",
-    version = "0.12",
-)
-crate.spec(
-    package = "protoc-gen-tonic",
-    version = "0.4",
+    repositories = ["ahab_crates"],
 )
 crate.annotation(
     crate = "protoc-gen-tonic",
     gen_binaries = ["protoc-gen-tonic"],
+    repositories = ["ahab_crates"],
 )
-crate.from_specs()
-use_repo(crate, "crates")
+use_repo(crate, "ahab_crates")
 
 register_toolchains("//proto:prost_toolchain")
