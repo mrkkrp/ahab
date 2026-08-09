@@ -25,6 +25,9 @@ pub enum Reproducibility {
     Always,
     /// The program is never reproducible; no set of flags can make it so.
     Never,
+    /// The program was written by inspecting the machine in ways that make
+    /// it non-hermetic.
+    HostDerived,
     /// The program is reproducible only under some conditions—see the
     /// required and breaking flags of the [`ReproducibilitySpec`].
     Sometimes,
@@ -149,6 +152,7 @@ impl ReproducibilitySpec {
         match self.reproducibility {
             Reproducibility::Always => Conformance::Reproducible,
             Reproducibility::Never => Conformance::NeverReproducible,
+            Reproducibility::HostDerived => Conformance::HostDerived,
             Reproducibility::Sometimes => {
                 let present: BTreeSet<String> = args
                     .into_iter()
@@ -196,6 +200,9 @@ pub enum Conformance {
     Reproducible,
     /// The program is never reproducible, whatever the flags.
     NeverReproducible,
+    /// The program was written by inspecting the machine in ways that make
+    /// it non-hermetic.
+    HostDerived,
     /// The program is conditionally reproducible and this invocation does
     /// not meet the conditions: some required flags are absent and/or some
     /// breaking flags are present. At least one of the two sets is

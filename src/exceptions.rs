@@ -16,6 +16,7 @@ enum Kind {
     BadPath,
     AbsolutePath,
     SystemProgram,
+    HostDerivedProgram,
     UnknownProgram,
     NeverReproducible,
     ConditionalReproducibility,
@@ -23,11 +24,12 @@ enum Kind {
 
 impl Kind {
     /// Every kind, in the order [`Violation`] declares them.
-    const ALL: [Kind; 7] = [
+    const ALL: [Kind; 8] = [
         Kind::EnvironmentLeak,
         Kind::BadPath,
         Kind::AbsolutePath,
         Kind::SystemProgram,
+        Kind::HostDerivedProgram,
         Kind::UnknownProgram,
         Kind::NeverReproducible,
         Kind::ConditionalReproducibility,
@@ -40,6 +42,7 @@ impl Kind {
             Kind::BadPath => "bad_path",
             Kind::AbsolutePath => "absolute_path",
             Kind::SystemProgram => "system_program",
+            Kind::HostDerivedProgram => "host_derived_program",
             Kind::UnknownProgram => "unknown_program",
             Kind::NeverReproducible => "never_reproducible",
             Kind::ConditionalReproducibility => {
@@ -53,6 +56,7 @@ impl Kind {
         matches!(
             self,
             Kind::SystemProgram
+                | Kind::HostDerivedProgram
                 | Kind::UnknownProgram
                 | Kind::NeverReproducible
                 | Kind::ConditionalReproducibility

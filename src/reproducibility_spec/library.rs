@@ -85,9 +85,19 @@ pub(super) fn never() -> ReproducibilitySpec {
     )
 }
 
+/// A spec for a program Bazel wrote by inspecting the machine.
+pub(super) fn host_derived() -> ReproducibilitySpec {
+    ReproducibilitySpec::new(
+        Reproducibility::HostDerived,
+        [] as [&str; 0],
+        [] as [&str; 0],
+    )
+}
+
 /// The library Ahab ships with.
 fn entries() -> Vec<(ProgramId, Entry)> {
     let mut entries = super::per_lang::rust::entries();
+    entries.extend(super::per_lang::cc::entries());
     entries.extend(language_agnostic());
     entries
 }
@@ -329,6 +339,7 @@ pub fn parse_entries(
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::reproducibility_spec::program_id::Origin;
 
     /// A library holding exactly these entries and nothing built in.
     fn index(entries: Vec<(ProgramId, Entry)>) -> Library {
@@ -420,6 +431,66 @@ mod tests {
                 at = target;
             }
         }
+    }
+
+    #[test]
+    fn a_program_outside_the_execution_root_is_the_machines() {
+        let resolved = Library::builtin()
+            .resolve(ProgramId::of("/usr/bin/gcc"), vec![]);
+        // Nothing in the library says so; the identity does.
+        assert_eq!(resolved.program.origin, Origin::System);
+        assert!(resolved.spec.is_none());
+    }
+
+    #[test]
+    fn a_declared_program_is_the_machines_wherever_it_sits() {
+        // Inside the execution root, in an ordinary-looking repository,
+        // and still the host's—which only the library can know.
+        let wrapper = ProgramId::extension(
+            "rules_cc",
+            "cc_configure_extension",
+            "cc_wrapper.sh",
+        );
+        let resolved = Library::builtin().resolve(wrapper.clone(), vec![]);
+        // Distinct from a system program: this one is inside the
+        // execution root, and only the library knows what it really is.
+        assert_ne!(resolved.program.origin, Origin::System);
+        assert_eq!(
+            resolved.spec.map(|(_, spec)| spec.reproducibility),
+            Some(Reproducibility::HostDerived),
+        );
+        // And the report can still say where it was found.
+        assert_eq!(
+            resolved.program.to_string(),
+            "@rules_cc+cc_configure_extension//cc_wrapper.sh",
+        );
+    }
+
+    #[test]
+    fn its_neighbours_in_the_same_repository_are_not() {
+        // The point of listing programs rather than repositories:
+        // `local_config_cc` also holds files that came from nobody's
+        // machine, and a rule about the repository would have swept them
+        // in. They are simply unknown, which is the safe answer.
+        let static_file = ProgramId::extension(
+            "rules_cc",
+            "cc_configure_extension",
+            "armeabi_cc_toolchain_config.bzl",
+        );
+        let resolved = Library::builtin().resolve(static_file, vec![]);
+        assert!(resolved.spec.is_none());
+    }
+
+    #[test]
+    fn a_synonym_may_point_at_a_host_derived_program() {
+        let library = index(vec![
+            (a(), Entry::Spec(host_derived())),
+            (b(), Entry::SameAs(a())),
+        ]);
+        assert_eq!(
+            spec_for(&library, &b()).map(|spec| spec.reproducibility),
+            Some(Reproducibility::HostDerived),
+        );
     }
 
     #[test]

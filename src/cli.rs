@@ -669,6 +669,31 @@ mod tests {
     }
 
     #[test]
+    fn a_file_can_declare_a_program_host_derived() {
+        // A project's own autoconfigured toolchain is the same shape of
+        // fact as Bazel's, so it is sayable in a file rather than only in
+        // Ahab's own library—and it needs no new syntax, because it is a
+        // disposition like any other.
+        let specs = specs_from(
+            "host.json",
+            r#"{"programs": {
+                 "@acme+configure//toolchain/cc":
+                   {"spec": {"reproducibility": "host_derived"}}
+               }}"#,
+        )
+        .expect("should load");
+
+        let Entry::Spec(spec) = &specs[0].1 else {
+            panic!("expected a spec, got {:?}", specs[0].1);
+        };
+        assert_eq!(spec.reproducibility, Reproducibility::HostDerived);
+        assert_eq!(
+            specs[0].0,
+            ProgramId::extension("acme", "configure", "toolchain/cc"),
+        );
+    }
+
+    #[test]
     fn a_file_can_declare_a_wrapper() {
         let specs = specs_from(
             "wrapper.json",
