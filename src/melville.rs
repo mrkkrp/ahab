@@ -34,11 +34,15 @@ const QUOTES: &[(&str, Option<&str>)] = &[
         Some("Merchant service"),
     ),
     (
-        "Dost see that leg?—I'll take that leg away from thy stern, if ever thou talkest of the marchant service to me again.",
+        "I'll take that leg away from thy stern, if ever thou talkest of the marchant service to me again.",
         Some("the marchant service"),
     ),
     (
-        "Fiery pit! fiery pit! ye insult me, man; past all natural bearing, ye insult me. It's an all-fired outrage to tell any human creature that he's bound to hell.",
+        "Fiery pit! fiery pit! ye insult me, man; past all natural bearing, ye insult me.",
+        None,
+    ),
+    (
+        "It's an all-fired outrage to tell any human creature that he's bound to hell.",
         None,
     ),
     (
@@ -46,7 +50,7 @@ const QUOTES: &[(&str, Option<&str>)] = &[
         None,
     ),
     (
-        "Below to thy nightly grave; where such as ye sleep between shrouds, to use ye to the filling one at last.—Down, dog, and kennel!",
+        "Below to thy nightly grave; where such as ye sleep between shrouds, to use ye to the filling one at last.",
         None,
     ),
     (
@@ -54,7 +58,11 @@ const QUOTES: &[(&str, Option<&str>)] = &[
         Some("the white whale"),
     ),
     (
-        "Take off thine eye! more intolerable than fiends' glarings is a doltish stare! So, so; thou reddenest and palest; my heat has melted thee to anger-glow.",
+        "Take off thine eye! more intolerable than fiends' glarings is a doltish stare!",
+        None,
+    ),
+    (
+        "So, so; thou reddenest and palest; my heat has melted thee to anger-glow.",
         None,
     ),
     (
@@ -67,7 +75,11 @@ const QUOTES: &[(&str, Option<&str>)] = &[
         None,
     ),
     (
-        "Swerve me? ye cannot swerve me, else ye swerve yourselves! man has ye there. Swerve me? The path to my fixed purpose is laid with iron rails, whereon my soul is grooved to run.",
+        "Swerve me? ye cannot swerve me, else ye swerve yourselves! man has ye there.",
+        None,
+    ),
+    (
+        "Swerve me? The path to my fixed purpose is laid with iron rails, whereon my soul is grooved to run.",
         Some("my fixed purpose"),
     ),
     ("Why don't ye spring, I say, all of ye—spring!", None),
