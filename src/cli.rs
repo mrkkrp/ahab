@@ -144,7 +144,7 @@ impl Cli {
         let filtered = Exceptions::new(exceptions).filter(violations);
 
         if let Some(warning) = stale_warning(&filtered.unused) {
-            eprintln!("{warning}");
+            eprintln!("\n{warning}");
         }
 
         let violations = filtered.kept;
@@ -176,7 +176,10 @@ impl Cli {
             return Ok(ExitCode::SUCCESS);
         }
 
-        eprint!("{}", render_diff(&expected, found, Palette::for_stderr()));
+        eprint!(
+            "\n{}",
+            render_diff(&expected, found, Palette::for_stderr())
+        );
         Ok(ExitCode::FAILURE)
     }
 
@@ -195,9 +198,10 @@ impl Cli {
                 Palette::for_stderr(),
             );
             if self.no_fail {
-                eprintln!("{report}");
+                eprintln!("\n{report}");
                 return Ok(());
             }
+            eprintln!();
             bail!("{report}");
         }
 
@@ -209,7 +213,7 @@ impl Cli {
                 palette.faint(&{ suppressed.note() })
             ));
         }
-        println!("{passed}");
+        println!("\n{passed}");
         Ok(())
     }
 }
@@ -400,12 +404,48 @@ fn report_violations(
     }
 
     if quote {
-        report.push_str(&format!(
-            "\n\n  {}",
-            palette.faint(melville::quote_for(&violations))
-        ));
+        // Wrapped, unlike the findings above: a finding is one fact and
+        // carries paths that must not be broken across lines, whereas the
+        // sign-off is prose and only has to be read.
+        report.push('\n');
+        for line in wrap(&melville::quote_for(violations), REPORT_WIDTH - 2)
+        {
+            report.push_str(&format!("\n  {}", palette.faint(&line)));
+        }
     }
     report
+}
+
+/// How wide the report is allowed to be, matching what the rest of the
+/// project wraps to.
+const REPORT_WIDTH: usize = 76;
+
+/// Break `text` into lines of at most `width` columns, splitting only
+/// between words.
+///
+/// A word wider than `width` is left whole and overruns: breaking it would
+/// make it unsearchable, and the words that get that long here are the
+/// ones a reader most wants to copy.
+fn wrap(text: &str, width: usize) -> Vec<String> {
+    let mut lines = Vec::new();
+    let mut line = String::new();
+
+    for word in text.split_whitespace() {
+        let would_be = line.chars().count() + 1 + word.chars().count();
+        if line.is_empty() {
+            line.push_str(word);
+        } else if would_be <= width {
+            line.push(' ');
+            line.push_str(word);
+        } else {
+            lines.push(std::mem::take(&mut line));
+            line.push_str(word);
+        }
+    }
+    if !line.is_empty() {
+        lines.push(line);
+    }
+    lines
 }
 
 #[cfg(test)]
@@ -1132,11 +1172,14 @@ mod tests {
             report.starts_with("found 2 hermeticity violations:\n"),
             "{report}"
         );
-        // Each violation appears on its own numbered line.
-        assert!(report.contains("\n  1. "), "{report}");
-        assert!(report.contains("\n  2. "), "{report}");
-        // Header + two numbered lines + blank separator + Ahab quote.
-        assert_eq!(report.lines().count(), 5);
+        // Each violation appears on its own numbered line, then a blank
+        // line, then the sign-off—which wraps, so its length is its own
+        // test rather than part of this count.
+        let lines: Vec<&str> = report.lines().collect();
+        assert!(lines[1].starts_with("  1. "), "{report}");
+        assert!(lines[2].starts_with("  2. "), "{report}");
+        assert_eq!(lines[3], "", "{report}");
+        assert!(lines.len() >= 5, "{report}");
     }
 
     #[test]
@@ -1335,11 +1378,54 @@ mod tests {
     }
 
     #[test]
+    fn the_sign_off_is_wrapped_to_the_report_width() {
+        // Only the sign-off. The findings above it are left long on
+        // purpose: they carry paths a reader will want to copy whole.
+        let report = super::report_violations(
+            &once([bad_path("CppCompile", 1, "/bin")]),
+            Suppressed::default(),
+            true,
+            Palette::plain(),
+        );
+        let sign_off = report.rsplit("\n\n").next().expect("a sign-off");
+        for line in sign_off.lines() {
+            assert!(
+                line.chars().count() <= REPORT_WIDTH,
+                "{} columns: {line}",
+                line.chars().count(),
+            );
+        }
+    }
+
+    #[test]
+    fn wrapping_breaks_only_between_words() {
+        let text = "the path to my fixed purpose is laid with iron rails";
+        let lines = wrap(text, 20);
+        assert!(lines.iter().all(|l| l.chars().count() <= 20), "{lines:?}");
+        assert_eq!(lines.join(" "), text);
+    }
+
+    #[test]
+    fn a_word_wider_than_the_line_is_left_whole() {
+        // Overrunning is better than making it unsearchable.
+        let long = "external/rules_cc++cc_configure/cc_wrapper.sh";
+        let lines = wrap(&format!("of {long} again"), 20);
+        assert!(lines.contains(&long.to_owned()), "{lines:?}");
+    }
+
+    #[test]
     fn report_ends_with_a_melville_quote() {
         let violations = once([bad_path("CppCompile", 1, "/bin")]);
         let report = report_violations(&violations, true, Palette::plain());
         let quote = melville::quote_for(&violations);
-        assert!(report.ends_with(&format!("\n\n  {quote}")), "{report}");
+        let sign_off: Vec<&str> = report
+            .rsplit("\n\n")
+            .next()
+            .expect("a sign-off")
+            .lines()
+            .map(str::trim_start)
+            .collect();
+        assert_eq!(sign_off.join(" "), quote, "{report}");
     }
 
     #[test]
@@ -1356,6 +1442,6 @@ mod tests {
         // ...but no quote and no sign-off separator are appended.
         assert!(!report.contains("  — "), "{report}");
         let quote = melville::quote_for(&violations);
-        assert!(!report.contains(quote), "{report}");
+        assert!(!report.contains(&quote), "{report}");
     }
 }
