@@ -96,5 +96,17 @@ alias(
 
 ahab(
     name = "hermeticity",
+    exceptions = [
+        {
+            "kind": "execution_requirement",
+            "target": "//tools:buildifier_test",
+            "requirement": "no-sandbox",
+        },
+        {
+            "kind": "execution_requirement",
+            "target": "//tools:buildifier_test",
+            "requirement": "no-cache",
+        },
+    ],
     label = "//...",
 )

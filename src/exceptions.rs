@@ -14,6 +14,7 @@ use crate::glob::Glob;
 enum Kind {
     EnvironmentLeak,
     BadPath,
+    ExecutionRequirement,
     AbsolutePath,
     SystemProgram,
     HostDerivedProgram,
@@ -24,9 +25,10 @@ enum Kind {
 
 impl Kind {
     /// Every kind, in the order [`Violation`] declares them.
-    const ALL: [Kind; 8] = [
+    const ALL: [Kind; 9] = [
         Kind::EnvironmentLeak,
         Kind::BadPath,
+        Kind::ExecutionRequirement,
         Kind::AbsolutePath,
         Kind::SystemProgram,
         Kind::HostDerivedProgram,
@@ -40,6 +42,7 @@ impl Kind {
         match self {
             Kind::EnvironmentLeak => "environment_leak",
             Kind::BadPath => "bad_path",
+            Kind::ExecutionRequirement => "execution_requirement",
             Kind::AbsolutePath => "absolute_path",
             Kind::SystemProgram => "system_program",
             Kind::HostDerivedProgram => "host_derived_program",
@@ -153,6 +156,7 @@ pub(crate) struct Exception {
     program: Option<Glob>,
     path: Option<Glob>,
     actual: Option<Glob>,
+    requirement: Option<Glob>,
     source: Option<EnvSource>,
     location: Option<Location>,
     env_var: Option<Glob>,
@@ -193,6 +197,9 @@ impl Exception {
             return false;
         }
         if !glob(&self.actual, facets.actual) {
+            return false;
+        }
+        if !glob(&self.requirement, facets.requirement) {
             return false;
         }
         if self.source.is_some() && self.source != facets.source {
@@ -237,6 +244,10 @@ impl fmt::Display for Exception {
         push("program", self.program.as_ref().map(ToString::to_string));
         push("path", self.path.as_ref().map(ToString::to_string));
         push("actual", self.actual.as_ref().map(ToString::to_string));
+        push(
+            "requirement",
+            self.requirement.as_ref().map(ToString::to_string),
+        );
         push("source", self.source.map(|s| source_name(s).to_owned()));
         push("location", self.location.map(|l| l.as_str().to_owned()));
         push("env_var", self.env_var.as_ref().map(ToString::to_string));
@@ -387,6 +398,8 @@ struct ExceptionEntry {
     #[serde(default)]
     actual: Option<String>,
     #[serde(default)]
+    requirement: Option<String>,
+    #[serde(default)]
     source: Option<String>,
     #[serde(default)]
     location: Option<String>,
@@ -404,6 +417,7 @@ fn applies_to(field: &str, kind: Kind) -> bool {
         "program" => kind.has_program(),
         "path" => kind == Kind::AbsolutePath,
         "actual" => kind == Kind::BadPath,
+        "requirement" => kind == Kind::ExecutionRequirement,
         "source" => kind == Kind::EnvironmentLeak,
         "location" | "env_var" => kind.has_site(),
         _ => true,
@@ -469,6 +483,7 @@ fn compile(
             ("program", entry.program.is_some()),
             ("path", entry.path.is_some()),
             ("actual", entry.actual.is_some()),
+            ("requirement", entry.requirement.is_some()),
             ("source", entry.source.is_some()),
             ("location", entry.location.is_some()),
             ("env_var", entry.env_var.is_some()),
@@ -503,6 +518,7 @@ fn compile(
         program: entry.program.as_deref().map(Glob::new),
         path: entry.path.as_deref().map(Glob::new),
         actual: entry.actual.as_deref().map(Glob::new),
+        requirement: entry.requirement.as_deref().map(Glob::new),
         source,
         location,
         env_var: entry.env_var.as_deref().map(Glob::new),
@@ -528,6 +544,7 @@ impl Exception {
             || self.program.is_some()
             || self.path.is_some()
             || self.actual.is_some()
+            || self.requirement.is_some()
             || self.source.is_some()
             || self.location.is_some()
             || self.env_var.is_some()

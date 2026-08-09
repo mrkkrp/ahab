@@ -216,6 +216,14 @@ pub(crate) enum Violation {
         /// The `PATH` value the action actually set.
         actual: String,
     },
+    /// An action declares an execution requirement that says it cannot be
+    /// run like an ordinary hermetic action.
+    ExecutionRequirement {
+        action: ActionRef,
+        /// The requirement, as the action declares it: `no-sandbox`,
+        /// `requires-network`, and so on.
+        requirement: String,
+    },
     /// An action referenced an absolute path (a `/`-rooted run) in one of
     /// its arguments or environment-variable values.
     AbsolutePath {
@@ -314,6 +322,8 @@ pub(crate) struct Facets<'a> {
     pub path: Option<&'a str>,
     /// The offending `PATH`, for [`Violation::BadPath`].
     pub actual: Option<&'a str>,
+    /// The declared requirement, for [`Violation::ExecutionRequirement`].
+    pub requirement: Option<&'a str>,
     /// The environment source, for [`Violation::EnvironmentLeak`].
     pub source: Option<EnvSource>,
     /// Where in the action it was found, for the variants that record it.
@@ -330,6 +340,7 @@ impl Violation {
             program: None,
             path: None,
             actual: None,
+            requirement: None,
             source: None,
             site: None,
         };
@@ -348,6 +359,13 @@ impl Violation {
             Violation::BadPath { action, actual } => Facets {
                 actual: Some(actual),
                 ..bare("bad_path", action)
+            },
+            Violation::ExecutionRequirement {
+                action,
+                requirement,
+            } => Facets {
+                requirement: Some(requirement),
+                ..bare("execution_requirement", action)
             },
             Violation::AbsolutePath { action, path, site } => Facets {
                 path: Some(path),
@@ -440,6 +458,15 @@ impl Violation {
                 "{hermeticity}: {} sets PATH to {}, expected {EXPECTED_PATH:?}",
                 at(action),
                 found(&format!("{actual:?}")),
+            ),
+            Violation::ExecutionRequirement {
+                action,
+                requirement,
+            } => format!(
+                "{hermeticity}: {} declares {}, so the build itself says \
+                 it cannot run like an ordinary action",
+                at(action),
+                found(&format!("{requirement:?}")),
             ),
             Violation::AbsolutePath { action, path, site } => {
                 let action = at(action);
@@ -560,6 +587,7 @@ pub(crate) fn check_all(
     let mut violations = check_environment_leaks(container, user, hostname);
     violations.extend(check_path(container));
     violations.extend(check_absolute_paths(container));
+    violations.extend(check_execution_requirements(container));
     violations.extend(check_reproducibility(container, library));
 
     let mut counted = BTreeMap::new();
@@ -567,6 +595,69 @@ pub(crate) fn check_all(
         *counted.entry(violation).or_insert(0) += 1;
     }
     counted
+}
+
+/// Execution requirements that say an action is not an ordinary hermetic
+/// one, with why each is worth reporting.
+const NON_HERMETIC_REQUIREMENTS: &[(&str, &str)] = &[
+    (
+        "requires-network",
+        "the action reaches the network, so its output can depend on \
+         anything out there",
+    ),
+    (
+        "no-cache",
+        "refusing to cache an action is saying its output is not a \
+         function of its inputs",
+    ),
+    (
+        "no-sandbox",
+        "the action sees the whole filesystem, so it can read inputs it \
+         never declared",
+    ),
+    (
+        "local",
+        "the action sees the whole filesystem, so it can read inputs it \
+         never declared",
+    ),
+    (
+        "no-remote",
+        "an action that must run here is likely to depend on here",
+    ),
+    (
+        "no-remote-exec",
+        "an action that must run here is likely to depend on here",
+    ),
+];
+
+/// Whether a declared execution requirement is one Ahab reports.
+fn is_non_hermetic_requirement(key: &str) -> bool {
+    NON_HERMETIC_REQUIREMENTS
+        .iter()
+        .any(|(requirement, _)| *requirement == key)
+}
+
+/// Find every action that declares an execution requirement meaning it
+/// cannot run like an ordinary hermetic action, and return one
+/// [`Violation`] per declaration.
+fn check_execution_requirements(
+    container: &ActionGraphContainer,
+) -> Vec<Violation> {
+    let mut violations = Vec::new();
+    let targets = target_labels(container);
+
+    for action in &container.actions {
+        for kv in &action.execution_info {
+            if is_non_hermetic_requirement(&kv.key) {
+                violations.push(Violation::ExecutionRequirement {
+                    action: ActionRef::of(action, &targets),
+                    requirement: kv.key.clone(),
+                });
+            }
+        }
+    }
+
+    violations
 }
 
 /// Find every place where a sentinel leaks into an action's command line,
@@ -1244,6 +1335,93 @@ mod tests {
             target: test_label(1),
         };
         assert_eq!(action.to_string(), "action for target //test:t1");
+    }
+
+    /// An [`Action`] declaring the given execution requirements.
+    fn action_with_requirements(
+        mnemonic: &str,
+        target_id: u32,
+        requirements: &[&str],
+    ) -> Action {
+        Action {
+            mnemonic: mnemonic.to_owned(),
+            target_id,
+            execution_info: requirements
+                .iter()
+                .map(|key| KeyValuePair {
+                    key: (*key).to_owned(),
+                    value: String::new(),
+                })
+                .collect(),
+            ..Default::default()
+        }
+    }
+
+    // ---- check_execution_requirements ----
+
+    #[test]
+    fn every_declared_non_hermetic_requirement_is_reported() {
+        // One violation each, so that an action declaring two problems is
+        // not reported as one.
+        let c = container(vec![action_with_requirements(
+            "Genrule",
+            1,
+            &["requires-network", "no-sandbox"],
+        )]);
+        let found = check_execution_requirements(&c);
+        assert_eq!(found.len(), 2, "{found:?}");
+        let declared: Vec<&str> = found
+            .iter()
+            .map(|v| match v {
+                Violation::ExecutionRequirement { requirement, .. } => {
+                    requirement.as_str()
+                }
+                other => panic!("{other:?}"),
+            })
+            .collect();
+        assert!(declared.contains(&"requires-network"), "{declared:?}");
+        assert!(declared.contains(&"no-sandbox"), "{declared:?}");
+    }
+
+    #[test]
+    fn scheduling_advice_is_not_a_hermeticity_finding() {
+        // Everything here is a capability or a resource hint. A tag
+        // nobody has classified stays silent, which is the direction to
+        // fail in: a deny-list that misses something is quiet, an
+        // allow-list that misses something is noise.
+        let c = container(vec![action_with_requirements(
+            "Rustc",
+            1,
+            &[
+                "supports-path-mapping",
+                "supports-workers",
+                "cpu:4",
+                "resources:memory:512",
+                "some-tag-invented-next-year",
+            ],
+        )]);
+        assert!(check_execution_requirements(&c).is_empty());
+    }
+
+    #[test]
+    fn an_action_declaring_nothing_is_not_reported() {
+        let c = container(vec![action_with_env("Rustc", 1, &[])]);
+        assert!(check_execution_requirements(&c).is_empty());
+    }
+
+    #[test]
+    fn a_declared_requirement_says_so_in_the_report() {
+        // The wording matters: this is the one finding Ahab does not
+        // infer, and the message should say the build stated it.
+        let c = container(vec![action_with_requirements(
+            "Genrule",
+            1,
+            &["no-cache"],
+        )]);
+        let rendered =
+            check_execution_requirements(&c)[0].render(Palette::plain());
+        assert!(rendered.contains("\"no-cache\""), "{rendered}");
+        assert!(rendered.contains("the build itself says"), "{rendered}");
     }
 
     // ---- check_path: pathological cases (expect violations) ----
