@@ -270,6 +270,7 @@ enum EntryFile {
 
 /// The JSON form of a [`ReproducibilitySpec`].
 #[derive(Debug, Deserialize)]
+#[serde(deny_unknown_fields)]
 struct SpecFields {
     /// The baseline disposition.
     reproducibility: Reproducibility,

@@ -852,6 +852,27 @@ mod tests {
     }
 
     #[test]
+    fn a_misspelled_spec_field_is_rejected() {
+        // Every field but `reproducibility` is optional, so a typo would
+        // otherwise be dropped in silence—leaving a specification that
+        // demands less than its author wrote.
+        let message = specs_from(
+            "typo.json",
+            r#"{"programs": {
+                 "@llvm+t//bin/clang": {"spec": {
+                   "reproducibility": "sometimes",
+                   "required_flag": ["-frandom-seed"]
+                 }}
+               }}"#,
+        )
+        .unwrap_err()
+        .to_string();
+        assert!(message.contains("required_flag"), "{message}");
+        // And it says what was expected instead.
+        assert!(message.contains("required_flags"), "{message}");
+    }
+
+    #[test]
     fn a_file_that_is_not_a_spec_file_says_so() {
         let message = specs_from("not-specs.json", r#"{"violations": []}"#)
             .unwrap_err()
