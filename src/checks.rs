@@ -755,10 +755,8 @@ fn absolute_paths(text: &str) -> Vec<String> {
 }
 
 /// Absolute paths that are allowed to appear in an action and must not be
-/// reported as hermeticity violations. `/dev/null` is a portable,
-/// always-present special file (used as a sink or an empty input);
-/// referencing it does not make a build non-hermetic.
-const ALLOWED_ABSOLUTE_PATHS: &[&str] = &["/dev/null"];
+/// reported as hermeticity violations.
+const ALLOWED_ABSOLUTE_PATHS: &[&str] = &["/dev/null", "/proc/self/cwd"];
 
 /// Whether an extracted absolute path is exempt from the absolute-path
 /// check.
