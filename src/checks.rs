@@ -938,9 +938,8 @@ mod tests {
     use crate::reproducibility_spec::program_id::Origin;
     use analysis_v2_proto::analysis::KeyValuePair;
 
-    // Fixed, human-readable stand-ins for the values Ahab injects as USER and
-    // HOSTNAME. Using literals (rather than `random_token`) keeps every test
-    // fully deterministic.
+    // Short, human-readable stand-ins for the values Ahab injects as USER
+    // and HOSTNAME.
     const USER_SENTINEL: &str = "ahab-user-SENTINEL";
     const HOST_SENTINEL: &str = "ahab-host-SENTINEL";
 

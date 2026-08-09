@@ -9,7 +9,7 @@ use clap::Parser;
 use serde::{Deserialize, Serialize};
 use similar::TextDiff;
 
-use crate::aquery::{random_token, run_aquery};
+use crate::aquery::{HOSTNAME_SENTINEL, USER_SENTINEL, run_aquery};
 
 use crate::checks::{Violation, check_all};
 use crate::exceptions::{
@@ -106,10 +106,8 @@ impl Cli {
             return Ok(ExitCode::SUCCESS);
         }
 
-        let user = random_token("ahab-user");
-        let hostname = random_token("ahab-host");
         let env =
-            [("USER", user.as_str()), ("HOSTNAME", hostname.as_str())];
+            [("USER", USER_SENTINEL), ("HOSTNAME", HOSTNAME_SENTINEL)];
         let label = self.label.as_deref().unwrap_or_default();
         let container = run_aquery(&self.configs, label, &env)?;
 
@@ -131,7 +129,12 @@ impl Cli {
             library.extend(read_specs(&path)?);
         }
 
-        let violations = check_all(&container, &user, &hostname, &library);
+        let violations = check_all(
+            &container,
+            USER_SENTINEL,
+            HOSTNAME_SENTINEL,
+            &library,
+        );
 
         let mut exceptions = Vec::new();
         for path in &self.exceptions_json {

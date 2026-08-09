@@ -3,39 +3,22 @@
 //! graph.
 
 use std::process::Command;
-use std::time::{SystemTime, UNIX_EPOCH};
 
 use anyhow::{Context, Result, bail};
 use prost::Message;
 
 use analysis_v2_proto::analysis::ActionGraphContainer;
 
-/// Generate a random alphanumeric token long enough to be extremely
-/// unlikely to occur incidentally in an action's arguments or environment.
-/// No `rand` dependency: we seed a small xorshift PRNG from the current
-/// time and the process id, which is plenty for a leak sentinel.
-pub(crate) fn random_token(prefix: &str) -> String {
-    let nanos = SystemTime::now()
-        .duration_since(UNIX_EPOCH)
-        .map(|d| d.as_nanos() as u64)
-        .unwrap_or(0);
-    let mut state =
-        nanos ^ ((std::process::id() as u64) << 32) ^ 0x9e37_79b9_7f4a_7c15;
+/// The value Ahab substitutes for `USER` while querying, and the one for
+/// `HOSTNAME`.
+pub(crate) const USER_SENTINEL: &str =
+    "ahab-sentinel-user-4f8a1c6b9d2e7350";
 
-    const ALPHABET: &[u8] = b"abcdefghijklmnopqrstuvwxyz0123456789";
-    let mut token = String::from(prefix);
-    token.push('-');
-    for _ in 0..32 {
-        // xorshift64
-        state ^= state << 13;
-        state ^= state >> 7;
-        state ^= state << 17;
-        token.push(
-            ALPHABET[(state % ALPHABET.len() as u64) as usize] as char,
-        );
-    }
-    token
-}
+/// The `HOSTNAME` counterpart. Distinct from [`USER_SENTINEL`] and not a
+/// substring of it, since the checks look for each with `contains` and a
+/// shared tail would report one leak as both.
+pub(crate) const HOSTNAME_SENTINEL: &str =
+    "ahab-sentinel-hostname-4f8a1c6b9d2e7350";
 
 /// The directory from which nested `bazel` invocations should run.
 ///
@@ -176,18 +159,22 @@ mod tests {
     use super::*;
 
     #[test]
-    fn random_token_has_expected_shape() {
-        let token = random_token("ahab-user");
-        let prefix = "ahab-user-";
-        assert!(token.starts_with(prefix), "{token}");
-        // prefix + 32 random chars.
-        assert_eq!(token.len(), prefix.len() + 32, "{token}");
-        let suffix = &token[prefix.len()..];
-        assert!(
-            suffix
-                .chars()
-                .all(|c| c.is_ascii_lowercase() || c.is_ascii_digit()),
-            "unexpected char in {suffix}"
-        );
+    fn the_sentinels_cannot_be_mistaken_for_each_other() {
+        // The checks search with `contains`, so either being a substring
+        // of the other would report one leak as two.
+        assert!(!USER_SENTINEL.contains(HOSTNAME_SENTINEL));
+        assert!(!HOSTNAME_SENTINEL.contains(USER_SENTINEL));
+        assert_ne!(USER_SENTINEL, HOSTNAME_SENTINEL);
+    }
+
+    #[test]
+    fn the_sentinels_are_findable_and_long_enough() {
+        // Long and distinctive is what keeps them from occurring by
+        // accident; `ahab` in the text is what lets someone who finds one
+        // work out where it came from.
+        for sentinel in [USER_SENTINEL, HOSTNAME_SENTINEL] {
+            assert!(sentinel.starts_with("ahab-"), "{sentinel}");
+            assert!(sentinel.len() >= 32, "{sentinel}");
+        }
     }
 }
