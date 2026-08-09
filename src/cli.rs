@@ -1,6 +1,7 @@
 //! Command-line interface and top-level orchestration for Ahab.
 
 use std::collections::BTreeMap;
+use std::io::IsTerminal;
 use std::path::{Path, PathBuf};
 use std::process::ExitCode;
 
@@ -194,7 +195,7 @@ impl Cli {
             let report = report_violations(
                 violations,
                 suppressed,
-                !self.shut_up,
+                !self.shut_up && std::io::stderr().is_terminal(),
                 Palette::for_stderr(),
             );
             if self.no_fail {
