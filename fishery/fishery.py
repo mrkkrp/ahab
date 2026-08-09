@@ -235,6 +235,49 @@ def cmd_clean(name):
     print(f"fishery: removed {work.relative_to(AHAB)}")
     return 0
 
+def summarize(name):
+    """A target's recorded expectation, counted by kind.
+
+    Read from `expectation.json` rather than measured afresh: that file is
+    what review looks at, and after an `update` sweep it is exactly what
+    Ahab found. Counting it costs nothing, where finding out again would
+    cost another analysis of every project.
+    """
+    recorded = target_dir(name) / "expectation.json"
+    if not recorded.is_file():
+        return 0, 0, {}
+    try:
+        violations = json.loads(recorded.read_text())["violations"]
+    except (ValueError, KeyError):
+        return 0, 0, {}
+
+    kinds = {}
+    for counted in violations:
+        kind = counted["violation"].get("kind", "?")
+        distinct, occurrences = kinds.get(kind, (0, 0))
+        kinds[kind] = (distinct + 1, occurrences + counted["count"])
+    return (
+        len(violations),
+        sum(counted["count"] for counted in violations),
+        kinds,
+    )
+
+
+def print_summary(label, distinct, occurrences, kinds):
+    """One block: the totals, then a line per kind, widest first."""
+    print(
+        f"    {label}: {distinct} distinct, {occurrences} occurrences",
+        flush=True,
+    )
+    ordered = sorted(kinds.items(), key=lambda kv: (-kv[1][0], kv[0]))
+    for kind, (kind_distinct, kind_occurrences) in ordered:
+        print(
+            f"      {kind_distinct:>6} distinct"
+            f"  {kind_occurrences:>6} occurrences  {kind}",
+            flush=True,
+        )
+
+
 def cmd_ci():
     """Set up and check every target, reporting all of them.
     """
@@ -243,6 +286,7 @@ def cmd_ci():
         fail("no targets found under fishery/")
 
     failed = []
+    totals = {}
     for name in names:
         print(f"\n=== fishery: {name} ===", flush=True)
         for step, command in (("setup", cmd_setup), ("check", cmd_check)):
@@ -258,8 +302,25 @@ def cmd_ci():
         else:
             print(f"=== fishery: {name} ok", flush=True)
 
+        distinct, occurrences, kinds = summarize(name)
+        print_summary("expectation", distinct, occurrences, kinds)
+        for kind, (kind_distinct, kind_occurrences) in kinds.items():
+            total_distinct, total_occurrences = totals.get(kind, (0, 0))
+            totals[kind] = (
+                total_distinct + kind_distinct,
+                total_occurrences + kind_occurrences,
+            )
+
     print(f"\n=== fishery: {len(names) - len(failed)}/{len(names)} passed",
           flush=True)
+    # Worth printing only when it says something a single project did not.
+    if len(names) > 1:
+        print_summary(
+            f"across {len(names)} projects",
+            sum(distinct for distinct, _ in totals.values()),
+            sum(occurrences for _, occurrences in totals.values()),
+            totals,
+        )
     if failed:
         print(f"=== fishery: failed: {', '.join(failed)}", flush=True)
         return 1
