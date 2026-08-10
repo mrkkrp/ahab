@@ -2,4 +2,3 @@
 .direnv/
 __pycache__/
 fishery/*/work/
-packaging/MODULE.bazel.lock
