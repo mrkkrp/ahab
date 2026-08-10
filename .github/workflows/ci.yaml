@@ -28,6 +28,14 @@ jobs:
           bazelisk-cache: true
           disk-cache: ${{ github.workflow }}
           repository-cache: true
+      - name: Show the Bazel configuration
+        run: |
+          for rc in ~/.bazelrc "${XDG_CONFIG_HOME:-$HOME/.config}/bazel/bazelrc"; do
+            echo "--- $rc ---"
+            cat "$rc" 2>/dev/null || echo "(absent)"
+          done
+          echo "--- what an invocation in this workspace reads ---"
+          bazel info --announce_rc 2>&1 | grep -i 'rc options' || echo "(none announced)"
       - name: Run the tests
         run: bazel test //...
       - name: Run clippy
