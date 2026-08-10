@@ -100,6 +100,7 @@ fn entries() -> Vec<(ProgramId, Entry)> {
     entries.extend(super::per_lang::cc::entries());
     entries.extend(super::per_lang::go::entries());
     entries.extend(super::per_lang::java::entries());
+    entries.extend(super::per_lang::kotlin::entries());
     entries.extend(language_agnostic());
     entries
 }

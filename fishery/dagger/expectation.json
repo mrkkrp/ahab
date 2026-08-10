@@ -1,0 +1,64 @@
+{
+  "violations": [
+    {
+      "count": 1,
+      "violation": {
+        "kind": "system_program",
+        "action": {
+          "mnemonic": "DaggerJavadocLibrary",
+          "target": "//dagger-compiler:artifact-javadoc"
+        },
+        "program": {
+          "origin": "system",
+          "path": "/bin/bash"
+        },
+        "wrappers": []
+      }
+    },
+    {
+      "count": 1,
+      "violation": {
+        "kind": "system_program",
+        "action": {
+          "mnemonic": "DaggerPackageR8AndProguard",
+          "target": "//dagger-compiler:artifact"
+        },
+        "program": {
+          "origin": "system",
+          "path": "/bin/bash"
+        },
+        "wrappers": []
+      }
+    },
+    {
+      "count": 1,
+      "violation": {
+        "kind": "system_program",
+        "action": {
+          "mnemonic": "ExternalJarjarLibrary",
+          "target": "//dagger-compiler:artifact-classes"
+        },
+        "program": {
+          "origin": "system",
+          "path": "/bin/bash"
+        },
+        "wrappers": []
+      }
+    },
+    {
+      "count": 1,
+      "violation": {
+        "kind": "system_program",
+        "action": {
+          "mnemonic": "ExternalJarjarLibrary",
+          "target": "//dagger-compiler:artifact-src"
+        },
+        "program": {
+          "origin": "system",
+          "path": "/bin/bash"
+        },
+        "wrappers": []
+      }
+    }
+  ]
+}
