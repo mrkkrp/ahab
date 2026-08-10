@@ -1,0 +1,41 @@
+load("@ahab//:defs.bzl", "ahab", "ahab_check", "ahab_explain", "ahab_update")
+
+# Every macro Ahab exposes, instantiated the way a consumer would. Building
+# these is most of the test: it proves the module resolves, `defs.bzl` loads
+# across the boundary, and each macro produces a launcher that builds.
+
+# Reports what it finds and never fails, so that a CI log shows the analysis
+# actually happening—the hello world is compiled, linked and stripped by
+# whatever compiler the machine has, and Ahab says so.
+ahab(
+    name = "ahab.report",
+    label = "//...",
+    no_fail = True,
+)
+
+# The same findings, excused. A first exceptions file looks exactly like
+# this one, and an empty expectation then means "nothing beyond the host
+# toolchain we already know about".
+ahab_check(
+    name = "ahab.check",
+    baseline = "//:expectation.json",
+    exceptions = ["//:exceptions.json"],
+    label = "//...",
+)
+
+ahab_update(
+    name = "ahab.update",
+    baseline = "//:expectation.json",
+    exceptions = ["//:exceptions.json"],
+    label = "//...",
+)
+
+ahab_explain(
+    name = "ahab.explain",
+    report = "//:expectation.json",
+)
+
+exports_files([
+    "exceptions.json",
+    "expectation.json",
+])

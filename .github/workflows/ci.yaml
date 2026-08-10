@@ -33,6 +33,24 @@ jobs:
       - name: Run clippy
         if: ${{ !cancelled() }}
         run: bazel build //:clippy
+      - name: Check that Ahab can be consumed as a module (Bazel 9)
+        if: ${{ !cancelled() }}
+        working-directory: packaging
+        run: |
+          bazel build //:ahab.report //:ahab.check //:ahab.update //:ahab.explain
+          bazel run //:ahab.report
+          bazel run //:ahab.check
+          bazel run //:ahab.explain
+      - name: Check that Ahab can be consumed as a module (Bazel 8)
+        if: ${{ !cancelled() }}
+        working-directory: packaging
+        env:
+          USE_BAZEL_VERSION: "8.7.0"
+        run: |
+          bazel build //:ahab.report //:ahab.check //:ahab.update //:ahab.explain
+          bazel run //:ahab.report
+          bazel run //:ahab.check
+          bazel run //:ahab.explain
       - name: Run the fishery
         if: ${{ !cancelled() }}
         run: python3 fishery/fishery.py ci

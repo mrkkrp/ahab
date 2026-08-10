@@ -1,0 +1,14 @@
+{
+  "exceptions": [
+    {
+      "reason": "autoconfigured C++ toolchain",
+      "kind": "system_program",
+      "program": "*/bin/gcc"
+    },
+    {
+      "reason": "autoconfigured C++ toolchain",
+      "kind": "system_program",
+      "program": "*/bin/strip"
+    }
+  ]
+}
