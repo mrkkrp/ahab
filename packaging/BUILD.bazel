@@ -19,14 +19,28 @@ ahab(
 ahab_check(
     name = "ahab.check",
     baseline = "//:expectation.json",
-    exceptions = ["//:exceptions.json"],
+    exceptions = [
+        "//:exceptions.json",
+        {
+            "reason": "autoconfigured C++ toolchain (inline)",
+            "kind": "system_program",
+            "program": "*/bin/strip",
+        },
+    ],
     label = "//...",
 )
 
 ahab_update(
     name = "ahab.update",
     baseline = "//:expectation.json",
-    exceptions = ["//:exceptions.json"],
+    exceptions = [
+        "//:exceptions.json",
+        {
+            "reason": "autoconfigured C++ toolchain (inline)",
+            "kind": "system_program",
+            "program": "*/bin/strip",
+        },
+    ],
     label = "//...",
 )
 
