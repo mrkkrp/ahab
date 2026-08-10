@@ -94,6 +94,11 @@ pub struct Cli {
     /// excuse. May be repeated.
     #[arg(long = "exceptions-json", value_name = "FILENAME")]
     pub exceptions_json: Vec<PathBuf>,
+
+    /// Analyze in this Bazel output base, instead of the one the project
+    /// would otherwise use.
+    #[arg(long = "output-base", value_name = "DIRECTORY")]
+    pub output_base: Option<String>,
 }
 
 impl Cli {
@@ -110,7 +115,12 @@ impl Cli {
         let env =
             [("USER", USER_SENTINEL), ("HOSTNAME", HOSTNAME_SENTINEL)];
         let label = self.label.as_deref().unwrap_or_default();
-        let container = run_aquery(&self.configs, label, &env)?;
+        let container = run_aquery(
+            &self.configs,
+            label,
+            &env,
+            self.output_base.as_deref(),
+        )?;
 
         // For debugging, dump every action we're about to analyze. We print
         // only the actions; the other parts of the container aren't used by
@@ -1331,6 +1341,23 @@ mod tests {
             ])
             .is_ok()
         );
+    }
+
+    #[test]
+    fn an_output_base_is_optional_and_kept_verbatim() {
+        // Absent is the ordinary case: Ahab asks Bazel where the project
+        // keeps its state. A harness that would rather say gets to.
+        let discovered = Cli::try_parse_from(["ahab", "//..."]).unwrap();
+        assert_eq!(discovered.output_base, None);
+
+        let chosen = Cli::try_parse_from([
+            "ahab",
+            "//...",
+            "--output-base",
+            "/tmp/somewhere",
+        ])
+        .unwrap();
+        assert_eq!(chosen.output_base.as_deref(), Some("/tmp/somewhere"));
     }
 
     #[test]

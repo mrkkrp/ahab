@@ -80,15 +80,28 @@ fn bazel_info() -> Result<std::collections::HashMap<String, String>> {
 /// discover the real `output_base` and `output_user_root` with the
 /// unmodified environment and then pin them as startup flags, so only the
 /// actions' environment changes.
+///
+/// `output_base` overrides that discovery, for a caller that would rather
+/// say where the analysis goes than find out afterwards.
 pub fn run_aquery(
     configs: &[String],
     label: &str,
     env: &[(&str, &str)],
+    output_base: Option<&str>,
 ) -> Result<ActionGraphContainer> {
-    let info = bazel_info()?;
-    let output_base = info
-        .get("output_base")
-        .context("`bazel info` did not report an \"output_base\" key")?;
+    let discovered;
+    let output_base = match output_base {
+        Some(given) => given,
+        None => {
+            discovered = bazel_info()?
+                .get("output_base")
+                .context(
+                    "`bazel info` did not report an \"output_base\" key",
+                )?
+                .clone();
+            &discovered
+        }
+    };
 
     // `bazel info` doesn't expose output_user_root, but it's simply the parent
     // of output_base (the `_bazel_$USER` directory), so derive it from there.
