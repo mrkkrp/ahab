@@ -190,18 +190,16 @@ mod tests {
                 .into_iter()
                 .filter(|arg| *arg != dropped)
                 .collect();
-            match resolve(singlejar(), kept) {
-                Conformance::Conditional {
-                    missing_required, ..
-                } => assert_eq!(
-                    missing_required.iter().collect::<Vec<_>>(),
-                    vec![dropped],
-                    "dropping {dropped}",
-                ),
-                other => {
-                    panic!("expected {dropped} to matter, got {other:?}")
-                }
-            }
+            let verdict = resolve(singlejar(), kept);
+            assert!(
+                matches!(verdict, Conformance::Conditional { .. }),
+                "expected {dropped} to matter, got {verdict:?}",
+            );
+            assert_eq!(
+                verdict.missing_required().iter().collect::<Vec<_>>(),
+                vec![dropped],
+                "dropping {dropped}",
+            );
         }
     }
 

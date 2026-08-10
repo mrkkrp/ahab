@@ -9,7 +9,7 @@ use crate::param_files::{
     ArgSource, Sourced, analyzable_strings, expanded_command_line,
 };
 use crate::reproducibility_spec::{
-    Conformance,
+    Conformance, Unmet,
     library::Library,
     program_id::{Origin, ProgramId},
 };
@@ -296,10 +296,9 @@ pub(crate) enum Violation {
         /// The synonym whose spec produced this verdict, if it was not the
         /// program's own.
         synonym: Option<ProgramId>,
-        /// Required flags absent from the invocation.
-        missing_required: Vec<String>,
-        /// Breaking flags present in the invocation.
-        present_breaking: Vec<String>,
+        /// The clauses the invocation failed, with the spec's own words for
+        /// what each was about.
+        unmet: Vec<Unmet>,
     },
 }
 
@@ -410,8 +409,7 @@ impl Violation {
                 program,
                 wrappers: _,
                 synonym: _,
-                missing_required: _,
-                present_breaking: _,
+                unmet: _,
             } => Facets {
                 program: Some(program),
                 ..bare("conditional_reproducibility", action)
@@ -540,22 +538,31 @@ impl Violation {
                 program,
                 wrappers,
                 synonym,
-                missing_required,
-                present_breaking,
+                unmet,
             } => {
-                let mut reasons = Vec::new();
-                if !missing_required.is_empty() {
-                    reasons.push(format!(
-                        "missing required flag(s) {}",
-                        found(&format!("{missing_required:?}")),
-                    ));
-                }
-                if !present_breaking.is_empty() {
-                    reasons.push(format!(
-                        "present breaking flag(s) {}",
-                        found(&format!("{present_breaking:?}")),
-                    ));
-                }
+                let reasons: Vec<String> = unmet
+                    .iter()
+                    .map(|clause| {
+                        let evidence = if clause.present.is_empty() {
+                            format!(
+                                "none of {}",
+                                found(&format!(
+                                    "{:?}",
+                                    clause
+                                        .any_of
+                                        .iter()
+                                        .collect::<Vec<_>>()
+                                )),
+                            )
+                        } else {
+                            found(&format!(
+                                "{:?}",
+                                clause.present.iter().collect::<Vec<_>>()
+                            ))
+                        };
+                        format!("{} ({})", clause.because, evidence)
+                    })
+                    .collect();
                 format!(
                     "{reproducibility}: {} runs program {}{} \
                      non-reproducibly: {}",
@@ -1000,21 +1007,13 @@ fn check_reproducibility(
                     synonym,
                 });
             }
-            Conformance::Conditional {
-                missing_required,
-                present_breaking,
-            } => {
+            Conformance::Conditional { unmet } => {
                 violations.push(Violation::ConditionalReproducibility {
                     action: action_ref(),
                     program: resolved.program,
                     wrappers,
                     synonym,
-                    missing_required: missing_required
-                        .into_iter()
-                        .collect(),
-                    present_breaking: present_breaking
-                        .into_iter()
-                        .collect(),
+                    unmet,
                 });
             }
         }
@@ -2544,15 +2543,27 @@ mod tests {
             program: ProgramId::of("gcc"),
             wrappers: Vec::new(),
             synonym: None,
-            missing_required: vec!["--deterministic".to_owned()],
-            present_breaking: vec!["--timestamp".to_owned()],
+            unmet: vec![
+                Unmet {
+                    because: "--deterministic is required".to_owned(),
+                    any_of: ["--deterministic".to_owned()].into(),
+                    present: Default::default(),
+                },
+                Unmet {
+                    because: "--timestamp breaks it".to_owned(),
+                    any_of: Default::default(),
+                    present: ["--timestamp".to_owned()].into(),
+                },
+            ],
         };
         let r = v.render(Palette::plain());
         assert!(r.contains(r#"program "gcc""#), "{r}");
-        assert!(r.contains("missing required flag(s)"), "{r}");
-        assert!(r.contains("--deterministic"), "{r}");
-        assert!(r.contains("present breaking flag(s)"), "{r}");
-        assert!(r.contains("--timestamp"), "{r}");
+        // Each clause speaks in the words its spec gave it, and shows the
+        // patterns that would have met it or the arguments that broke it.
+        assert!(r.contains("--deterministic is required"), "{r}");
+        assert!(r.contains(r#"none of ["--deterministic"]"#), "{r}");
+        assert!(r.contains("--timestamp breaks it"), "{r}");
+        assert!(r.contains(r#"["--timestamp"]"#), "{r}");
     }
 
     #[test]
@@ -2565,12 +2576,16 @@ mod tests {
             program: ProgramId::of("gcc"),
             wrappers: Vec::new(),
             synonym: None,
-            missing_required: vec!["--sorted".to_owned()],
-            present_breaking: vec![],
+            unmet: vec![Unmet {
+                because: "--sorted is required".to_owned(),
+                any_of: ["--sorted".to_owned()].into(),
+                present: Default::default(),
+            }],
         };
         let r = v.render(Palette::plain());
-        assert!(r.contains("missing required flag(s)"), "{r}");
-        // No breaking reason when the list is empty.
-        assert!(!r.contains("breaking"), "{r}");
+        assert!(r.contains("--sorted is required"), "{r}");
+        assert!(r.contains(r#"none of ["--sorted"]"#), "{r}");
+        // Nothing is said about a clause the invocation did not fail.
+        assert!(!r.contains("breaks it"), "{r}");
     }
 }

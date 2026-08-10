@@ -6,7 +6,8 @@ use std::collections::{BTreeMap, BTreeSet, HashMap};
 use serde::Deserialize;
 
 use super::program_id::{Origin, ProgramId};
-use super::{Reproducibility, ReproducibilitySpec};
+use super::{Clause, Guard, Reproducibility, ReproducibilitySpec};
+use crate::glob::Glob;
 
 /// What the library knows about one program.
 ///
@@ -285,10 +286,55 @@ struct SpecFields {
     /// way.
     #[serde(default)]
     breaking_flags: BTreeSet<String>,
+    /// Clauses an invocation must satisfy, each of which may be guarded and
+    /// may offer alternatives. The long form of `required_flags`.
+    #[serde(default)]
+    requirements: Vec<ClauseFields>,
+    /// Clauses an invocation must not satisfy. The long form of
+    /// `breaking_flags`.
+    #[serde(default)]
+    prohibitions: Vec<ClauseFields>,
     /// Arguments that stand for a different option, as `argument -> option`.
     /// Anything unlisted stands for itself.
     #[serde(default)]
     recognize: BTreeMap<String, String>,
+}
+
+/// The JSON form of a [`Clause`].
+#[derive(Debug, Deserialize)]
+#[serde(deny_unknown_fields)]
+struct ClauseFields {
+    /// What the clause is about, quoted back in the report.
+    because: String,
+    /// The patterns, any one of which satisfies it.
+    any_of: BTreeSet<String>,
+    /// The condition under which it applies. Absent is always.
+    #[serde(default)]
+    when: Option<GuardFields>,
+}
+
+/// The JSON form of a [`Guard`].
+#[derive(Debug, Deserialize)]
+#[serde(deny_unknown_fields)]
+struct GuardFields {
+    /// Flags that turn the condition on.
+    family: BTreeSet<String>,
+    /// Flags of the same family that turn it off again.
+    #[serde(default)]
+    off: BTreeSet<String>,
+}
+
+impl From<ClauseFields> for Clause {
+    fn from(fields: ClauseFields) -> Clause {
+        Clause {
+            when: fields.when.map(|guard| Guard {
+                family: guard.family.iter().map(|f| Glob::new(f)).collect(),
+                off: guard.off.iter().map(|f| Glob::new(f)).collect(),
+            }),
+            any_of: fields.any_of.iter().map(|f| Glob::new(f)).collect(),
+            because: fields.because,
+        }
+    }
 }
 
 /// The JSON form of a [`Transition`].
@@ -318,14 +364,23 @@ pub fn parse_entries(
             };
             let id = named("program", &program)?;
             let entry = match entry {
-                EntryFile::Spec(fields) => Entry::Spec(
-                    ReproducibilitySpec::new(
+                EntryFile::Spec(fields) => {
+                    // The short forms desugar into clauses and join the
+                    // ones written out in full.
+                    let mut spec = ReproducibilitySpec::new(
                         fields.reproducibility,
                         fields.required_flags,
                         fields.breaking_flags,
                     )
-                    .with_translations(fields.recognize),
-                ),
+                    .with_translations(fields.recognize);
+                    spec.requirements.extend(
+                        fields.requirements.into_iter().map(Clause::from),
+                    );
+                    spec.prohibitions.extend(
+                        fields.prohibitions.into_iter().map(Clause::from),
+                    );
+                    Entry::Spec(spec)
+                }
                 EntryFile::SameAs(target) => {
                     Entry::SameAs(named("same_as", &target)?)
                 }

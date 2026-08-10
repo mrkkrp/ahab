@@ -130,14 +130,12 @@ mod tests {
     /// The missing requirements of a conditional verdict, or a panic if the
     /// invocation was judged reproducible after all.
     fn missing(program: &ProgramId, flags: &[&str]) -> BTreeSet<String> {
-        match assess(program, flags) {
-            Conformance::Conditional {
-                missing_required, ..
-            } => missing_required,
-            other => {
-                panic!("expected a conditional verdict, got {other:?}")
-            }
-        }
+        let verdict = assess(program, flags);
+        assert!(
+            matches!(verdict, Conformance::Conditional { .. }),
+            "expected a conditional verdict, got {verdict:?}",
+        );
+        verdict.missing_required()
     }
 
     /// `rules_rust_flags` with every path remapping stripped out.
@@ -206,10 +204,10 @@ mod tests {
         {
             let mut flags = rules_rust_flags();
             flags.push(spelling);
-            match assess(&rust_tool("rustc"), &flags) {
-                Conformance::Conditional {
-                    present_breaking, ..
-                } => {
+            let verdict = assess(&rust_tool("rustc"), &flags);
+            match &verdict {
+                Conformance::Conditional { .. } => {
+                    let present_breaking = verdict.present_breaking();
                     // Reported by the argument that matched, not by the
                     // pattern: here there is something concrete to name.
                     assert_eq!(present_breaking.len(), 1, "{spelling}");

@@ -1,6 +1,9 @@
+use std::collections::BTreeSet;
+
 use super::super::library::{Entry, host_derived};
 use super::super::program_id::ProgramId;
-use super::super::{Reproducibility, ReproducibilitySpec};
+use super::super::{Clause, Guard, Reproducibility, ReproducibilitySpec};
+use crate::glob::Glob;
 
 /// A program in the repository `cc_configure` generates from the host.
 fn local_config_cc(path: &str) -> ProgramId {
@@ -14,17 +17,76 @@ fn llvm_toolchain(path: &str) -> ProgramId {
     ProgramId::module("llvm_toolchain", path)
 }
 
-/// The flags without which clang is not a function of its inputs.
-///
-/// Only the one, and not for want of candidates. A compilation also needs
-/// `__DATE__`, `__TIME__` and `__TIMESTAMP__` defined away, or a source
-/// that mentions them records the moment it was built—but the same program
-/// links as well as compiles, and a link has no preprocessor to define them
-/// for. Requiring them would report every C++ link ever run. Saying
-/// "required when `-c` is present" is not something a spec can express
-/// today, so the check that would need it is left undone rather than made
-/// noisy.
+/// The flag clang needs however it is invoked.
 const CLANG_REQUIRED: [&str; 1] = ["-no-canonical-prefixes"];
+
+/// The macros a compilation has to define away, and the flags that would
+/// otherwise let each of them record the clock.
+const DATE_MACROS: [&str; 3] = ["__DATE__", "__TIME__", "__TIMESTAMP__"];
+
+/// The clauses that only apply to some of what clang does.
+///
+/// Both are guarded, and for the same reason: one program compiles, links
+/// and preprocesses, so a rule stated over every invocation is a rule
+/// stated about the wrong ones. The first applies to compilations, which is
+/// what `-c` marks; the second to whatever emits debugging information,
+/// which is a family of flags rather than one, with `-g0` turning it off
+/// again.
+fn clang_clauses() -> Vec<Clause> {
+    let mut clauses: Vec<Clause> = DATE_MACROS
+        .iter()
+        .map(|macro_name| Clause {
+            when: Some(Guard {
+                family: [Glob::new("-c")].into_iter().collect(),
+                off: BTreeSet::new(),
+            }),
+            any_of: [Glob::new(&format!("-D{macro_name}=*"))]
+                .into_iter()
+                .collect(),
+            because: format!(
+                "a source mentioning {macro_name} records when it was \
+                 compiled unless the macro is defined away",
+            ),
+        })
+        .collect();
+
+    clauses.push(Clause {
+        when: Some(Guard {
+            family: [
+                "-g",
+                "-g1",
+                "-g2",
+                "-g3",
+                "-gdwarf*",
+                "-gline-tables-only",
+                "-gsplit-dwarf",
+                "-gz*",
+            ]
+            .into_iter()
+            .map(Glob::new)
+            .collect(),
+            // `-g0` asks for no debugging information at all, so it is the
+            // one member of the family that answers the question "no".
+            off: [Glob::new("-g0")].into_iter().collect(),
+        }),
+        // Any one of these settles it: `-ffile-prefix-map` implies the
+        // debug mapping, and naming the compilation directory outright
+        // addresses the same field from the other end.
+        any_of: [
+            "-ffile-prefix-map=*",
+            "-fdebug-prefix-map=*",
+            "-fdebug-compilation-dir=*",
+        ]
+        .into_iter()
+        .map(Glob::new)
+        .collect(),
+        because: "debugging information records the directory it was \
+                  compiled in, which is the execution root"
+            .to_owned(),
+    });
+
+    clauses
+}
 
 /// The letters `ar` accepts as its operation and modifiers.
 const AR_MODIFIERS: &str = "abcDdfhiLlNOoPpqrSsTtUuVvxX";
@@ -71,25 +133,20 @@ pub(in crate::reproducibility_spec) fn entries() -> Vec<(ProgramId, Entry)>
         // so the compiler is as pinned as any other input and the question
         // becomes what it is asked to do.
         //
-        // What it is required to do is stop canonicalizing the paths it was
-        // given, which would otherwise put the execution root—a directory
-        // whose name is nobody else's—into the output. Bazel passes that on
-        // compilations and links alike, which is what makes it safe to ask
-        // for; see `CLANG_REQUIRED` for the checks that are not.
-        //
-        // Nor is a `-fdebug-prefix-map` required. It would be, for a build
-        // compiling with debug information, since the compilation directory
-        // is absolute and lands in the DWARF. Bazel's default configuration
-        // does not pass `-g`, and requiring a remapping of paths that are
-        // not being recorded would report every C++ action in the world.
-        (
-            llvm_toolchain("bin/cc_wrapper.sh"),
-            Entry::Spec(ReproducibilitySpec::new(
+        // One requirement holds whatever it is doing: stop canonicalizing
+        // the paths it was given, which would otherwise put the execution
+        // root—a directory whose name is nobody else's—into the output.
+        // The rest depend on what is being asked of it, and are guarded;
+        // see `clang_clauses`.
+        (llvm_toolchain("bin/cc_wrapper.sh"), {
+            let mut spec = ReproducibilitySpec::new(
                 Reproducibility::Sometimes,
                 CLANG_REQUIRED,
                 [] as [&str; 0],
-            )),
-        ),
+            );
+            spec.requirements.extend(clang_clauses());
+            Entry::Spec(spec)
+        }),
         // An archiver writes the modification time, user and group of every
         // member it stores, none of which is a property of the code. `D`
         // asks for all three to be zeroed—the same bargain `singlejar`
@@ -138,14 +195,12 @@ mod tests {
     }
 
     fn missing(program: ProgramId, args: Vec<&str>) -> BTreeSet<String> {
-        match assess(program, args) {
-            Conformance::Conditional {
-                missing_required, ..
-            } => missing_required,
-            other => {
-                panic!("expected a conditional verdict, got {other:?}")
-            }
-        }
+        let verdict = assess(program, args);
+        assert!(
+            matches!(verdict, Conformance::Conditional { .. }),
+            "expected a conditional verdict, got {verdict:?}",
+        );
+        verdict.missing_required()
     }
 
     #[test]
@@ -173,6 +228,108 @@ mod tests {
                 "dropping {dropped}",
             );
         }
+    }
+
+    /// The three ways of satisfying the debug clause, which is one clause
+    /// however many patterns would have met it.
+    fn remedies() -> BTreeSet<String> {
+        [
+            "-fdebug-compilation-dir=*",
+            "-fdebug-prefix-map=*",
+            "-ffile-prefix-map=*",
+        ]
+        .into_iter()
+        .map(str::to_owned)
+        .collect()
+    }
+
+    /// `clang_args` with every argument starting with `prefix` removed.
+    fn clang_without(prefix: &str) -> Vec<&'static str> {
+        clang_args()
+            .into_iter()
+            .filter(|arg| !arg.starts_with(prefix))
+            .collect()
+    }
+
+    #[test]
+    fn a_compilation_must_define_the_date_macros_away() {
+        // Present, so the guarded clauses are satisfied and silent.
+        assert_eq!(
+            assess(llvm_toolchain("bin/cc_wrapper.sh"), clang_args()),
+            Conformance::Reproducible,
+        );
+        // Absent, and now each is reported on its own—three clauses, not
+        // one, because a source may mention any of them.
+        for macro_name in DATE_MACROS {
+            let flags = clang_without(&format!("-D{macro_name}="));
+            assert_eq!(
+                missing(llvm_toolchain("bin/cc_wrapper.sh"), flags)
+                    .iter()
+                    .map(String::as_str)
+                    .collect::<Vec<_>>(),
+                vec![format!("-D{macro_name}=*")],
+                "{macro_name}",
+            );
+        }
+    }
+
+    #[test]
+    fn the_date_macros_are_only_asked_of_a_compilation() {
+        // The same missing defines, with no `-c` to make them matter.
+        let mut flags = clang_without("-D__");
+        flags.retain(|arg| *arg != "-c");
+        assert_eq!(
+            assess(llvm_toolchain("bin/cc_wrapper.sh"), flags),
+            Conformance::Reproducible,
+        );
+    }
+
+    #[test]
+    fn debugging_information_must_have_its_paths_remapped() {
+        // Envoy's `-c dbg` as it actually stands: `-g`, and nothing that
+        // says where the compilation directory should be written as.
+        let mut flags = clang_args();
+        flags.extend(["-g", "-gsplit-dwarf"]);
+        assert_eq!(
+            missing(llvm_toolchain("bin/cc_wrapper.sh"), flags),
+            remedies(),
+        );
+
+        // Any one of the three alternatives settles it.
+        for remedy in [
+            "-ffile-prefix-map=/execroot=.",
+            "-fdebug-prefix-map=/execroot=.",
+            "-fdebug-compilation-dir=.",
+        ] {
+            let mut flags = clang_args();
+            flags.extend(["-g", remedy]);
+            assert_eq!(
+                assess(llvm_toolchain("bin/cc_wrapper.sh"), flags),
+                Conformance::Reproducible,
+                "{remedy}",
+            );
+        }
+    }
+
+    #[test]
+    fn a_guard_is_decided_by_the_last_flag_that_speaks_to_it() {
+        // `-g0` after `-g` turns debugging information off, so there is
+        // nothing left to remap and nothing to report...
+        let mut off = clang_args();
+        off.extend(["-g", "-g0"]);
+        assert_eq!(
+            assess(llvm_toolchain("bin/cc_wrapper.sh"), off),
+            Conformance::Reproducible,
+        );
+
+        // ...and the other way round it is on again. A rule that merely
+        // asked whether `-g0` appeared anywhere would get this one wrong.
+        let mut on = clang_args();
+        on.extend(["-g0", "-g"]);
+        assert_eq!(
+            missing(llvm_toolchain("bin/cc_wrapper.sh"), on),
+            remedies(),
+        );
     }
 
     #[test]

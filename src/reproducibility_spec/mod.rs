@@ -36,17 +36,120 @@ pub enum Reproducibility {
 /// How a program's raw arguments are read as canonical options.
 pub type Recognize = Arc<dyn Fn(&str) -> Option<String> + Send + Sync>;
 
+/// A condition on an invocation, by which a [`Clause`] applies or does not.
+///
+/// Written as a family of flags that turn something on and the flags of the
+/// same family that turn it back off.
+#[derive(Debug, Clone, PartialEq, Eq, Default)]
+pub struct Guard {
+    /// Flags that turn the condition on.
+    pub family: BTreeSet<Glob>,
+    /// Flags of the same family that turn it off again.
+    pub off: BTreeSet<Glob>,
+}
+
+impl Guard {
+    /// Whether the condition holds, decided by the last argument that
+    /// speaks to it.
+    ///
+    /// Compilers read their flags last-wins: `-g -g0` leaves debugging off
+    /// and `-g0 -g` leaves it on, and a rule that only asked whether `-g0`
+    /// appeared anywhere would get the second one wrong. Arguments that
+    /// belong to neither set say nothing and are passed over.
+    fn holds(&self, args: &[String]) -> bool {
+        args.iter()
+            .rev()
+            .find_map(|arg| {
+                if self.off.iter().any(|glob| glob.matches(arg)) {
+                    Some(false)
+                } else if self.family.iter().any(|glob| glob.matches(arg)) {
+                    Some(true)
+                } else {
+                    None
+                }
+            })
+            .unwrap_or(false)
+    }
+}
+
+/// One thing that has to be true of an invocation, and why.
+///
+/// A requirement is met and a prohibition is breached when any one of
+/// `any_of` matches. Either way the clause only speaks when its guard
+/// holds, so a rule about compiling says nothing about linking.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct Clause {
+    /// The condition under which this clause applies. `None` is always.
+    pub when: Option<Guard>,
+    /// The patterns, any one of which satisfies the clause.
+    pub any_of: BTreeSet<Glob>,
+    /// What the clause is about, in words, for the report to quote.
+    pub because: String,
+}
+
+impl Clause {
+    /// A clause that always applies, phrased as a single pattern.
+    fn plain(pattern: &str, because: &str) -> Self {
+        Clause {
+            when: None,
+            any_of: [Glob::new(pattern)].into_iter().collect(),
+            because: because.to_owned(),
+        }
+    }
+
+    /// Whether the clause has anything to say about these arguments.
+    fn applies(&self, args: &[String]) -> bool {
+        self.when.as_ref().is_none_or(|guard| guard.holds(args))
+    }
+
+    /// The arguments matching any of the clause's patterns.
+    fn matched(&self, args: &[String]) -> BTreeSet<String> {
+        args.iter()
+            .filter(|arg| self.any_of.iter().any(|glob| glob.matches(arg)))
+            .cloned()
+            .collect()
+    }
+
+    /// The patterns themselves, for a report that has no argument to name.
+    fn patterns(&self) -> BTreeSet<String> {
+        self.any_of.iter().map(ToString::to_string).collect()
+    }
+}
+
+/// A clause an invocation failed to meet.
+#[derive(
+    Debug,
+    Clone,
+    PartialEq,
+    Eq,
+    PartialOrd,
+    Ord,
+    Hash,
+    Serialize,
+    Deserialize,
+)]
+pub struct Unmet {
+    /// What the clause was about, in the words the spec gave it.
+    pub because: String,
+    /// For a requirement, the patterns any one of which would have met it.
+    #[serde(default, skip_serializing_if = "BTreeSet::is_empty")]
+    pub any_of: BTreeSet<String>,
+    /// For a prohibition, the arguments that breached it.
+    #[serde(default, skip_serializing_if = "BTreeSet::is_empty")]
+    pub present: BTreeSet<String>,
+}
+
 /// A description of one program's reproducibility and the conditions
 /// affecting it.
 #[derive(Clone)]
 pub struct ReproducibilitySpec {
     /// The baseline reproducibility of the program.
     pub reproducibility: Reproducibility,
-    /// Patterns an invocation must match for the program to be
+    /// Clauses an invocation must satisfy for the program to be
     /// reproducible.
-    pub required_flags: BTreeSet<Glob>,
-    /// Patterns whose match breaks the program's reproducibility.
-    pub breaking_flags: BTreeSet<Glob>,
+    pub requirements: Vec<Clause>,
+    /// Clauses an invocation must not satisfy.
+    pub prohibitions: Vec<Clause>,
     /// Map a raw argument to the canonical option it represents, or `None`
     /// if it is not recognized as an option of this program.
     pub recognize: Recognize,
@@ -57,8 +160,8 @@ impl fmt::Debug for ReproducibilitySpec {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         f.debug_struct("ReproducibilitySpec")
             .field("reproducibility", &self.reproducibility)
-            .field("required_flags", &self.required_flags)
-            .field("breaking_flags", &self.breaking_flags)
+            .field("requirements", &self.requirements)
+            .field("prohibitions", &self.prohibitions)
             .field("recognize", &"<function>")
             .finish()
     }
@@ -74,8 +177,8 @@ impl PartialEq for ReproducibilitySpec {
     /// differently.
     fn eq(&self, other: &Self) -> bool {
         self.reproducibility == other.reproducibility
-            && self.required_flags == other.required_flags
-            && self.breaking_flags == other.breaking_flags
+            && self.requirements == other.requirements
+            && self.prohibitions == other.prohibitions
     }
 }
 
@@ -100,13 +203,19 @@ impl ReproducibilitySpec {
     {
         ReproducibilitySpec {
             reproducibility,
-            required_flags: required_flags
+            requirements: required_flags
                 .into_iter()
-                .map(|flag| Glob::new(&flag.into()))
+                .map(|flag| {
+                    let flag = flag.into();
+                    Clause::plain(&flag, &format!("{flag} is required"))
+                })
                 .collect(),
-            breaking_flags: breaking_flags
+            prohibitions: breaking_flags
                 .into_iter()
-                .map(|flag| Glob::new(&flag.into()))
+                .map(|flag| {
+                    let flag = flag.into();
+                    Clause::plain(&flag, &format!("{flag} breaks it"))
+                })
                 .collect(),
             recognize: Arc::new(|arg: &str| Some(arg.to_owned())),
         }
@@ -154,39 +263,48 @@ impl ReproducibilitySpec {
             Reproducibility::Never => Conformance::NeverReproducible,
             Reproducibility::HostDerived => Conformance::HostDerived,
             Reproducibility::Sometimes => {
-                let present: BTreeSet<String> = args
+                // In order, and with duplicates: a guard decides by the
+                // last argument that speaks to it, so neither position nor
+                // repetition can be thrown away here.
+                let present: Vec<String> = args
                     .into_iter()
                     .filter_map(|arg| self.recognize(arg))
                     .collect();
 
-                let missing_required: BTreeSet<String> = self
-                    .required_flags
-                    .iter()
-                    .filter(|required| {
-                        !present.iter().any(|arg| required.matches(arg))
-                    })
-                    .map(ToString::to_string)
-                    .collect();
+                let mut unmet: Vec<Unmet> = Vec::new();
 
-                let present_breaking: BTreeSet<String> = present
-                    .iter()
-                    .filter(|arg| {
-                        self.breaking_flags
-                            .iter()
-                            .any(|breaking| breaking.matches(arg))
-                    })
-                    .cloned()
-                    .collect();
+                for clause in &self.requirements {
+                    if clause.applies(&present)
+                        && clause.matched(&present).is_empty()
+                    {
+                        unmet.push(Unmet {
+                            because: clause.because.clone(),
+                            any_of: clause.patterns(),
+                            present: BTreeSet::new(),
+                        });
+                    }
+                }
 
-                if missing_required.is_empty()
-                    && present_breaking.is_empty()
-                {
+                for clause in &self.prohibitions {
+                    if !clause.applies(&present) {
+                        continue;
+                    }
+                    let matched = clause.matched(&present);
+                    if !matched.is_empty() {
+                        unmet.push(Unmet {
+                            because: clause.because.clone(),
+                            any_of: BTreeSet::new(),
+                            present: matched,
+                        });
+                    }
+                }
+
+                if unmet.is_empty() {
                     Conformance::Reproducible
                 } else {
-                    Conformance::Conditional {
-                        missing_required,
-                        present_breaking,
-                    }
+                    unmet.sort();
+                    unmet.dedup();
+                    Conformance::Conditional { unmet }
                 }
             }
         }
@@ -204,20 +322,66 @@ pub enum Conformance {
     /// it non-hermetic.
     HostDerived,
     /// The program is conditionally reproducible and this invocation does
-    /// not meet the conditions: some required flags are absent and/or some
-    /// breaking flags are present. At least one of the two sets is
-    /// non-empty.
+    /// not meet the conditions. Never empty.
     Conditional {
-        /// Required flags that are absent from the invocation.
-        missing_required: BTreeSet<String>,
-        /// Breaking flags that are present in the invocation.
-        present_breaking: BTreeSet<String>,
+        /// The clauses it failed, each with the spec's words for why.
+        unmet: Vec<Unmet>,
     },
+}
+
+/// Ways of asking a verdict what went wrong, flattened across clauses.
+///
+/// The report reads the clauses themselves, because it has room to say why
+/// each one mattered; these are for tests, which mostly want to know which
+/// patterns went unmet and which arguments offended.
+#[cfg(test)]
+impl Conformance {
+    /// Every pattern that would have satisfied a requirement left unmet.
+    ///
+    pub fn missing_required(&self) -> BTreeSet<String> {
+        match self {
+            Conformance::Conditional { unmet } => unmet
+                .iter()
+                .flat_map(|clause| clause.any_of.iter().cloned())
+                .collect(),
+            _ => BTreeSet::new(),
+        }
+    }
+
+    /// Every argument that breached a prohibition.
+    pub fn present_breaking(&self) -> BTreeSet<String> {
+        match self {
+            Conformance::Conditional { unmet } => unmet
+                .iter()
+                .flat_map(|clause| clause.present.iter().cloned())
+                .collect(),
+            _ => BTreeSet::new(),
+        }
+    }
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    /// Assert a verdict is conditional, and on exactly these grounds.
+    ///
+    /// Stated through the accessors rather than by rebuilding the clauses:
+    /// what a test of `assess` cares about is which patterns went unmet and
+    /// which arguments offended, not the sentence attached to each.
+    #[track_caller]
+    fn assert_conditional(
+        verdict: Conformance,
+        missing: BTreeSet<String>,
+        breaking: BTreeSet<String>,
+    ) {
+        assert!(
+            matches!(verdict, Conformance::Conditional { .. }),
+            "expected a conditional verdict, got {verdict:?}",
+        );
+        assert_eq!(verdict.missing_required(), missing, "missing");
+        assert_eq!(verdict.present_breaking(), breaking, "breaking");
+    }
 
     #[test]
     fn new_collects_flag_sets_and_dedups() {
@@ -227,11 +391,20 @@ mod tests {
             ["--timestamp"],
         );
         assert_eq!(spec.reproducibility, Reproducibility::Sometimes);
-        // The set dedups and orders the required flags.
-        assert!(spec.required_flags.contains("--deterministic"));
-        assert!(spec.required_flags.contains("-frandom-seed"));
-        assert_eq!(spec.required_flags.len(), 2);
-        assert!(spec.breaking_flags.contains("--timestamp"));
+        // A clause per pattern, deduplicated on the way in.
+        let patterns: BTreeSet<String> = spec
+            .requirements
+            .iter()
+            .flat_map(|clause| clause.patterns())
+            .collect();
+        assert!(patterns.contains("--deterministic"));
+        assert!(patterns.contains("-frandom-seed"));
+        assert_eq!(patterns.len(), 2);
+        assert!(
+            spec.prohibitions
+                .iter()
+                .any(|clause| clause.any_of.contains("--timestamp"))
+        );
     }
 
     #[test]
@@ -263,19 +436,15 @@ mod tests {
             spec.assess(["--deterministic", "input.c"]),
             Conformance::Reproducible
         );
-        assert_eq!(
+        assert_conditional(
             spec.assess(["--deterministic", "--timestamp"]),
-            Conformance::Conditional {
-                missing_required: set(&[]),
-                present_breaking: set(&["--timestamp"]),
-            }
+            set(&[]),
+            set(&["--timestamp"]),
         );
-        assert_eq!(
+        assert_conditional(
             spec.assess(["input.c"]),
-            Conformance::Conditional {
-                missing_required: set(&["--deterministic"]),
-                present_breaking: set(&[]),
-            }
+            set(&["--deterministic"]),
+            set(&[]),
         );
     }
 
@@ -308,12 +477,10 @@ mod tests {
         .with_translations(translations([("-O2", "-O")]));
 
         // `-O2` is the breaking flag `-O` under another name.
-        assert_eq!(
+        assert_conditional(
             spec.assess(["-O2", "input.c"]),
-            Conformance::Conditional {
-                missing_required: set(&[]),
-                present_breaking: set(&["-O"]),
-            }
+            set(&[]),
+            set(&["-O"]),
         );
         // `-O9` was not translated, so it is not `-O`.
         assert_eq!(spec.assess(["-O9"]), Conformance::Reproducible);
@@ -394,12 +561,10 @@ mod tests {
             ["--deterministic", "--sorted"],
             [] as [&str; 0],
         );
-        assert_eq!(
+        assert_conditional(
             spec.assess(["--sorted"]),
-            Conformance::Conditional {
-                missing_required: set(&["--deterministic"]),
-                present_breaking: set(&[]),
-            }
+            set(&["--deterministic"]),
+            set(&[]),
         );
     }
 
@@ -413,12 +578,10 @@ mod tests {
         .with_translations(translations([("-O2", "-O")]));
         // -O2 translates to -O, a breaking flag; --timestamp is absent, so
         // only the one that is present is reported.
-        assert_eq!(
+        assert_conditional(
             spec.assess(["-O2", "input.c"]),
-            Conformance::Conditional {
-                missing_required: set(&[]),
-                present_breaking: set(&["-O"]),
-            }
+            set(&[]),
+            set(&["-O"]),
         );
     }
 
@@ -429,12 +592,10 @@ mod tests {
             ["--deterministic"],
             ["--timestamp"],
         );
-        assert_eq!(
+        assert_conditional(
             spec.assess(["--timestamp"]),
-            Conformance::Conditional {
-                missing_required: set(&["--deterministic"]),
-                present_breaking: set(&["--timestamp"]),
-            }
+            set(&["--deterministic"]),
+            set(&["--timestamp"]),
         );
     }
 }

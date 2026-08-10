@@ -466,6 +466,7 @@ mod tests {
     use crate::reproducibility_spec::Reproducibility;
     use crate::reproducibility_spec::library::Transition;
     use crate::reproducibility_spec::program_id::ProgramId;
+    use crate::reproducibility_spec::{Conformance, Unmet};
 
     fn report_violations(
         violations: &BTreeMap<Violation, usize>,
@@ -679,6 +680,74 @@ mod tests {
     }
 
     #[test]
+    fn a_file_may_write_its_conditions_out_in_full() {
+        // The shape the README documents under "When a rule only sometimes
+        // applies", kept here so the two cannot drift apart: a guard with
+        // an `off` set, and a requirement met by any one of its patterns.
+        let specs = specs_from(
+            "conditions.json",
+            r#"{"programs": {
+                 "@acme//bin/cc": {
+                   "spec": {
+                     "reproducibility": "sometimes",
+                     "requirements": [
+                       {
+                         "because": "a source mentioning __DATE__",
+                         "when": {"family": ["-c"]},
+                         "any_of": ["-D__DATE__=*"]
+                       },
+                       {
+                         "because": "debugging information records a path",
+                         "when": {
+                           "family": ["-g", "-gsplit-dwarf"],
+                           "off": ["-g0"]
+                         },
+                         "any_of": [
+                           "-ffile-prefix-map=*",
+                           "-fdebug-compilation-dir=*"
+                         ]
+                       }
+                     ]
+                   }
+                 }
+               }}"#,
+        )
+        .expect("should load");
+
+        let Entry::Spec(spec) = &specs[0].1 else {
+            panic!("expected a spec");
+        };
+        assert_eq!(spec.requirements.len(), 2);
+
+        // Compiling without the define is caught...
+        assert!(matches!(
+            spec.assess(["-c", "x.c"]),
+            Conformance::Conditional { .. }
+        ));
+        // ...and the same arguments without `-c` are not its business.
+        assert_eq!(spec.assess(["x.c"]), Conformance::Reproducible);
+
+        // The guard reads last-wins, and either alternative satisfies it.
+        assert_eq!(
+            spec.assess(["-g", "-g0", "-c", "-D__DATE__=\"redacted\""]),
+            Conformance::Reproducible,
+        );
+        assert!(matches!(
+            spec.assess(["-g0", "-g", "-c", "-D__DATE__=\"redacted\""]),
+            Conformance::Conditional { .. }
+        ));
+        assert_eq!(
+            spec.assess([
+                "-g",
+                "-fdebug-compilation-dir=.",
+                "-c",
+                "-D__DATE__=\"redacted\"",
+            ]),
+            Conformance::Reproducible,
+        );
+    }
+
+    #[test]
     fn a_file_names_programs_the_way_a_report_does() {
         let specs = specs_from(
             "specs.json",
@@ -702,7 +771,11 @@ mod tests {
             panic!("expected a spec, got {entry:?}");
         };
         assert_eq!(spec.reproducibility, Reproducibility::Sometimes);
-        assert!(spec.required_flags.contains("--deterministic"));
+        assert!(
+            spec.requirements
+                .iter()
+                .any(|clause| clause.any_of.contains("--deterministic"))
+        );
         assert_eq!(spec.recognize("-O2"), Some("-O".to_owned()));
     }
 
@@ -819,8 +892,8 @@ mod tests {
         let Entry::Spec(spec) = &specs[0].1 else {
             panic!("expected a spec");
         };
-        assert!(spec.required_flags.is_empty());
-        assert!(spec.breaking_flags.is_empty());
+        assert!(spec.requirements.is_empty());
+        assert!(spec.prohibitions.is_empty());
         // No translations means every argument stands for itself.
         assert_eq!(
             spec.recognize("--anything"),
@@ -1020,8 +1093,11 @@ mod tests {
                 program,
                 wrappers,
                 synonym: None,
-                missing_required: vec!["--deterministic".to_owned()],
-                present_breaking: vec!["--timestamp".to_owned()],
+                unmet: vec![Unmet {
+                    because: "--deterministic is required".to_owned(),
+                    any_of: ["--deterministic".to_owned()].into(),
+                    present: Default::default(),
+                }],
             },
         ]);
 

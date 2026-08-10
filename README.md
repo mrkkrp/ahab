@@ -12,6 +12,7 @@
 * [Reproducibility specifications](#reproducibility-specifications)
   * [Naming a program](#naming-a-program)
   * [Writing one](#writing-one)
+  * [When a rule only sometimes applies](#when-a-rule-only-sometimes-applies)
   * [Saying it another way](#saying-it-another-way)
 * [Exceptions](#exceptions)
   * [How they match](#how-they-match)
@@ -261,13 +262,15 @@ ahab(
 )
 ```
 
-All four fields live directly under `spec`, and only the first is required:
+The fields live directly under `spec`, and only the first is required:
 
 | field             |          | meaning                              |
 | ----------------- | -------- | ------------------------------------ |
 | `reproducibility` | required | the baseline disposition             |
 | `required_flags`  | optional | patterns the invocation has to match |
 | `breaking_flags`  | optional | patterns that spoil it               |
+| `requirements`    | optional | the same, said conditionally         |
+| `prohibitions`    | optional | the same, said conditionally         |
 | `recognize`       | optional | how to transform options             |
 
 `reproducibility` is one of:
@@ -279,14 +282,15 @@ All four fields live directly under `spec`, and only the first is required:
 | `sometimes`    | deterministic under the conditions below        |
 | `host_derived` | this program was derived by inspecting the host |
 
-Only `sometimes` consults the two flag lists; for the other three there is
-nothing an invocation could say to change the answer.
+Only `sometimes` looks at the invocation at all; for the other three there
+is nothing an invocation could say to change the answer.
 
 `required_flags` and `breaking_flags` are lists of patterns, matched against
 the invocation's arguments. `*` matches any run of characters and `?`
 exactly one; a pattern with neither is an exact argument. A specification is
 met when every required pattern matches some argument and no breaking one
-matches any.
+matches any—unconditionally, which is not always what one wants to say; see
+[below](#when-a-rule-only-sometimes-applies).
 
 They are patterns rather than names because what makes an invocation
 reproducible is usually a flag *and* its value. `--remap-path-prefix` says
@@ -299,6 +303,74 @@ what lets one specification cover a tool with several spellings for the same
 thing. In the example above an invocation passing `-d` satisfies the
 required `--deterministic`, as though it had been written out. Anything
 unlisted stands for itself, so a table only has to name the exceptions.
+
+### When a rule only sometimes applies
+
+`required_flags` says *always*, and a program that does more than one job
+cannot be described that way. Clang compiles, links, and preprocesses; a
+rule about compiling, stated over every invocation, is a rule stated about
+the wrong ones. `requirements` and `prohibitions` are the same idea with a
+condition attached, and a sentence explaining themselves:
+
+```json
+{
+  "reproducibility": "sometimes",
+  "requirements": [
+    {
+      "because": "a source mentioning __DATE__ records when it was compiled",
+      "when": {"family": ["-c"]},
+      "any_of": ["-D__DATE__=*"]
+    },
+    {
+      "because": "debugging information records the directory it was compiled in",
+      "when": {"family": ["-g", "-gsplit-dwarf"], "off": ["-g0"]},
+      "any_of": ["-ffile-prefix-map=*", "-fdebug-compilation-dir=*"]
+    }
+  ]
+}
+```
+
+| field     |          | meaning                                        |
+| --------- | -------- | ---------------------------------------------- |
+| `because` | required | what the rule is about, quoted in the report   |
+| `any_of`  | required | patterns, any one of which satisfies it        |
+| `when`    | optional | the condition; absent means always             |
+
+The two clauses show the two things a flat list cannot say.
+
+**A condition.** `when` names a `family` of flags that turn something on and
+the `off` flags of the same family that turn it back off. It is decided by
+the *last* argument that speaks to it, because that is how compilers read
+their own flags: `-g -g0` leaves debugging information off, and `-g0 -g`
+leaves it on. A rule that only asked whether `-g0` appeared anywhere would
+get the second one wrong. With no `off` flags the question is simply whether
+the family appears, which is all the first clause needs.
+
+**Alternatives.** `any_of` is satisfied by any one of its patterns, not all
+of them. There is more than one way to keep the execution root out of the
+DWARF—`-ffile-prefix-map` covers it, and naming the compilation directory
+outright addresses the same field from the other end—and a specification
+that demanded a particular one would report a build that had done the job
+differently.
+
+For the conjunction, write more clauses: three macros that each need
+defining away are three requirements sharing one condition, and every one of
+them has to be met.
+
+`because` is not decoration. It is what the report says when the clause goes
+unmet, so it should finish the sentence "this is not reproducible because…":
+
+```
+CppCompile for //source/common/common:assert_lib runs
+"@llvm_toolchain//bin/cc_wrapper.sh" non-reproducibly: debugging information
+records the directory it was compiled in (none of ["-fdebug-compilation-dir=*",
+"-ffile-prefix-map=*"])
+```
+
+`required_flags` and `breaking_flags` remain the short way to say the
+unconditional case, and mean exactly what a clause with no `when` and a
+single pattern means. Use them where a rule really does hold however the
+program was invoked.
 
 ### Saying it another way
 
