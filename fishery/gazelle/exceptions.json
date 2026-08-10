@@ -1,0 +1,18 @@
+{
+  "exceptions": [
+    {
+      "reason": "gazelle compiles and links Go with Bazel's autoconfigured non-hermetic C++ toolchain, which puts the host compiler's directory on PATH",
+      "kind": "bad_path"
+    },
+    {
+      "reason": "gazelle compiles and links Go with Bazel's autoconfigured non-hermetic C++ toolchain, named by absolute path",
+      "kind": "absolute_path",
+      "path": "*/bin/gcc"
+    },
+    {
+      "reason": "gazelle compiles and links Go with Bazel's autoconfigured non-hermetic C++ toolchain, named by absolute path",
+      "kind": "absolute_path",
+      "path": "*/bin/ar"
+    }
+  ]
+}

@@ -1,0 +1,599 @@
+{
+  "violations": [
+    {
+      "count": 1,
+      "violation": {
+        "kind": "unknown_program",
+        "action": {
+          "mnemonic": "GoCompilePkg",
+          "target": "//language/bazel/visibility:visibility"
+        },
+        "program": {
+          "origin": {
+            "module": {
+              "name": "rules_go",
+              "extension": "go_sdk"
+            }
+          },
+          "path": "builder_reset/builder"
+        },
+        "wrappers": []
+      }
+    },
+    {
+      "count": 2,
+      "violation": {
+        "kind": "unknown_program",
+        "action": {
+          "mnemonic": "GoCompilePkg",
+          "target": "//language/bazel/visibility:visibility_test"
+        },
+        "program": {
+          "origin": {
+            "module": {
+              "name": "rules_go",
+              "extension": "go_sdk"
+            }
+          },
+          "path": "builder_reset/builder"
+        },
+        "wrappers": []
+      }
+    },
+    {
+      "count": 2,
+      "violation": {
+        "kind": "unknown_program",
+        "action": {
+          "mnemonic": "GoCompilePkg",
+          "target": "//language/go/gen_std_package_list:gen_std_package_list"
+        },
+        "program": {
+          "origin": {
+            "module": {
+              "name": "rules_go",
+              "extension": "go_sdk"
+            }
+          },
+          "path": "builder_reset/builder"
+        },
+        "wrappers": []
+      }
+    },
+    {
+      "count": 2,
+      "violation": {
+        "kind": "unknown_program",
+        "action": {
+          "mnemonic": "GoCompilePkg",
+          "target": "//language/go/gen_std_package_list:gen_std_package_list_lib"
+        },
+        "program": {
+          "origin": {
+            "module": {
+              "name": "rules_go",
+              "extension": "go_sdk"
+            }
+          },
+          "path": "builder_reset/builder"
+        },
+        "wrappers": []
+      }
+    },
+    {
+      "count": 2,
+      "violation": {
+        "kind": "unknown_program",
+        "action": {
+          "mnemonic": "GoCompilePkg",
+          "target": "//language/go/platform_info_generator:platform_info_generator"
+        },
+        "program": {
+          "origin": {
+            "module": {
+              "name": "rules_go",
+              "extension": "go_sdk"
+            }
+          },
+          "path": "builder_reset/builder"
+        },
+        "wrappers": []
+      }
+    },
+    {
+      "count": 2,
+      "violation": {
+        "kind": "unknown_program",
+        "action": {
+          "mnemonic": "GoCompilePkg",
+          "target": "//language/go/platform_info_generator:platform_info_generator_lib"
+        },
+        "program": {
+          "origin": {
+            "module": {
+              "name": "rules_go",
+              "extension": "go_sdk"
+            }
+          },
+          "path": "builder_reset/builder"
+        },
+        "wrappers": []
+      }
+    },
+    {
+      "count": 1,
+      "violation": {
+        "kind": "unknown_program",
+        "action": {
+          "mnemonic": "GoCompilePkg",
+          "target": "//language/go:go"
+        },
+        "program": {
+          "origin": {
+            "module": {
+              "name": "rules_go",
+              "extension": "go_sdk"
+            }
+          },
+          "path": "builder_reset/builder"
+        },
+        "wrappers": []
+      }
+    },
+    {
+      "count": 2,
+      "violation": {
+        "kind": "unknown_program",
+        "action": {
+          "mnemonic": "GoCompilePkg",
+          "target": "//language/go:go_test"
+        },
+        "program": {
+          "origin": {
+            "module": {
+              "name": "rules_go",
+              "extension": "go_sdk"
+            }
+          },
+          "path": "builder_reset/builder"
+        },
+        "wrappers": []
+      }
+    },
+    {
+      "count": 2,
+      "violation": {
+        "kind": "unknown_program",
+        "action": {
+          "mnemonic": "GoCompilePkg",
+          "target": "//language/proto/gen:gen_known_imports"
+        },
+        "program": {
+          "origin": {
+            "module": {
+              "name": "rules_go",
+              "extension": "go_sdk"
+            }
+          },
+          "path": "builder_reset/builder"
+        },
+        "wrappers": []
+      }
+    },
+    {
+      "count": 2,
+      "violation": {
+        "kind": "unknown_program",
+        "action": {
+          "mnemonic": "GoCompilePkg",
+          "target": "//language/proto/gen:gen_lib"
+        },
+        "program": {
+          "origin": {
+            "module": {
+              "name": "rules_go",
+              "extension": "go_sdk"
+            }
+          },
+          "path": "builder_reset/builder"
+        },
+        "wrappers": []
+      }
+    },
+    {
+      "count": 1,
+      "violation": {
+        "kind": "unknown_program",
+        "action": {
+          "mnemonic": "GoCompilePkg",
+          "target": "//language/proto:proto"
+        },
+        "program": {
+          "origin": {
+            "module": {
+              "name": "rules_go",
+              "extension": "go_sdk"
+            }
+          },
+          "path": "builder_reset/builder"
+        },
+        "wrappers": []
+      }
+    },
+    {
+      "count": 2,
+      "violation": {
+        "kind": "unknown_program",
+        "action": {
+          "mnemonic": "GoCompilePkg",
+          "target": "//language/proto:proto_test"
+        },
+        "program": {
+          "origin": {
+            "module": {
+              "name": "rules_go",
+              "extension": "go_sdk"
+            }
+          },
+          "path": "builder_reset/builder"
+        },
+        "wrappers": []
+      }
+    },
+    {
+      "count": 1,
+      "violation": {
+        "kind": "unknown_program",
+        "action": {
+          "mnemonic": "GoCompilePkg",
+          "target": "//language:language"
+        },
+        "program": {
+          "origin": {
+            "module": {
+              "name": "rules_go",
+              "extension": "go_sdk"
+            }
+          },
+          "path": "builder_reset/builder"
+        },
+        "wrappers": []
+      }
+    },
+    {
+      "count": 1,
+      "violation": {
+        "kind": "unknown_program",
+        "action": {
+          "mnemonic": "GoCompilePkgExternal",
+          "target": "//language/bazel/visibility:visibility_test"
+        },
+        "program": {
+          "origin": {
+            "module": {
+              "name": "rules_go",
+              "extension": "go_sdk"
+            }
+          },
+          "path": "builder_reset/builder"
+        },
+        "wrappers": []
+      }
+    },
+    {
+      "count": 1,
+      "violation": {
+        "kind": "unknown_program",
+        "action": {
+          "mnemonic": "GoCompilePkgExternal",
+          "target": "//language/go:go_test"
+        },
+        "program": {
+          "origin": {
+            "module": {
+              "name": "rules_go",
+              "extension": "go_sdk"
+            }
+          },
+          "path": "builder_reset/builder"
+        },
+        "wrappers": []
+      }
+    },
+    {
+      "count": 1,
+      "violation": {
+        "kind": "unknown_program",
+        "action": {
+          "mnemonic": "GoCompilePkgExternal",
+          "target": "//language/proto:proto_test"
+        },
+        "program": {
+          "origin": {
+            "module": {
+              "name": "rules_go",
+              "extension": "go_sdk"
+            }
+          },
+          "path": "builder_reset/builder"
+        },
+        "wrappers": []
+      }
+    },
+    {
+      "count": 1,
+      "violation": {
+        "kind": "unknown_program",
+        "action": {
+          "mnemonic": "GoLink",
+          "target": "//language/bazel/visibility:visibility_test"
+        },
+        "program": {
+          "origin": {
+            "module": {
+              "name": "rules_go",
+              "extension": "go_sdk"
+            }
+          },
+          "path": "builder_reset/builder"
+        },
+        "wrappers": []
+      }
+    },
+    {
+      "count": 2,
+      "violation": {
+        "kind": "unknown_program",
+        "action": {
+          "mnemonic": "GoLink",
+          "target": "//language/go/gen_std_package_list:gen_std_package_list"
+        },
+        "program": {
+          "origin": {
+            "module": {
+              "name": "rules_go",
+              "extension": "go_sdk"
+            }
+          },
+          "path": "builder_reset/builder"
+        },
+        "wrappers": []
+      }
+    },
+    {
+      "count": 2,
+      "violation": {
+        "kind": "unknown_program",
+        "action": {
+          "mnemonic": "GoLink",
+          "target": "//language/go/platform_info_generator:platform_info_generator"
+        },
+        "program": {
+          "origin": {
+            "module": {
+              "name": "rules_go",
+              "extension": "go_sdk"
+            }
+          },
+          "path": "builder_reset/builder"
+        },
+        "wrappers": []
+      }
+    },
+    {
+      "count": 1,
+      "violation": {
+        "kind": "unknown_program",
+        "action": {
+          "mnemonic": "GoLink",
+          "target": "//language/go:go_test"
+        },
+        "program": {
+          "origin": {
+            "module": {
+              "name": "rules_go",
+              "extension": "go_sdk"
+            }
+          },
+          "path": "builder_reset/builder"
+        },
+        "wrappers": []
+      }
+    },
+    {
+      "count": 2,
+      "violation": {
+        "kind": "unknown_program",
+        "action": {
+          "mnemonic": "GoLink",
+          "target": "//language/proto/gen:gen_known_imports"
+        },
+        "program": {
+          "origin": {
+            "module": {
+              "name": "rules_go",
+              "extension": "go_sdk"
+            }
+          },
+          "path": "builder_reset/builder"
+        },
+        "wrappers": []
+      }
+    },
+    {
+      "count": 1,
+      "violation": {
+        "kind": "unknown_program",
+        "action": {
+          "mnemonic": "GoLink",
+          "target": "//language/proto:proto_test"
+        },
+        "program": {
+          "origin": {
+            "module": {
+              "name": "rules_go",
+              "extension": "go_sdk"
+            }
+          },
+          "path": "builder_reset/builder"
+        },
+        "wrappers": []
+      }
+    },
+    {
+      "count": 1,
+      "violation": {
+        "kind": "unknown_program",
+        "action": {
+          "mnemonic": "GoStdPackageList",
+          "target": "//language/go:std_package_list"
+        },
+        "program": {
+          "origin": {
+            "main": {
+              "extension": null
+            }
+          },
+          "path": "language/go/gen_std_package_list/gen_std_package_list_/gen_std_package_list"
+        },
+        "wrappers": []
+      }
+    },
+    {
+      "count": 1,
+      "violation": {
+        "kind": "unknown_program",
+        "action": {
+          "mnemonic": "GoTestGenTest",
+          "target": "//language/bazel/visibility:visibility_test"
+        },
+        "program": {
+          "origin": {
+            "module": {
+              "name": "rules_go",
+              "extension": "go_sdk"
+            }
+          },
+          "path": "builder_reset/builder"
+        },
+        "wrappers": []
+      }
+    },
+    {
+      "count": 1,
+      "violation": {
+        "kind": "unknown_program",
+        "action": {
+          "mnemonic": "GoTestGenTest",
+          "target": "//language/go:go_test"
+        },
+        "program": {
+          "origin": {
+            "module": {
+              "name": "rules_go",
+              "extension": "go_sdk"
+            }
+          },
+          "path": "builder_reset/builder"
+        },
+        "wrappers": []
+      }
+    },
+    {
+      "count": 1,
+      "violation": {
+        "kind": "unknown_program",
+        "action": {
+          "mnemonic": "GoTestGenTest",
+          "target": "//language/proto:proto_test"
+        },
+        "program": {
+          "origin": {
+            "module": {
+              "name": "rules_go",
+              "extension": "go_sdk"
+            }
+          },
+          "path": "builder_reset/builder"
+        },
+        "wrappers": []
+      }
+    },
+    {
+      "count": 1,
+      "violation": {
+        "kind": "unknown_program",
+        "action": {
+          "mnemonic": "KnownImports",
+          "target": "//language/proto:known_go_imports"
+        },
+        "program": {
+          "origin": {
+            "main": {
+              "extension": null
+            }
+          },
+          "path": "language/proto/gen/gen_known_imports_/gen_known_imports"
+        },
+        "wrappers": []
+      }
+    },
+    {
+      "count": 1,
+      "violation": {
+        "kind": "unknown_program",
+        "action": {
+          "mnemonic": "KnownImports",
+          "target": "//language/proto:known_imports"
+        },
+        "program": {
+          "origin": {
+            "main": {
+              "extension": null
+            }
+          },
+          "path": "language/proto/gen/gen_known_imports_/gen_known_imports"
+        },
+        "wrappers": []
+      }
+    },
+    {
+      "count": 1,
+      "violation": {
+        "kind": "unknown_program",
+        "action": {
+          "mnemonic": "KnownImports",
+          "target": "//language/proto:known_proto_imports"
+        },
+        "program": {
+          "origin": {
+            "main": {
+              "extension": null
+            }
+          },
+          "path": "language/proto/gen/gen_known_imports_/gen_known_imports"
+        },
+        "wrappers": []
+      }
+    },
+    {
+      "count": 1,
+      "violation": {
+        "kind": "unknown_program",
+        "action": {
+          "mnemonic": "RunBinary",
+          "target": "//language/go:gen_platform_info"
+        },
+        "program": {
+          "origin": {
+            "main": {
+              "extension": null
+            }
+          },
+          "path": "language/go/platform_info_generator/platform_info_generator_/platform_info_generator"
+        },
+        "wrappers": []
+      }
+    }
+  ]
+}

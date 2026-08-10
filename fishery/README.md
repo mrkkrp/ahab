@@ -110,6 +110,16 @@ the findings it removes land in the same commit.
 `local_path_override`, so a `WORKSPACE`-only project cannot be a target.
 `setup` says so rather than producing something broken.
 
+**Injecting Ahab perturbs the project's own dependency graph.** The wiring
+is a `bazel_dep`, so minimal version selection takes the maximum of Ahab's
+requirements and the project's, and a project pinned to an older version of
+something Ahab also needs gets silently upgraded. When a target fails during
+analysis, build the same label in `work/` with the injected lines reverted
+before believing Ahab had anything to do with it. Choosing a narrower
+`label` often steps around it, since the damage is usually confined to one
+subtree—that is why the gazelle target analyzes `//language/...` and not
+`//...`.
+
 **Setup fetches over the network** and `check`/`update` run a full Bazel
 analysis of the target project, so these are not part of `bazel test //...`
 and never will be. CI runs them as its own step, `./fishery.py ci`.
