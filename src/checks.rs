@@ -572,24 +572,18 @@ impl Violation {
                 let reasons: Vec<String> = unmet
                     .iter()
                     .map(|clause| {
-                        let evidence = if clause.present.is_empty() {
-                            format!(
-                                "none of {}",
-                                found(&format!(
-                                    "{:?}",
-                                    clause
-                                        .any_of
-                                        .iter()
-                                        .collect::<Vec<_>>()
-                                )),
-                            )
-                        } else {
-                            found(&format!(
-                                "{:?}",
-                                clause.present.iter().collect::<Vec<_>>()
-                            ))
+                        let names = |set: &BTreeSet<String>| {
+                            set.iter()
+                                .map(String::as_str)
+                                .collect::<Vec<_>>()
+                                .join(" ")
                         };
-                        format!("{} ({})", clause.because, evidence)
+                        let evidence = if clause.present.is_empty() {
+                            format!("none of {}", names(&clause.any_of))
+                        } else {
+                            names(&clause.present)
+                        };
+                        format!("{}, {}", clause.because, evidence)
                     })
                     .collect();
                 format!(
@@ -2957,12 +2951,14 @@ pub(crate) mod tests {
             synonym: None,
             unmet: vec![
                 Unmet {
-                    because: "--deterministic is required".to_owned(),
+                    because: "it needs an option it was not given"
+                        .to_owned(),
                     any_of: ["--deterministic".to_owned()].into(),
                     present: Default::default(),
                 },
                 Unmet {
-                    because: "--timestamp breaks it".to_owned(),
+                    because: "it was given an option that breaks it"
+                        .to_owned(),
                     any_of: Default::default(),
                     present: ["--timestamp".to_owned()].into(),
                 },
@@ -2972,10 +2968,10 @@ pub(crate) mod tests {
         assert!(r.contains(r#"program "gcc""#), "{r}");
         // Each clause speaks in the words its spec gave it, and shows the
         // patterns that would have met it or the arguments that broke it.
-        assert!(r.contains("--deterministic is required"), "{r}");
-        assert!(r.contains(r#"none of ["--deterministic"]"#), "{r}");
-        assert!(r.contains("--timestamp breaks it"), "{r}");
-        assert!(r.contains(r#"["--timestamp"]"#), "{r}");
+        assert!(r.contains("it needs an option it was not given"), "{r}");
+        assert!(r.contains("none of --deterministic"), "{r}");
+        assert!(r.contains("it was given an option that breaks it"), "{r}");
+        assert!(r.contains("breaks it, --timestamp"), "{r}");
     }
 
     #[test]
@@ -2989,14 +2985,19 @@ pub(crate) mod tests {
             wrappers: Vec::new(),
             synonym: None,
             unmet: vec![Unmet {
-                because: "--sorted is required".to_owned(),
+                because: "it needs an option it was not given".to_owned(),
                 any_of: ["--sorted".to_owned()].into(),
                 present: Default::default(),
             }],
         };
         let r = v.render(Palette::plain());
-        assert!(r.contains("--sorted is required"), "{r}");
-        assert!(r.contains(r#"none of ["--sorted"]"#), "{r}");
+        assert!(r.contains("it needs an option it was not given"), "{r}");
+        assert!(r.contains("none of --sorted"), "{r}");
+        // Plainly: the options are bare, with no brackets or quotes of
+        // their own. The program name is quoted; that is a different
+        // thing and stays.
+        assert!(!r.contains('['), "{r}");
+        assert!(!r.contains(r#"""--sorted"#), "{r}");
         // Nothing is said about a clause the invocation did not fail.
         assert!(!r.contains("breaks it"), "{r}");
     }

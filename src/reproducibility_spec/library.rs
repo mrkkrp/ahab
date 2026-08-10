@@ -37,6 +37,14 @@ pub enum Transition {
     /// equal to `separator`: the next argument is its program and the rest
     /// are its arguments.
     AfterSeparator { separator: String },
+    /// The wrapped command is the first argument: an interpreter handed a
+    /// script to run, as `python3 precompiler --src …`.
+    ///
+    /// Does not fire when the first argument is an option, because
+    /// `python3 -c` and `python3 -m` name no program the action can be
+    /// judged by—and a transition that does not fire leaves the
+    /// interpreter itself unvouched for, which is the safe direction.
+    FirstArgument,
 }
 
 impl Transition {
@@ -56,6 +64,13 @@ impl Transition {
                     .iter()
                     .position(|arg| *arg == separator.as_str())?;
                 let (program, rest) = args[at + 1..].split_first()?;
+                Some((program, rest.to_vec()))
+            }
+            Transition::FirstArgument => {
+                let (program, rest) = args.split_first()?;
+                if program.starts_with('-') {
+                    return None;
+                }
                 Some((program, rest.to_vec()))
             }
         }
@@ -102,6 +117,8 @@ fn entries() -> Vec<(ProgramId, Entry)> {
     entries.extend(super::per_lang::go::entries());
     entries.extend(super::per_lang::java::entries());
     entries.extend(super::per_lang::kotlin::entries());
+    entries.extend(super::per_lang::pkg::entries());
+    entries.extend(super::per_lang::python::entries());
     entries.extend(language_agnostic());
     entries
 }
@@ -305,6 +322,9 @@ struct SpecFields {
     /// `breaking_flags`.
     #[serde(default)]
     prohibitions: Vec<ClauseFields>,
+    /// Flags whose value is the argument that follows them.
+    #[serde(default)]
+    takes_value: BTreeSet<String>,
     /// Arguments that stand for a different option, as `argument -> option`.
     /// Anything unlisted stands for itself.
     #[serde(default)]
@@ -354,6 +374,8 @@ impl From<ClauseFields> for Clause {
 enum TransitionFile {
     /// The wrapped command follows this separator.
     AfterSeparator(String),
+    /// The wrapped command is the first argument.
+    FirstArgument,
 }
 
 /// Parse the entries a `--repro-specs` file declares.
@@ -387,10 +409,14 @@ pub fn parse_entries(
                         fields.requirements.into_iter().map(Clause::from),
                         fields.prohibitions.into_iter().map(Clause::from),
                     )
+                    .with_valued_flags(fields.takes_value)
                     .with_translations(fields.recognize),
                 ),
                 EntryFile::SameAs(target) => {
                     Entry::SameAs(named("same_as", &target)?)
+                }
+                EntryFile::Wraps(TransitionFile::FirstArgument) => {
+                    Entry::Wraps(Transition::FirstArgument)
                 }
                 EntryFile::Wraps(TransitionFile::AfterSeparator(
                     separator,

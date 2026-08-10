@@ -97,7 +97,7 @@ const FAMILIAR_PLACES: &[(&str, &str)] = &[
     ("/tmp/", "the temp directory"),
     ("/opt/", "the opt directory"),
     ("/var/", "the var directory"),
-    ("/usr/", "the system"),
+    ("/usr/", "the host"),
 ];
 
 /// What the report is mostly about, phrased so that it can stand where a

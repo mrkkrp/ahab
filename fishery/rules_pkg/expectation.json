@@ -1,0 +1,615 @@
+{
+  "violations": [
+    {
+      "count": 1,
+      "violation": {
+        "kind": "execution_requirement",
+        "action": {
+          "mnemonic": "CopyFile",
+          "target": "//tests/zip:zipcontent_loremipsum"
+        },
+        "requirement": "no-cache"
+      }
+    },
+    {
+      "count": 1,
+      "violation": {
+        "kind": "execution_requirement",
+        "action": {
+          "mnemonic": "CopyFile",
+          "target": "//tests/zip:zipcontent_loremipsum"
+        },
+        "requirement": "no-remote"
+      }
+    },
+    {
+      "count": 2,
+      "violation": {
+        "kind": "execution_requirement",
+        "action": {
+          "mnemonic": "GitChangelog",
+          "target": "//distro:changelog"
+        },
+        "requirement": "local"
+      }
+    },
+    {
+      "count": 1,
+      "violation": {
+        "kind": "execution_requirement",
+        "action": {
+          "mnemonic": "TestRunner",
+          "target": "//distro:packaging_test"
+        },
+        "requirement": "local"
+      }
+    },
+    {
+      "count": 1,
+      "violation": {
+        "kind": "absolute_path",
+        "action": {
+          "mnemonic": "Genrule",
+          "target": "//distro:small_module"
+        },
+        "path": "/version",
+        "site": {
+          "location": "argument",
+          "value": "source external/bazel_tools/tools/genrule/genrule-setup.sh; sed -e 's/version = \"\"/version = \"1.2.0\"/' -e '/### INTERNAL ONLY/,$d' ./MODULE.bazel >bazel-out/k8-fastbuild/bin/distro/MODULE.bazel"
+        }
+      }
+    },
+    {
+      "count": 1,
+      "violation": {
+        "kind": "absolute_path",
+        "action": {
+          "mnemonic": "Genrule",
+          "target": "//doc_build:toc"
+        },
+        "path": "/1.2.0/",
+        "site": {
+          "location": "argument",
+          "value": "source external/bazel_tools/tools/genrule/genrule-setup.sh; sed -e 's/{VERSION}/1.2.0/' doc_build/toc.md.tpl >bazel-out/k8-fastbuild/bin/doc_build/toc.md"
+        }
+      }
+    },
+    {
+      "count": 1,
+      "violation": {
+        "kind": "absolute_path",
+        "action": {
+          "mnemonic": "MakeDeb",
+          "target": "//tests/deb:test_deb"
+        },
+        "path": "/etc/nsswitch.conf",
+        "site": {
+          "location": "argument",
+          "value": "--conffile=/etc/nsswitch.conf"
+        }
+      }
+    },
+    {
+      "count": 1,
+      "violation": {
+        "kind": "absolute_path",
+        "action": {
+          "mnemonic": "MakeDeb",
+          "target": "//tests/deb:test_deb"
+        },
+        "path": "/etc/other",
+        "site": {
+          "location": "argument",
+          "value": "--conffile=/etc/other"
+        }
+      }
+    },
+    {
+      "count": 1,
+      "violation": {
+        "kind": "absolute_path",
+        "action": {
+          "mnemonic": "PackageTar",
+          "target": "//tests/tar:test-pkg-tar-with-attributes"
+        },
+        "path": "/foo/bar",
+        "site": {
+          "location": "argument",
+          "value": "--directory=/foo/bar"
+        }
+      }
+    },
+    {
+      "count": 1,
+      "violation": {
+        "kind": "absolute_path",
+        "action": {
+          "mnemonic": "PackageTar",
+          "target": "//tests/tar:test_tar_package_dir"
+        },
+        "path": "/my/package",
+        "site": {
+          "location": "argument",
+          "value": "--directory=/my/package"
+        }
+      }
+    },
+    {
+      "count": 1,
+      "violation": {
+        "kind": "absolute_path",
+        "action": {
+          "mnemonic": "PackageZip",
+          "target": "//tests/zip:test_zip_package_dir1"
+        },
+        "path": "/abc/def",
+        "site": {
+          "location": "argument",
+          "value": "/abc/def"
+        }
+      }
+    },
+    {
+      "count": 1,
+      "violation": {
+        "kind": "absolute_path",
+        "action": {
+          "mnemonic": "PackageZip",
+          "target": "//tests/zip:test_zip_package_dir2"
+        },
+        "path": "/abc/def/",
+        "site": {
+          "location": "argument",
+          "value": "/abc/def/"
+        }
+      }
+    },
+    {
+      "count": 1,
+      "violation": {
+        "kind": "absolute_path",
+        "action": {
+          "mnemonic": "PackageZip",
+          "target": "//tests/zip:test_zip_package_dir_substitution"
+        },
+        "path": "/level1/some_value/level3",
+        "site": {
+          "location": "argument",
+          "value": "/level1/some_value/level3"
+        }
+      }
+    },
+    {
+      "count": 1,
+      "violation": {
+        "kind": "system_program",
+        "action": {
+          "mnemonic": "CopyFile",
+          "target": "//tests/zip:zipcontent_loremipsum"
+        },
+        "program": {
+          "origin": "system",
+          "path": "/bin/bash"
+        },
+        "wrappers": []
+      }
+    },
+    {
+      "count": 1,
+      "violation": {
+        "kind": "system_program",
+        "action": {
+          "mnemonic": "Genrule",
+          "target": "//distro:relnotes"
+        },
+        "program": {
+          "origin": "system",
+          "path": "/bin/bash"
+        },
+        "wrappers": []
+      }
+    },
+    {
+      "count": 1,
+      "violation": {
+        "kind": "system_program",
+        "action": {
+          "mnemonic": "Genrule",
+          "target": "//distro:small_module"
+        },
+        "program": {
+          "origin": "system",
+          "path": "/bin/bash"
+        },
+        "wrappers": []
+      }
+    },
+    {
+      "count": 1,
+      "violation": {
+        "kind": "system_program",
+        "action": {
+          "mnemonic": "Genrule",
+          "target": "//distro:small_workspace"
+        },
+        "program": {
+          "origin": "system",
+          "path": "/bin/bash"
+        },
+        "wrappers": []
+      }
+    },
+    {
+      "count": 1,
+      "violation": {
+        "kind": "system_program",
+        "action": {
+          "mnemonic": "Genrule",
+          "target": "//distro:version_as_py"
+        },
+        "program": {
+          "origin": "system",
+          "path": "/bin/bash"
+        },
+        "wrappers": []
+      }
+    },
+    {
+      "count": 1,
+      "violation": {
+        "kind": "system_program",
+        "action": {
+          "mnemonic": "Genrule",
+          "target": "//doc_build:reference"
+        },
+        "program": {
+          "origin": "system",
+          "path": "/bin/bash"
+        },
+        "wrappers": []
+      }
+    },
+    {
+      "count": 1,
+      "violation": {
+        "kind": "system_program",
+        "action": {
+          "mnemonic": "Genrule",
+          "target": "//doc_build:toc"
+        },
+        "program": {
+          "origin": "system",
+          "path": "/bin/bash"
+        },
+        "wrappers": []
+      }
+    },
+    {
+      "count": 1,
+      "violation": {
+        "kind": "system_program",
+        "action": {
+          "mnemonic": "Genrule",
+          "target": "//tests/deb:generate_files"
+        },
+        "program": {
+          "origin": "system",
+          "path": "/bin/bash"
+        },
+        "wrappers": []
+      }
+    },
+    {
+      "count": 1,
+      "violation": {
+        "kind": "system_program",
+        "action": {
+          "mnemonic": "Genrule",
+          "target": "//tests/deb:generate_md5sums"
+        },
+        "program": {
+          "origin": "system",
+          "path": "/bin/bash"
+        },
+        "wrappers": []
+      }
+    },
+    {
+      "count": 1,
+      "violation": {
+        "kind": "system_program",
+        "action": {
+          "mnemonic": "Genrule",
+          "target": "//tests/tar:generate_files"
+        },
+        "program": {
+          "origin": "system",
+          "path": "/bin/bash"
+        },
+        "wrappers": []
+      }
+    },
+    {
+      "count": 1,
+      "violation": {
+        "kind": "system_program",
+        "action": {
+          "mnemonic": "Genrule",
+          "target": "//tests/zip:generate_files"
+        },
+        "program": {
+          "origin": "system",
+          "path": "/bin/bash"
+        },
+        "wrappers": []
+      }
+    },
+    {
+      "count": 1,
+      "violation": {
+        "kind": "unknown_program",
+        "action": {
+          "mnemonic": "Action",
+          "target": "//tests/install:generate_tree"
+        },
+        "program": {
+          "origin": {
+            "main": {
+              "extension": null
+            }
+          },
+          "path": "tests/util/create_directory_with_contents"
+        },
+        "wrappers": []
+      }
+    },
+    {
+      "count": 1,
+      "violation": {
+        "kind": "unknown_program",
+        "action": {
+          "mnemonic": "Action",
+          "target": "//tests/mappings/filter_directory:test_directory"
+        },
+        "program": {
+          "origin": {
+            "main": {
+              "extension": null
+            }
+          },
+          "path": "tests/util/create_directory_with_contents"
+        },
+        "wrappers": []
+      }
+    },
+    {
+      "count": 1,
+      "violation": {
+        "kind": "unknown_program",
+        "action": {
+          "mnemonic": "Action",
+          "target": "//tests/mappings/filter_directory:test_directory_same_root"
+        },
+        "program": {
+          "origin": {
+            "main": {
+              "extension": null
+            }
+          },
+          "path": "tests/util/create_directory_with_contents"
+        },
+        "wrappers": []
+      }
+    },
+    {
+      "count": 1,
+      "violation": {
+        "kind": "unknown_program",
+        "action": {
+          "mnemonic": "Action",
+          "target": "//tests/mappings:a_directory"
+        },
+        "program": {
+          "origin": {
+            "main": {
+              "extension": null
+            }
+          },
+          "path": "tests/util/create_directory_with_contents"
+        },
+        "wrappers": []
+      }
+    },
+    {
+      "count": 1,
+      "violation": {
+        "kind": "unknown_program",
+        "action": {
+          "mnemonic": "Action",
+          "target": "//tests/mappings:treeartifact"
+        },
+        "program": {
+          "origin": {
+            "main": {
+              "extension": null
+            }
+          },
+          "path": "tests/util/create_directory_with_contents"
+        },
+        "wrappers": []
+      }
+    },
+    {
+      "count": 1,
+      "violation": {
+        "kind": "unknown_program",
+        "action": {
+          "mnemonic": "Action",
+          "target": "//tests/tar:generate_tree"
+        },
+        "program": {
+          "origin": {
+            "main": {
+              "extension": null
+            }
+          },
+          "path": "tests/util/create_directory_with_contents"
+        },
+        "wrappers": []
+      }
+    },
+    {
+      "count": 1,
+      "violation": {
+        "kind": "unknown_program",
+        "action": {
+          "mnemonic": "Action",
+          "target": "//tests/tar:generate_tree_with_prefix"
+        },
+        "program": {
+          "origin": {
+            "main": {
+              "extension": null
+            }
+          },
+          "path": "tests/util/create_directory_with_contents"
+        },
+        "wrappers": []
+      }
+    },
+    {
+      "count": 1,
+      "violation": {
+        "kind": "unknown_program",
+        "action": {
+          "mnemonic": "Action",
+          "target": "//tests/tar:tree_artifact_to_rename"
+        },
+        "program": {
+          "origin": {
+            "main": {
+              "extension": null
+            }
+          },
+          "path": "tests/util/create_directory_with_contents"
+        },
+        "wrappers": []
+      }
+    },
+    {
+      "count": 1,
+      "violation": {
+        "kind": "unknown_program",
+        "action": {
+          "mnemonic": "Action",
+          "target": "//tests/tar:tree_artifact_with_links"
+        },
+        "program": {
+          "origin": {
+            "main": {
+              "extension": null
+            }
+          },
+          "path": "tests/util/create_directory_with_contents"
+        },
+        "wrappers": []
+      }
+    },
+    {
+      "count": 1,
+      "violation": {
+        "kind": "unknown_program",
+        "action": {
+          "mnemonic": "Action",
+          "target": "//tests/zip:generate_tree"
+        },
+        "program": {
+          "origin": {
+            "main": {
+              "extension": null
+            }
+          },
+          "path": "tests/util/create_directory_with_contents"
+        },
+        "wrappers": []
+      }
+    },
+    {
+      "count": 2,
+      "violation": {
+        "kind": "unknown_program",
+        "action": {
+          "mnemonic": "GitChangelog",
+          "target": "//distro:changelog"
+        },
+        "program": {
+          "origin": {
+            "main": {
+              "extension": null
+            }
+          },
+          "path": "pkg/releasing/git_changelog_private"
+        },
+        "wrappers": []
+      }
+    },
+    {
+      "count": 1,
+      "violation": {
+        "kind": "workspace_status",
+        "action": {
+          "mnemonic": "PackageTar",
+          "target": "//tests:stamped_tar"
+        },
+        "path": "bazel-out/volatile-status.txt"
+      }
+    },
+    {
+      "count": 1,
+      "violation": {
+        "kind": "workspace_status",
+        "action": {
+          "mnemonic": "PackageZip",
+          "target": "//tests:stamped_zip"
+        },
+        "path": "bazel-out/volatile-status.txt"
+      }
+    },
+    {
+      "count": 1,
+      "violation": {
+        "kind": "conditional_reproducibility",
+        "action": {
+          "mnemonic": "PackageTar",
+          "target": "//tests/tar:test-tar-preserve_mtime-True"
+        },
+        "program": {
+          "origin": {
+            "main": {
+              "extension": null
+            }
+          },
+          "path": "pkg/private/tar/build_tar"
+        },
+        "wrappers": [],
+        "synonym": {
+          "origin": {
+            "module": {
+              "name": "rules_pkg",
+              "extension": null
+            }
+          },
+          "path": "pkg/private/tar/build_tar"
+        },
+        "unmet": [
+          {
+            "because": "it was given an option that breaks it",
+            "present": [
+              "--preserve_mtime"
+            ]
+          }
+        ]
+      }
+    }
+  ]
+}

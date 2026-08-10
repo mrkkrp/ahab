@@ -1,0 +1,24 @@
+{
+  "exceptions": [
+    {
+      "reason": "the C++ tests build with Bazel's autoconfigured non-hermetic toolchain",
+      "kind": "system_program",
+      "program": "*/bin/gcc"
+    },
+    {
+      "reason": "the C++ tests build with Bazel's autoconfigured non-hermetic toolchain",
+      "kind": "system_program",
+      "program": "*/bin/ar"
+    },
+    {
+      "reason": "the C++ tests build with Bazel's autoconfigured non-hermetic toolchain",
+      "kind": "system_program",
+      "program": "*/bin/strip"
+    },
+    {
+      "reason": "the changelog rule is handed the workspace root, whose name is wherever the tree happens to be checked out",
+      "kind": "absolute_path",
+      "mnemonic": "GitChangelog"
+    }
+  ]
+}

@@ -33,6 +33,8 @@ rust_library(
         "src/reproducibility_spec/per_lang/java.rs",
         "src/reproducibility_spec/per_lang/kotlin.rs",
         "src/reproducibility_spec/per_lang/mod.rs",
+        "src/reproducibility_spec/per_lang/pkg.rs",
+        "src/reproducibility_spec/per_lang/python.rs",
         "src/reproducibility_spec/per_lang/rust.rs",
         "src/reproducibility_spec/program_id.rs",
         "src/terminal_color.rs",

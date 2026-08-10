@@ -1100,7 +1100,8 @@ mod tests {
                 wrappers,
                 synonym: None,
                 unmet: vec![Unmet {
-                    because: "--deterministic is required".to_owned(),
+                    because: "it needs an option it was not given"
+                        .to_owned(),
                     any_of: ["--deterministic".to_owned()].into(),
                     present: Default::default(),
                 }],

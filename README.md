@@ -303,6 +303,7 @@ The fields live directly under `spec`, and only the first is required:
 | `breaking_flags`  | optional | patterns that spoil it               |
 | `requirements`    | optional | the same, said conditionally         |
 | `prohibitions`    | optional | the same, said conditionally         |
+| `takes_value`     | optional | flags whose value is the next word   |
 | `recognize`       | optional | how to transform options             |
 
 `reproducibility` is one of:
@@ -329,6 +330,23 @@ reproducible is usually a flag *and* its value. `--remap-path-prefix` says
 only that some remapping happens; `--remap-path-prefix=${pwd}=*` says the
 execution root is what gets remapped, which is the thing actually worth
 requiring.
+
+`takes_value` names the flags whose value arrives as a separate argument.
+A pattern sees one argument at a time, so `--mtime=portable` is within
+reach and `--invalidation_mode unchecked_hash` is not—the value is simply a
+different word. Naming the flag folds the pair together with an `=` before
+anything looks at it:
+
+```json
+{
+  "reproducibility": "sometimes",
+  "takes_value": ["--invalidation_mode"],
+  "required_flags": ["--invalidation_mode=*hash*"]
+}
+```
+
+Folding with `=` is what makes the two spellings converge, so one pattern
+covers a tool however it was invoked—`-t 5` and `-t=5` both become `-t=5`.
 
 `recognize` is applied to each argument before the patterns see it, which is
 what lets one specification cover a tool with several spellings for the same

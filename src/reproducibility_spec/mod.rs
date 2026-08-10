@@ -150,6 +150,9 @@ pub struct ReproducibilitySpec {
     pub requirements: Vec<Clause>,
     /// Clauses an invocation must not satisfy.
     pub prohibitions: Vec<Clause>,
+    /// Flags whose value is the argument that follows them, rather than
+    /// part of the same one.
+    pub takes_value: BTreeSet<Glob>,
     /// Map a raw argument to the canonical option it represents, or `None`
     /// if it is not recognized as an option of this program.
     pub recognize: Recognize,
@@ -162,6 +165,7 @@ impl fmt::Debug for ReproducibilitySpec {
             .field("reproducibility", &self.reproducibility)
             .field("requirements", &self.requirements)
             .field("prohibitions", &self.prohibitions)
+            .field("takes_value", &self.takes_value)
             .field("recognize", &"<function>")
             .finish()
     }
@@ -179,6 +183,7 @@ impl PartialEq for ReproducibilitySpec {
         self.reproducibility == other.reproducibility
             && self.requirements == other.requirements
             && self.prohibitions == other.prohibitions
+            && self.takes_value == other.takes_value
     }
 }
 
@@ -210,19 +215,71 @@ impl ReproducibilitySpec {
             requirements: required_flags
                 .into_iter()
                 .map(|flag| {
-                    let flag = flag.into();
-                    Clause::plain(&flag, &format!("{flag} is required"))
+                    Clause::plain(
+                        &flag.into(),
+                        "it needs an option it was not given",
+                    )
                 })
                 .collect(),
             prohibitions: breaking_flags
                 .into_iter()
                 .map(|flag| {
-                    let flag = flag.into();
-                    Clause::plain(&flag, &format!("{flag} breaks it"))
+                    Clause::plain(
+                        &flag.into(),
+                        "it was given an option that breaks it",
+                    )
                 })
                 .collect(),
+            takes_value: BTreeSet::new(),
             recognize: Arc::new(|arg: &str| Some(arg.to_owned())),
         }
+    }
+
+    /// Declare the flags whose value is the next argument, returning the
+    /// updated spec.
+    ///
+    /// Tools spell a flag's value two ways—`--mtime=portable` in one
+    /// argument, `--invalidation_mode unchecked_hash` in two—and a pattern
+    /// sees one argument at a time, so the second form leaves the value
+    /// out of reach. Naming the flag here folds the pair together with an
+    /// `=`, which brings both spellings to the same shape: one pattern
+    /// then covers a tool however it was invoked.
+    ///
+    /// Declaring a flag that takes no value would swallow whatever follows
+    /// it, so this is a statement about the tool rather than a guess.
+    pub fn with_valued_flags<F>(mut self, flags: F) -> Self
+    where
+        F: IntoIterator,
+        F::Item: Into<String>,
+    {
+        self.takes_value = flags
+            .into_iter()
+            .map(|flag| Glob::new(&flag.into()))
+            .collect();
+        self
+    }
+
+    /// Fold each declared flag together with the argument after it.
+    ///
+    /// A flag at the very end has nothing to take, and is left alone. A
+    /// flag followed by another flag still takes it, because that is what
+    /// the tool would do.
+    fn join_values(&self, args: &[&str]) -> Vec<String> {
+        let mut joined = Vec::with_capacity(args.len());
+        let mut at = 0;
+        while at < args.len() {
+            let arg = args[at];
+            let takes =
+                self.takes_value.iter().any(|flag| flag.matches(arg));
+            if takes && at + 1 < args.len() {
+                joined.push(format!("{arg}={}", args[at + 1]));
+                at += 2;
+            } else {
+                joined.push(arg.to_owned());
+                at += 1;
+            }
+        }
+        joined
     }
 
     /// Add clauses that say more than a bare flag can, returning the
@@ -290,10 +347,22 @@ impl ReproducibilitySpec {
                 // In order, and with duplicates: a guard decides by the
                 // last argument that speaks to it, so neither position nor
                 // repetition can be thrown away here.
-                let present: Vec<String> = args
-                    .into_iter()
-                    .filter_map(|arg| self.recognize(arg))
-                    .collect();
+                //
+                // Values are folded onto their flags first, so that the
+                // recognizer and every pattern see whole options; a spec
+                // that declares none keeps the shorter path, since this
+                // runs over every argument of every action.
+                let present: Vec<String> = if self.takes_value.is_empty() {
+                    args.into_iter()
+                        .filter_map(|arg| self.recognize(arg))
+                        .collect()
+                } else {
+                    let raw: Vec<&str> = args.into_iter().collect();
+                    self.join_values(&raw)
+                        .iter()
+                        .filter_map(|arg| self.recognize(arg))
+                        .collect()
+                };
 
                 let mut unmet: Vec<Unmet> = Vec::new();
 
@@ -428,6 +497,113 @@ mod tests {
             spec.prohibitions
                 .iter()
                 .any(|clause| clause.any_of.contains("--timestamp"))
+        );
+    }
+
+    #[test]
+    fn a_value_in_the_next_argument_is_folded_onto_its_flag() {
+        let spec = ReproducibilitySpec::new(
+            Reproducibility::Sometimes,
+            ["--mode=*hash*"],
+            [] as [&str; 0],
+        )
+        .with_valued_flags(["--mode"]);
+
+        // Separated, as the tool is actually invoked...
+        assert_eq!(
+            spec.assess(["--mode", "unchecked_hash", "--src", "x.py"]),
+            Conformance::Reproducible,
+        );
+        // ...and the value is now constrainable, which was the point.
+        assert_conditional(
+            spec.assess(["--mode", "timestamp"]),
+            set(&["--mode=*hash*"]),
+            set(&[]),
+        );
+    }
+
+    #[test]
+    fn both_spellings_of_a_value_come_out_the_same() {
+        // Folding with `=` is what makes one pattern cover a tool however
+        // it was invoked.
+        let spec = ReproducibilitySpec::new(
+            Reproducibility::Sometimes,
+            ["-t=*"],
+            [] as [&str; 0],
+        )
+        .with_valued_flags(["-t"]);
+        for form in [vec!["-t", "5"], vec!["-t=5"]] {
+            assert_eq!(spec.assess(form), Conformance::Reproducible);
+        }
+    }
+
+    #[test]
+    fn a_value_already_joined_is_not_folded_again() {
+        // The declared flag is matched whole, so `--mode=x` is not the
+        // flag `--mode` and nothing is taken from after it. Were it
+        // otherwise, a tool invoked in the joined spelling would have its
+        // next argument swallowed.
+        // `--src` is required as a bare word: if the already-joined
+        // `--mode` had taken it, it would not be there to find.
+        let spec = ReproducibilitySpec::new(
+            Reproducibility::Sometimes,
+            ["--mode=*hash*", "--src"],
+            [] as [&str; 0],
+        )
+        .with_valued_flags(["--mode"]);
+        assert_eq!(
+            spec.assess(["--mode=unchecked_hash", "--src", "x.py"]),
+            Conformance::Reproducible,
+        );
+    }
+
+    #[test]
+    fn a_valued_flag_with_nothing_after_it_is_left_alone() {
+        let spec = ReproducibilitySpec::new(
+            Reproducibility::Sometimes,
+            [] as [&str; 0],
+            ["-t=*"],
+        )
+        .with_valued_flags(["-t"]);
+        // Nothing to take, so nothing is joined and the prohibition on a
+        // *valued* `-t` does not fire.
+        assert_eq!(
+            spec.assess(["-o", "out", "-t"]),
+            Conformance::Reproducible
+        );
+    }
+
+    #[test]
+    fn a_valued_flag_takes_the_next_argument_even_if_it_looks_like_a_flag()
+    {
+        // Faithful to the tool: `-t --verbose` really does consume
+        // `--verbose`. A spec that declares a boolean flag as valued gets
+        // this wrong, which is why the declaration is a claim about the
+        // tool.
+        let spec = ReproducibilitySpec::new(
+            Reproducibility::Sometimes,
+            ["--verbose"],
+            [] as [&str; 0],
+        )
+        .with_valued_flags(["-t"]);
+        assert_conditional(
+            spec.assess(["-t", "--verbose"]),
+            set(&["--verbose"]),
+            set(&[]),
+        );
+    }
+
+    #[test]
+    fn a_repeated_valued_flag_folds_each_occurrence() {
+        let spec = ReproducibilitySpec::new(
+            Reproducibility::Sometimes,
+            ["--src=b.py"],
+            [] as [&str; 0],
+        )
+        .with_valued_flags(["--src"]);
+        assert_eq!(
+            spec.assess(["--src", "a.py", "--src", "b.py"]),
+            Conformance::Reproducible,
         );
     }
 

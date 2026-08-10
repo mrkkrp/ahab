@@ -1,0 +1,6 @@
+{
+  "repo": "https://github.com/bazelbuild/rules_pkg",
+  "commit": "074a0c5063d841ea0d1f9d032954166893f6a775",
+  "label": "//... - //tests/rpm/... - //pkg/legacy/tests/rpm/...",
+  "configs": []
+}
