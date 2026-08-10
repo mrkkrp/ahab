@@ -99,6 +99,7 @@ fn entries() -> Vec<(ProgramId, Entry)> {
     let mut entries = super::per_lang::rust::entries();
     entries.extend(super::per_lang::cc::entries());
     entries.extend(super::per_lang::go::entries());
+    entries.extend(super::per_lang::java::entries());
     entries.extend(language_agnostic());
     entries
 }

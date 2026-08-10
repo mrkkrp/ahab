@@ -1,6 +1,6 @@
 {
   "repo": "https://github.com/bazel-contrib/bazel-gazelle",
   "commit": "1208622c21a6b52907725c7257ff9cc6f884c084",
-  "label": "//language/...",
+  "label": "//...",
   "configs": []
 }

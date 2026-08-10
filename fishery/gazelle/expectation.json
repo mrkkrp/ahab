@@ -1,3 +1,74 @@
 {
-  "violations": []
+  "violations": [
+    {
+      "count": 2,
+      "violation": {
+        "kind": "execution_requirement",
+        "action": {
+          "mnemonic": "GoCompilePkg",
+          "target": "//internal:bazel_test"
+        },
+        "requirement": "local"
+      }
+    },
+    {
+      "count": 1,
+      "violation": {
+        "kind": "execution_requirement",
+        "action": {
+          "mnemonic": "GoCompilePkgExternal",
+          "target": "//internal:bazel_test"
+        },
+        "requirement": "local"
+      }
+    },
+    {
+      "count": 1,
+      "violation": {
+        "kind": "execution_requirement",
+        "action": {
+          "mnemonic": "GoLink",
+          "target": "//internal:bazel_test"
+        },
+        "requirement": "local"
+      }
+    },
+    {
+      "count": 1,
+      "violation": {
+        "kind": "execution_requirement",
+        "action": {
+          "mnemonic": "GoTestGenTest",
+          "target": "//internal:bazel_test"
+        },
+        "requirement": "local"
+      }
+    },
+    {
+      "count": 1,
+      "violation": {
+        "kind": "execution_requirement",
+        "action": {
+          "mnemonic": "TestRunner",
+          "target": "//internal:bazel_test"
+        },
+        "requirement": "local"
+      }
+    },
+    {
+      "count": 1,
+      "violation": {
+        "kind": "system_program",
+        "action": {
+          "mnemonic": "Genrule",
+          "target": "//tests/visibility_attr/child:visibility_test_0__deps"
+        },
+        "program": {
+          "origin": "system",
+          "path": "/bin/bash"
+        },
+        "wrappers": []
+      }
+    }
+  ]
 }
