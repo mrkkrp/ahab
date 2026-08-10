@@ -85,6 +85,7 @@ fn bazel_info() -> Result<std::collections::HashMap<String, String>> {
 /// say where the analysis goes than find out afterwards.
 pub fn run_aquery(
     configs: &[String],
+    compilation_mode: Option<&str>,
     label: &str,
     env: &[(&str, &str)],
     output_base: Option<&str>,
@@ -136,6 +137,12 @@ pub fn run_aquery(
 
     for config in configs {
         command.arg(format!("--config={config}"));
+    }
+
+    // After the configs, so that asking for a mode outright beats whatever
+    // a named configuration in the project's own rc files chose.
+    if let Some(mode) = compilation_mode {
+        command.arg(format!("--compilation_mode={mode}"));
     }
 
     // Ask for the action graph as a binary protobuf ActionGraphContainer.

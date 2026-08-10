@@ -8,6 +8,8 @@ def _ahab_impl(ctx):
     args = []
     for config in ctx.attr.configs:
         args.append("--config=" + config)
+    if ctx.attr.compilation_mode:
+        args.append("--compilation-mode=" + ctx.attr.compilation_mode)
     if ctx.attr.shut_up:
         args.append("--shut-up")
     if ctx.attr.no_fail:
@@ -100,6 +102,9 @@ _ahab = rule(
         "label": attr.string(
             doc = "The Bazel label or wildcard to analyze.",
         ),
+        "compilation_mode": attr.string(
+            doc = "The compilation mode to analyze, e.g. `dbg`.",
+        ),
         "shut_up": attr.bool(
             doc = "Suppress the Moby-Dick quote.",
         ),
@@ -190,6 +195,7 @@ def ahab(
         name,
         label = None,
         configs = [],
+        compilation_mode = None,
         shut_up = False,
         no_fail = False,
         write_json = None,
@@ -213,6 +219,9 @@ def ahab(
       label: The Bazel label or wildcard to analyze, e.g. `//...`.
         Required, unless `explain_json` is set.
       configs: `--config=<name>` values forwarded to `bazel aquery`.
+      compilation_mode: The compilation mode to analyze—`fastbuild`, `dbg`
+        or `opt`. Defaults to whatever the project's own configuration
+        chooses.
       shut_up: Suppress the Moby-Dick quote appended to the report.
       no_fail: Print the report but exit 0 even when there are violations.
       write_json: Where to write the report, relative to the workspace
@@ -238,6 +247,7 @@ def ahab(
         name = name,
         label = label,
         configs = configs,
+        compilation_mode = compilation_mode,
         shut_up = shut_up,
         no_fail = no_fail,
         write_json = write_json,
@@ -283,6 +293,7 @@ def ahab_check(
         label,
         baseline,
         configs = [],
+        compilation_mode = None,
         shut_up = False,
         repro_specs = [],
         exceptions = [],
@@ -303,6 +314,9 @@ def ahab_check(
       label: The Bazel label or wildcard to analyze, e.g. `//...`.
       baseline: A label naming the checked-in report to compare against.
       configs: `--config=<name>` values forwarded to `bazel aquery`.
+      compilation_mode: The compilation mode to analyze—`fastbuild`, `dbg`
+        or `opt`. Defaults to whatever the project's own configuration
+        chooses.
       shut_up: Suppress the Moby-Dick quote appended to the report.
       repro_specs: Reproducibility specs; see `ahab`.
       exceptions: Exceptions; see `ahab`.
@@ -313,6 +327,7 @@ def ahab_check(
         label = label,
         expect_json = baseline,
         configs = configs,
+        compilation_mode = compilation_mode,
         shut_up = shut_up,
         repro_specs = repro_specs,
         exceptions = exceptions,
@@ -324,6 +339,7 @@ def ahab_update(
         label,
         baseline,
         configs = [],
+        compilation_mode = None,
         shut_up = False,
         repro_specs = [],
         exceptions = [],
@@ -347,6 +363,9 @@ def ahab_update(
       baseline: A label naming the report to write. Must be in this
         workspace, since it is a source file to be committed.
       configs: `--config=<name>` values forwarded to `bazel aquery`.
+      compilation_mode: The compilation mode to analyze—`fastbuild`, `dbg`
+        or `opt`. Defaults to whatever the project's own configuration
+        chooses.
       shut_up: Suppress the Moby-Dick quote appended to the report.
       repro_specs: Reproducibility specs; see `ahab`.
       exceptions: Exceptions; see `ahab`.
@@ -358,6 +377,7 @@ def ahab_update(
         write_json = _baseline_path(name, baseline),
         no_fail = True,
         configs = configs,
+        compilation_mode = compilation_mode,
         shut_up = shut_up,
         repro_specs = repro_specs,
         exceptions = exceptions,

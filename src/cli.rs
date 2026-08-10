@@ -99,6 +99,11 @@ pub struct Cli {
     /// would otherwise use.
     #[arg(long = "output-base", value_name = "DIRECTORY")]
     pub output_base: Option<String>,
+
+    /// Analyze the build Bazel would make in this compilation mode—one of
+    /// `fastbuild`, `dbg` or `opt`—rather than the default.
+    #[arg(long = "compilation-mode", value_name = "MODE")]
+    pub compilation_mode: Option<String>,
 }
 
 impl Cli {
@@ -117,6 +122,7 @@ impl Cli {
         let label = self.label.as_deref().unwrap_or_default();
         let container = run_aquery(
             &self.configs,
+            self.compilation_mode.as_deref(),
             label,
             &env,
             self.output_base.as_deref(),
@@ -1416,6 +1422,32 @@ mod tests {
                 "base.json"
             ])
             .is_ok()
+        );
+    }
+
+    #[test]
+    fn a_compilation_mode_is_optional_and_kept_verbatim() {
+        // Absent is the ordinary case: whatever the project's own
+        // configuration chooses.
+        assert_eq!(
+            Cli::try_parse_from(["ahab", "//..."])
+                .unwrap()
+                .compilation_mode,
+            None,
+        );
+        // Passed through as written, so that a mode Bazel grows later
+        // needs no change here.
+        assert_eq!(
+            Cli::try_parse_from([
+                "ahab",
+                "//...",
+                "--compilation-mode",
+                "dbg",
+            ])
+            .unwrap()
+            .compilation_mode
+            .as_deref(),
+            Some("dbg"),
         );
     }
 

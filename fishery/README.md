@@ -75,8 +75,9 @@ Make a directory and write a `spec.json`:
 }
 ```
 
-`repo` and `commit` are required; `label` defaults to `//...` and `configs`
-to none. Pin a full 40-character SHA rather than a branch—a fishery whose
+`repo` and `commit` are required; `label` defaults to `//...`, and `configs`
+and `compilation_mode` to none, which leaves the project's own configuration
+to choose. Pin a full 40-character SHA rather than a branch—a fishery whose
 input moves cannot tell you what your own change did.
 
 Then:

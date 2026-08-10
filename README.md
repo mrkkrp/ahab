@@ -124,14 +124,20 @@ ahab_explain(
 
 ### The macros
 
-`ahab` takes `label`, `configs`, `repro_specs`, `exceptions`, `shut_up`,
-`no_fail`, `write_json`, `explain_json` and `expect_json`. The three
-wrappers take the subset that makes sense for them, plus `baseline` or
-`report`. All of them pass unrecognized arguments through, so `visibility`
-and `tags` work as usual.
+`ahab` takes `label`, `configs`, `compilation_mode`, `repro_specs`,
+`exceptions`, `shut_up`, `no_fail`, `write_json`, `explain_json` and
+`expect_json`. The three wrappers take the subset that makes sense for them,
+plus `baseline` or `report`. All of them pass unrecognized arguments
+through, so `visibility` and `tags` work as usual.
 
 `configs` forwards `--config=<name>` values to the underlying `aquery`,
 which matters when the thing worth analyzing is a particular configuration.
+
+`compilation_mode` asks for `fastbuild`, `dbg` or `opt` rather than the
+default. It is worth its own attribute because a toolchain does different
+work in each: a debug build compiles with information a fast one leaves out,
+and the flags that keep that information reproducible are only passed when
+it is being produced.
 
 The binary is also usable directly—`bazel run @ahab//:ahab -- --help` lists
 the flags the macros set for you.

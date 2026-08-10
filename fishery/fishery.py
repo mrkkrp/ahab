@@ -166,6 +166,9 @@ def ahab_run(name, args):
     command = [str(ahab_binary()), f"--output-base={output_base(name)}"]
     for config in spec.get("configs", []):
         command.append(f"--config={config}")
+    mode = spec.get("compilation_mode")
+    if mode:
+        command.append(f"--compilation-mode={mode}")
     exceptions = target_dir(name) / "exceptions.json"
     if exceptions.is_file():
         command.append(f"--exceptions-json={exceptions}")
