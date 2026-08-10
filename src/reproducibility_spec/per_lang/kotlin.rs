@@ -33,13 +33,7 @@ pub(in crate::reproducibility_spec) fn entries() -> Vec<(ProgramId, Entry)>
 mod tests {
     use super::*;
     use crate::reproducibility_spec::Conformance;
-    use crate::reproducibility_spec::library::Library;
-
-    fn assess(program: ProgramId, args: Vec<&str>) -> Conformance {
-        let resolution = Library::builtin().resolve(program, args);
-        let (_, spec) = resolution.spec.expect("a spec");
-        spec.assess(resolution.args)
-    }
+    use crate::reproducibility_spec::per_lang::testing::assess;
 
     #[test]
     fn the_builder_is_reproducible_compiling_and_processing_alike() {

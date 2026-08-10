@@ -138,15 +138,17 @@ pub(in crate::reproducibility_spec) fn entries() -> Vec<(ProgramId, Entry)>
         // root—a directory whose name is nobody else's—into the output.
         // The rest depend on what is being asked of it, and are guarded;
         // see `clang_clauses`.
-        (llvm_toolchain("bin/cc_wrapper.sh"), {
-            let mut spec = ReproducibilitySpec::new(
-                Reproducibility::Sometimes,
-                CLANG_REQUIRED,
-                [] as [&str; 0],
-            );
-            spec.requirements.extend(clang_clauses());
-            Entry::Spec(spec)
-        }),
+        (
+            llvm_toolchain("bin/cc_wrapper.sh"),
+            Entry::Spec(
+                ReproducibilitySpec::new(
+                    Reproducibility::Sometimes,
+                    CLANG_REQUIRED,
+                    [] as [&str; 0],
+                )
+                .with_clauses(clang_clauses(), []),
+            ),
+        ),
         // An archiver writes the modification time, user and group of every
         // member it stores, none of which is a property of the code. `D`
         // asks for all three to be zeroed—the same bargain `singlejar`
@@ -170,6 +172,7 @@ mod tests {
     use super::*;
     use crate::reproducibility_spec::Conformance;
     use crate::reproducibility_spec::library::Library;
+    use crate::reproducibility_spec::per_lang::testing::{assess, missing};
     use std::collections::BTreeSet;
 
     /// A compile command line as Bazel's llvm toolchain writes it, trimmed
@@ -186,21 +189,6 @@ mod tests {
             "-c",
             "source/common/common/assert.cc",
         ]
-    }
-
-    fn assess(program: ProgramId, args: Vec<&str>) -> Conformance {
-        let resolution = Library::builtin().resolve(program, args);
-        let (_, spec) = resolution.spec.expect("a spec");
-        spec.assess(resolution.args)
-    }
-
-    fn missing(program: ProgramId, args: Vec<&str>) -> BTreeSet<String> {
-        let verdict = assess(program, args);
-        assert!(
-            matches!(verdict, Conformance::Conditional { .. }),
-            "expected a conditional verdict, got {verdict:?}",
-        );
-        verdict.missing_required()
     }
 
     #[test]

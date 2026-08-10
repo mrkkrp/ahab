@@ -77,7 +77,7 @@ pub(super) fn always() -> ReproducibilitySpec {
 }
 
 /// A spec for a program no set of flags can make reproducible.
-#[allow(dead_code)]
+#[cfg(test)]
 pub(super) fn never() -> ReproducibilitySpec {
     ReproducibilitySpec::new(
         Reproducibility::Never,
@@ -364,23 +364,20 @@ pub fn parse_entries(
             };
             let id = named("program", &program)?;
             let entry = match entry {
-                EntryFile::Spec(fields) => {
-                    // The short forms desugar into clauses and join the
-                    // ones written out in full.
-                    let mut spec = ReproducibilitySpec::new(
+                // The short forms desugar into clauses and join the ones
+                // written out in full.
+                EntryFile::Spec(fields) => Entry::Spec(
+                    ReproducibilitySpec::new(
                         fields.reproducibility,
                         fields.required_flags,
                         fields.breaking_flags,
                     )
-                    .with_translations(fields.recognize);
-                    spec.requirements.extend(
+                    .with_clauses(
                         fields.requirements.into_iter().map(Clause::from),
-                    );
-                    spec.prohibitions.extend(
                         fields.prohibitions.into_iter().map(Clause::from),
-                    );
-                    Entry::Spec(spec)
-                }
+                    )
+                    .with_translations(fields.recognize),
+                ),
                 EntryFile::SameAs(target) => {
                     Entry::SameAs(named("same_as", &target)?)
                 }

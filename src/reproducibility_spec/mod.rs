@@ -29,7 +29,7 @@ pub enum Reproducibility {
     /// it non-hermetic.
     HostDerived,
     /// The program is reproducible only under some conditions—see the
-    /// required and breaking flags of the [`ReproducibilitySpec`].
+    /// requirements and prohibitions of the [`ReproducibilitySpec`].
     Sometimes,
 }
 
@@ -173,7 +173,7 @@ impl PartialEq for ReproducibilitySpec {
     /// Two functions cannot be compared, and comparing them by identity
     /// would make every independently-built spec unequal to every other,
     /// which is useless. So the recognizer is excluded: specs that agree on
-    /// disposition and flags are equal even if they read arguments
+    /// disposition and clauses are equal even if they read arguments
     /// differently.
     fn eq(&self, other: &Self) -> bool {
         self.reproducibility == other.reproducibility
@@ -185,8 +185,12 @@ impl PartialEq for ReproducibilitySpec {
 impl Eq for ReproducibilitySpec {}
 
 impl ReproducibilitySpec {
-    /// Construct a spec from a baseline disposition and the two flag sets,
-    /// taking any iterables of strings.
+    /// Construct a spec from a baseline disposition and the unconditional
+    /// flags, taking any iterables of strings.
+    ///
+    /// The short way to say the common thing: each flag becomes a clause of
+    /// its own that always applies. A condition or a choice of alternatives
+    /// needs a [`Clause`], which [`Self::with_clauses`] adds.
     ///
     /// The recognizer defaults to the identity—every argument stands for
     /// itself.
@@ -219,6 +223,26 @@ impl ReproducibilitySpec {
                 .collect(),
             recognize: Arc::new(|arg: &str| Some(arg.to_owned())),
         }
+    }
+
+    /// Add clauses that say more than a bare flag can, returning the
+    /// updated spec.
+    ///
+    /// The counterpart to the flag lists [`Self::new`] takes: those become
+    /// clauses that always apply and are met by one pattern each, and these
+    /// are the ones that carry a condition or a choice.
+    pub fn with_clauses<R, P>(
+        mut self,
+        requirements: R,
+        prohibitions: P,
+    ) -> Self
+    where
+        R: IntoIterator<Item = Clause>,
+        P: IntoIterator<Item = Clause>,
+    {
+        self.requirements.extend(requirements);
+        self.prohibitions.extend(prohibitions);
+        self
     }
 
     /// Set the recognizer, returning the updated spec.

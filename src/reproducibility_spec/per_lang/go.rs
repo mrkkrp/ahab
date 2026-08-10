@@ -82,6 +82,7 @@ mod tests {
     use super::*;
     use crate::reproducibility_spec::Conformance;
     use crate::reproducibility_spec::library::Library;
+    use crate::reproducibility_spec::per_lang::testing;
 
     /// The head of a `compilepkg` command line as rules_go writes it,
     /// trimmed to the shape rather than the full list of sources.
@@ -122,10 +123,7 @@ mod tests {
     }
 
     fn assess(args: Vec<&str>) -> Conformance {
-        let resolution = Library::builtin()
-            .resolve(go_sdk("builder_reset/builder"), args);
-        let (_, spec) = resolution.spec.expect("a spec for the builder");
-        spec.assess(resolution.args)
+        testing::assess(go_sdk("builder_reset/builder"), args)
     }
 
     #[test]

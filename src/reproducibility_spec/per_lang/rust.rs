@@ -95,7 +95,7 @@ mod tests {
     use super::*;
     use crate::reproducibility_spec::Conformance;
     use crate::reproducibility_spec::library::Library;
-    use std::collections::BTreeSet;
+    use crate::reproducibility_spec::per_lang::testing::{assess, missing};
 
     /// The flags rules_rust actually hands rustc, trimmed to the ones that
     /// bear on reproducibility.
@@ -112,30 +112,12 @@ mod tests {
         ]
     }
 
-    fn assess(program: &ProgramId, args: &[&str]) -> Conformance {
-        let resolution =
-            Library::builtin().resolve(program.clone(), args.to_vec());
-        let (_, spec) = resolution.spec.expect("a spec for the program");
-        spec.assess(resolution.args)
-    }
-
     #[test]
     fn rustc_as_rules_rust_invokes_it_is_reproducible() {
         assert_eq!(
-            assess(&rust_tool("rustc"), &rules_rust_flags()),
+            assess(rust_tool("rustc"), rules_rust_flags()),
             Conformance::Reproducible,
         );
-    }
-
-    /// The missing requirements of a conditional verdict, or a panic if the
-    /// invocation was judged reproducible after all.
-    fn missing(program: &ProgramId, flags: &[&str]) -> BTreeSet<String> {
-        let verdict = assess(program, flags);
-        assert!(
-            matches!(verdict, Conformance::Conditional { .. }),
-            "expected a conditional verdict, got {verdict:?}",
-        );
-        verdict.missing_required()
     }
 
     /// `rules_rust_flags` with every path remapping stripped out.
@@ -151,7 +133,7 @@ mod tests {
         // A requirement that went unmet is named by its pattern: there is
         // no argument to point at. With none of them supplied, all three
         // are reported rather than just the first.
-        let missing = missing(&rust_tool("rustc"), &without_remappings());
+        let missing = missing(rust_tool("rustc"), without_remappings());
         for required in REQUIRED_REMAPS {
             assert!(missing.contains(required), "{missing:?}");
         }
@@ -171,7 +153,7 @@ mod tests {
             let mut flags = without_remappings();
             flags.extend(kept.iter().map(String::as_str));
 
-            let missing = missing(&rust_tool("rustc"), &flags);
+            let missing = missing(rust_tool("rustc"), flags);
             assert_eq!(
                 missing.iter().map(String::as_str).collect::<Vec<_>>(),
                 vec![dropped],
@@ -188,7 +170,7 @@ mod tests {
         // gets rewritten.
         let mut flags = without_remappings();
         flags.push("--remap-path-prefix=/nowhere=.");
-        let missing = missing(&rust_tool("rustc"), &flags);
+        let missing = missing(rust_tool("rustc"), flags);
         for required in REQUIRED_REMAPS {
             assert!(missing.contains(required), "{missing:?}");
         }
@@ -204,7 +186,7 @@ mod tests {
         {
             let mut flags = rules_rust_flags();
             flags.push(spelling);
-            let verdict = assess(&rust_tool("rustc"), &flags);
+            let verdict = assess(rust_tool("rustc"), flags);
             match &verdict {
                 Conformance::Conditional { .. } => {
                     let present_breaking = verdict.present_breaking();
@@ -232,7 +214,7 @@ mod tests {
         let mut flags = rules_rust_flags();
         flags.push("-Cincrementalish=1");
         assert_eq!(
-            assess(&rust_tool("rustc"), &flags),
+            assess(rust_tool("rustc"), flags),
             Conformance::Reproducible,
         );
     }

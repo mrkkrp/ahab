@@ -418,7 +418,9 @@ struct ExceptionEntry {
 fn applies_to(field: &str, kind: Kind) -> bool {
     match field {
         "program" => kind.has_program(),
-        "path" => kind == Kind::AbsolutePath,
+        "path" => {
+            matches!(kind, Kind::AbsolutePath | Kind::WorkspaceStatus)
+        }
         "actual" => kind == Kind::BadPath,
         "requirement" => kind == Kind::ExecutionRequirement,
         "source" => kind == Kind::EnvironmentLeak,
@@ -580,7 +582,42 @@ pub(crate) fn stale_warning(unused: &[Exception]) -> Option<String> {
 mod tests {
     use super::*;
     use crate::checks::ActionRef;
+    use crate::checks::tests::one_of_each_kind;
     use crate::reproducibility_spec::program_id::ProgramId;
+
+    #[test]
+    fn every_field_applies_to_exactly_the_kinds_that_carry_it() {
+        // `applies_to` restates, in another place and another form, which
+        // facets a violation carries. Restatements drift: this one said
+        // `path` belonged to absolute-path findings alone, and stayed
+        // saying it after a second kind started carrying one, so the
+        // documented way to excuse that kind was refused at load. The
+        // invariant is that the two agree for every kind and every field.
+        for violation in one_of_each_kind() {
+            let facets = violation.facets();
+            let kind =
+                parse_one_of("kind", facets.kind, &Kind::ALL, Kind::as_str)
+                    .expect("every violation's kind is a Kind");
+
+            for (field, carried) in [
+                ("program", facets.program.is_some()),
+                ("path", facets.path.is_some()),
+                ("actual", facets.actual.is_some()),
+                ("requirement", facets.requirement.is_some()),
+                ("source", facets.source.is_some()),
+                ("location", facets.site.is_some()),
+                ("env_var", facets.site.is_some()),
+            ] {
+                assert_eq!(
+                    applies_to(field, kind),
+                    carried,
+                    "{:?} carries {field}: {carried}, but applies_to says \
+                     otherwise",
+                    facets.kind,
+                );
+            }
+        }
+    }
 
     fn action(mnemonic: &str, target: &str) -> ActionRef {
         ActionRef {

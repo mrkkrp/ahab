@@ -111,12 +111,7 @@ mod tests {
     use super::*;
     use crate::reproducibility_spec::Conformance;
     use crate::reproducibility_spec::library::Library;
-
-    fn resolve(program: ProgramId, args: Vec<&str>) -> Conformance {
-        let resolution = Library::builtin().resolve(program, args);
-        let (_, spec) = resolution.spec.expect("a spec");
-        spec.assess(resolution.args)
-    }
+    use crate::reproducibility_spec::per_lang::testing::assess;
 
     /// A `singlejar` command line as rules_java writes it.
     fn singlejar_args() -> Vec<&'static str> {
@@ -176,7 +171,7 @@ mod tests {
     #[test]
     fn singlejar_as_rules_java_invokes_it_is_reproducible() {
         assert_eq!(
-            resolve(singlejar(), singlejar_args()),
+            assess(singlejar(), singlejar_args()),
             Conformance::Reproducible,
         );
     }
@@ -190,7 +185,7 @@ mod tests {
                 .into_iter()
                 .filter(|arg| *arg != dropped)
                 .collect();
-            let verdict = resolve(singlejar(), kept);
+            let verdict = assess(singlejar(), kept);
             assert!(
                 matches!(verdict, Conformance::Conditional { .. }),
                 "expected {dropped} to matter, got {verdict:?}",

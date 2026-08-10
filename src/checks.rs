@@ -1156,7 +1156,7 @@ fn check_reproducibility(
 }
 
 #[cfg(test)]
-mod tests {
+pub(crate) mod tests {
     use super::*;
     use crate::reproducibility_spec::program_id::Origin;
     use analysis_v2_proto::analysis::KeyValuePair;
@@ -1400,6 +1400,89 @@ mod tests {
             },
         ];
         assert_eq!(check_workspace_status(&c).len(), 1);
+    }
+
+    /// One [`Violation`] of every variant, for tests that have to cover
+    /// all of them.
+    ///
+    /// Written out rather than generated, because the point is that a new
+    /// variant is not covered until somebody adds it here—and the test
+    /// below fails until they do.
+    pub(crate) fn one_of_each_kind() -> Vec<Violation> {
+        let at = || ActionRef {
+            mnemonic: "A".to_owned(),
+            target: "//test:t".to_owned(),
+        };
+        let site = || LeakSite::Argument {
+            value: "x".to_owned(),
+        };
+        let program = || ProgramId::of("/usr/bin/cc");
+
+        vec![
+            Violation::EnvironmentLeak {
+                action: at(),
+                source: EnvSource::User,
+                sentinel: USER_SENTINEL.to_owned(),
+                site: site(),
+            },
+            Violation::BadPath {
+                action: at(),
+                actual: "/opt/bin".to_owned(),
+            },
+            Violation::ExecutionRequirement {
+                action: at(),
+                requirement: "local".to_owned(),
+            },
+            Violation::AbsolutePath {
+                action: at(),
+                path: "/usr/bin/cc".to_owned(),
+                site: site(),
+            },
+            Violation::SystemProgram {
+                action: at(),
+                program: program(),
+                wrappers: Vec::new(),
+            },
+            Violation::HostDerivedProgram {
+                action: at(),
+                program: program(),
+                wrappers: Vec::new(),
+            },
+            Violation::UnknownProgram {
+                action: at(),
+                program: program(),
+                wrappers: Vec::new(),
+            },
+            Violation::NeverReproducible {
+                action: at(),
+                program: program(),
+                wrappers: Vec::new(),
+                synonym: None,
+            },
+            Violation::WorkspaceStatus {
+                action: at(),
+                path: "bazel-out/stable-status.txt".to_owned(),
+            },
+            Violation::ConditionalReproducibility {
+                action: at(),
+                program: program(),
+                wrappers: Vec::new(),
+                synonym: None,
+                unmet: Vec::new(),
+            },
+        ]
+    }
+
+    #[test]
+    fn the_sample_covers_every_variant() {
+        // The list above is hand-written, so something has to notice when
+        // a variant is added and not listed. Kinds are unique per variant,
+        // so counting the distinct ones is enough.
+        let kinds: BTreeSet<&str> = one_of_each_kind()
+            .iter()
+            .map(|violation| violation.facets().kind)
+            .collect();
+        assert_eq!(kinds.len(), one_of_each_kind().len());
     }
 
     /// The label [`container`] gives the target with this id.
