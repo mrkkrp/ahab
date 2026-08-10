@@ -32,21 +32,12 @@ rust_library_group(
     deps = ["@ahab_crates//:prost"],
 )
 
-rust_library_group(
-    name = "tonic_runtime",
-    deps = [
-        ":prost_runtime",
-        "@ahab_crates//:tonic",
-    ],
-)
-
 rust_prost_toolchain(
     name = "prost_toolchain_impl",
     prost_plugin = "@ahab_crates//:protoc-gen-prost__protoc-gen-prost",
     prost_runtime = ":prost_runtime",
     prost_types = "@ahab_crates//:prost-types",
-    tonic_plugin = "@ahab_crates//:protoc-gen-tonic__protoc-gen-tonic",
-    tonic_runtime = ":tonic_runtime",
+    tonic_plugin_flag = "",
 )
 
 toolchain(

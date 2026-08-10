@@ -78,11 +78,6 @@ crate.annotation(
     gen_binaries = ["protoc-gen-prost"],
     repositories = ["ahab_crates"],
 )
-crate.annotation(
-    crate = "protoc-gen-tonic",
-    gen_binaries = ["protoc-gen-tonic"],
-    repositories = ["ahab_crates"],
-)
 use_repo(crate, "ahab_crates")
 
 register_toolchains("//proto:prost_toolchain")
