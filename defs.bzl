@@ -136,15 +136,17 @@ _ahab = rule(
 )
 
 def _generated_json(name, kind, index, document):
-    """Write one inline value out as a JSON file, and return its label."""
-    target = "{}.{}.{}.json".format(name, kind, index)
+    """Write one inline value out as a JSON file, and return its label.
+    """
+    out = "{}.{}.{}.json".format(name, kind, index)
+    target = "_" + out
     write_file(
         name = target,
-        out = target,
+        out = out,
         content = [json.encode_indent(document, indent = "  ")],
         tags = ["manual"],
     )
-    return ":" + target
+    return ":" + out
 
 def _collect(name, kind, values, wrap):
     """Split a list of inline values and file labels into labels alone.
