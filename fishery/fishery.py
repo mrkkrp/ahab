@@ -4,7 +4,6 @@
 
 import argparse
 import json
-import os
 import shutil
 import subprocess
 import sys
@@ -13,19 +12,8 @@ from pathlib import Path
 FISHERY = Path(__file__).resolve().parent
 AHAB = FISHERY.parent
 
-# The files placed inside the fetched project. Named distinctively because
-# they are written into somebody else's source tree.
-REPORT = "ahab-expectation.json"
-EXCEPTIONS = "ahab-exceptions.json"
-
 # What a target expects before anyone has looked: nothing at all.
 NO_VIOLATIONS = '{\n  "violations": []\n}\n'
-
-# What `setup` writes into the project. Kept together so that `setup` can
-# recognize its own work and refuse to do it twice.
-MARKER = "# --- added by fishery, do not edit ---"
-
-LOAD = 'load("@ahab//:defs.bzl", "ahab_check", "ahab_explain", "ahab_update")'
 
 class TargetError(Exception):
     """A target cannot proceed.
@@ -82,9 +70,6 @@ def require_work(name):
         fail(f"{name} is not set up; run `fishery.py setup {name}` first")
     return work
 
-def starlark_list(values):
-    return "[" + ", ".join(json.dumps(v) for v in values) + "]"
-
 def fetch(spec, work):
     """Shallow-fetch exactly the pinned commit.
 
@@ -108,76 +93,12 @@ def fetch(spec, work):
         )
     run(["git", "checkout", "--quiet", "FETCH_HEAD"], cwd=work)
 
-def inject_module(work):
-    """Point the project at this working copy of Ahab."""
-    module = work / "MODULE.bazel"
-    if not module.is_file():
-        fail(
-            f"{module} does not exist: the fishery can only wire itself into "
-            "a bzlmod project"
-        )
-    # An absolute path because the override is resolved against the project
-    # root, and work/ is disposable anyway—nothing here is committed.
-    module.write_text(
-        module.read_text()
-        + f"\n{MARKER}\n"
-        + 'bazel_dep(name = "ahab", version = "0.1.0")\n'
-        + "local_path_override(\n"
-        + '    module_name = "ahab",\n'
-        + f"    path = {json.dumps(str(AHAB))},\n"
-        + ")\n"
-    )
+def ensure_expectation(name):
+    """The target's recorded report, created empty when there is none.
 
-def inject_build(work, spec, exceptions):
-    """Add the Ahab targets to the project's top-level package.
-
-    `exceptions` says whether the target supplied an exception file.
-    """
-    build = work / "BUILD.bazel"
-    if not build.is_file():
-        alternative = work / "BUILD"
-        build = alternative if alternative.is_file() else build
-
-    existing = build.read_text() if build.is_file() else ""
-    label = spec.get("label", "//...")
-    configs = spec.get("configs", [])
-    common = (
-        f'    label = {json.dumps(label)},\n'
-        f'    configs = {starlark_list(configs)},\n'
-        f'    baseline = "//:{REPORT}",\n'
-    )
-    if exceptions:
-        common += f'    exceptions = ["//:{EXCEPTIONS}"],\n'
-    build.write_text(
-        f"{LOAD}\n\n"
-        + existing
-        + f"\n{MARKER}\n\n"
-        + f'ahab_update(\n    name = "ahab.update",\n{common})\n\n'
-        + f'ahab_check(\n    name = "ahab.check",\n{common})\n\n'
-        + 'ahab_explain(\n    name = "ahab.explain",\n'
-        + f'    report = "//:{REPORT}",\n)\n'
-    )
-
-def place_exceptions(name, work):
-    """Copy the target's exception file in, if it has one.
-
-    Optional on purpose: a project Ahab has nothing to excuse should not
-    need an empty file to say so. Returns whether there was one, since the
-    injected targets can only name it when it exists.
-    """
-    authored = target_dir(name) / "exceptions.json"
-    if not authored.is_file():
-        return False
-    shutil.copyfile(authored, work / EXCEPTIONS)
-    return True
-
-def place_expectation(name, work):
-    """Seed the project with the recorded report, recording one if absent.
-
-    A target need not ship an expectation. A new one starts out expecting
-    nothing, and `setup` writes that out rather than only handing it to the
-    project, so the file is on disk from the first run and the first
-    `update` shows up as a diff against it rather than as a new file.
+    A target need not ship one. A new one starts out expecting nothing,
+    written to disk rather than merely assumed, so that the first `update`
+    reads as a diff against it rather than as a new file.
     """
     recorded = target_dir(name) / "expectation.json"
     if not recorded.is_file():
@@ -186,25 +107,70 @@ def place_expectation(name, work):
             f"fishery: no expectation on record, wrote an empty "
             f"{recorded.relative_to(AHAB)}"
         )
-    shutil.copyfile(recorded, work / REPORT)
+    return recorded
 
 def output_base(name):
-    """Where a target's Bazel state lives.
+    """Where a target's Bazel state goes, chosen rather than discovered.
 
-    Its own, rather than whatever the environment would otherwise pick. CI
-    pins one `--output_base` for the whole runner, which in absence of an
-    override would make `clean --expunge` invocations quite
-    counter-productive.
+    Told to Ahab with `--output-base`, which is the only way to be sure of
+    it: a `startup` line in a home `.bazelrc`—which is what CI runners tend
+    to write—overrides anything a workspace says, and would otherwise put
+    every project, and Ahab's own build, in one shared base. Expunging that
+    would delete the very binary the fishery is running. An analysis output
+    base runs to gigabytes, so it has to be both ours and reclaimable.
     """
     return Path.home() / ".cache" / "ahab-fishery" / name
 
-def bazel_run(name, target):
-    """`bazel run` one of the injected targets, propagating its exit code."""
-    completed = run(
-        ["bazel", f"--output_base={output_base(name)}", "run", target],
-        cwd=require_work(name),
-        check=False,
-    )
+def bazel_stdout(args):
+    """Ask Bazel something in the Ahab repository and return what it said."""
+    return subprocess.run(
+        ["bazel"] + args,
+        cwd=AHAB,
+        check=True,
+        capture_output=True,
+        text=True,
+    ).stdout
+
+_ahab_binary = None
+
+def ahab_binary():
+    """Build Ahab once and return the path to the binary.
+
+    Once per fishery invocation rather than once per target: the whole point
+    of running a prebuilt binary is that a project under test neither builds
+    Ahab nor perturbs its own dependency graph by depending on it.
+    """
+    global _ahab_binary
+    if _ahab_binary is None:
+        run(["bazel", "build", "//:ahab"], cwd=AHAB)
+        paths = bazel_stdout(["cquery", "//:ahab", "--output=files"]).split()
+        if len(paths) != 1:
+            fail(f"expected one file for //:ahab, got {paths}")
+        # Against the execution root rather than the workspace: Ahab builds
+        # with convenience symlinks turned off, so there is no `bazel-out`
+        # next to the sources for that relative path to hang from.
+        execroot = bazel_stdout(["info", "execution_root"]).strip()
+        _ahab_binary = Path(execroot) / paths[0]
+        if not _ahab_binary.is_file():
+            fail(f"built //:ahab but {_ahab_binary} is not there")
+    return _ahab_binary
+
+def ahab_run(name, args):
+    """Run Ahab in the project, propagating its exit code.
+
+    The recorded files are named where they are authored, under
+    `fishery/<target>/`. Nothing is copied into the project and nothing has
+    to be copied back out.
+    """
+    spec = read_spec(name)
+    command = [str(ahab_binary()), f"--output-base={output_base(name)}"]
+    for config in spec.get("configs", []):
+        command.append(f"--config={config}")
+    exceptions = target_dir(name) / "exceptions.json"
+    if exceptions.is_file():
+        command.append(f"--exceptions-json={exceptions}")
+    command += args + [spec.get("label", "//...")]
+    completed = run(command, cwd=require_work(name), check=False)
     return completed.returncode
 
 def cmd_setup(name):
@@ -214,28 +180,36 @@ def cmd_setup(name):
         fail(f"{work} already exists; run `fishery.py clean {name}` first")
 
     fetch(spec, work)
-    inject_module(work)
-    exceptions = place_exceptions(name, work)
-    inject_build(work, spec, exceptions)
-    place_expectation(name, work)
+    ensure_expectation(name)
     print(f"fishery: {name} is ready in {work}")
     return 0
 
 def cmd_check(name):
-    return bazel_run(name, "//:ahab.check")
+    return ahab_run(name, [f"--expect-json={ensure_expectation(name)}"])
 
 def cmd_update(name):
-    work = require_work(name)
-    code = bazel_run(name, "//:ahab.update")
+    recorded = ensure_expectation(name)
+    code = ahab_run(name, ["--no-fail", f"--write-json={recorded}"])
     if code != 0:
         return code
-    recorded = target_dir(name) / "expectation.json"
-    shutil.copyfile(work / REPORT, recorded)
     print(f"fishery: recorded {recorded.relative_to(AHAB)}")
     return 0
 
 def cmd_explain(name):
-    return bazel_run(name, "//:ahab.explain")
+    """Print the recorded report.
+
+    Ahab reads it without consulting Bazel, so unlike every other command
+    this one has nothing to say about `work/` and does not need it.
+    """
+    recorded = target_dir(name) / "expectation.json"
+    if not recorded.is_file():
+        fail(f"{name} has no recorded expectation to explain")
+    completed = run(
+        [str(ahab_binary()), f"--explain-json={recorded}"],
+        cwd=AHAB,
+        check=False,
+    )
+    return completed.returncode
 
 def cmd_clean(name):
     work = work_dir(name)
@@ -281,7 +255,6 @@ def summarize(name):
         kinds,
     )
 
-
 def print_summary(label, distinct, occurrences, kinds):
     """One block: the totals, then a line per kind, widest first."""
     print(
@@ -295,7 +268,6 @@ def print_summary(label, distinct, occurrences, kinds):
             f"  {kind_occurrences:>6} occurrences  {kind}",
             flush=True,
         )
-
 
 def cmd_ci():
     """Set up and check every target, reporting all of them.

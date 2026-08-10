@@ -9,10 +9,12 @@ what it does to somebody else's build—the diff of `expectation.json` is what
 review looks at, and a check that quietly starts flagging four hundred more
 things says so in the diff rather than in production.
 
-A target here also exercises Ahab as a Bazel module, which its own build
-cannot: `//:hermeticity` runs the rules from inside the repository that
-defines them, where dev dependencies exist and the root module is Ahab
-itself.
+Ahab runs as a prebuilt binary, built once from this working copy and then
+pointed at each project in turn. The project is fetched and analyzed, never
+modified: it gains no dependency on Ahab, so its own dependency versions,
+toolchains and build graph are exactly what its authors pinned. What Ahab
+reports is therefore about that project rather than about what depending on
+Ahab did to it.
 
 ## Layout
 
@@ -35,7 +37,7 @@ under `fishery/`:
 $ ./fishery.py <command> <target>
 ```
 
-* `setup` fetches the project into `work/` and injects the Ahab targets.
+* `setup` fetches the project into `work/`.
 * `check` fails if Ahab's findings differ from `expectation.json`.
 * `update` rewrites `expectation.json` with what Ahab reports now.
 * `explain` prints the recorded report without analyzing anything.
@@ -43,19 +45,22 @@ $ ./fishery.py <command> <target>
 * `ci` runs `setup`, `check` and `clean` on every target, summarizing
   each expectation as it goes.
 
-`setup` does four things: a depth-1 fetch of exactly the pinned commit, a
-`bazel_dep` plus `local_path_override` appended to the project's
-`MODULE.bazel`, a load and three `ahab_*` targets added to its top-level
-`BUILD.bazel`, and `expectation.json` copied in under the name those targets
-expect. It refuses to run over an existing `work/`; run `clean` first.
+`setup` does one thing: a depth-1 fetch of exactly the pinned commit. It
+refuses to run over an existing `work/`; run `clean` first.
 
-`expectation.json` need not exist beforehand. When it does not, `setup`
-writes one recording no violations. That is what makes a new target's first
+Each target analyzes in an output base of the fishery's choosing, passed to
+Ahab as `--output-base`, and `clean` expunges exactly that. The location has
+to be dictated rather than discovered: a `startup` line in a home
+`.bazelrc`, which is what CI runners tend to write, overrides anything a
+workspace says, and would put every target and Ahab's own build in one
+shared base—where expunging between targets would delete the binary the
+fishery is running. An analysis output base runs to gigabytes, so it has to
+be both ours and reclaimable.
+
+`expectation.json` need not exist beforehand. When it does not, an empty one
+recording no violations is written. That is what makes a new target's first
 `check` a readable diff—everything Ahab finds shows up as added—rather than
-an analysis error about a missing source file.
-
-`update` copies the report back out of `work/` afterwards, so that `clean`
-does not throw away the thing the run produced.
+a complaint about a missing file.
 
 ## Adding a target
 
@@ -95,10 +100,8 @@ things.
 ## Exceptions
 
 A target may also hold an `exceptions.json`, in exactly the format
-`--exceptions-json` takes. It is optional, and `setup` wires it up only when
-it is there—the attribute is omitted rather than passed empty, because a
-label naming a file that does not exist is an analysis error rather than an
-empty list.
+`--exceptions-json` takes. It is optional, and passed to Ahab only when it
+is there.
 
 Note that `expectation.json` records what survives filtering, so adding an
 exception shrinks it. That diff is the reviewable artifact—an exception and
@@ -106,19 +109,10 @@ the findings it removes land in the same commit.
 
 ## Constraints worth knowing
 
-**The project has to use bzlmod.** The wiring is `bazel_dep` plus
-`local_path_override`, so a `WORKSPACE`-only project cannot be a target.
-`setup` says so rather than producing something broken.
-
-**Injecting Ahab perturbs the project's own dependency graph.** The wiring
-is a `bazel_dep`, so minimal version selection takes the maximum of Ahab's
-requirements and the project's, and a project pinned to an older version of
-something Ahab also needs gets silently upgraded. When a target fails during
-analysis, build the same label in `work/` with the injected lines reverted
-before believing Ahab had anything to do with it. Choosing a narrower
-`label` often steps around it, since the damage is usually confined to one
-subtree—that is why the gazelle target analyzes `//language/...` and not
-`//...`.
+**The fishery does not test Ahab's packaging.** Running a prebuilt binary is
+what keeps a target's dependency graph its own, and the price is that
+nothing here exercises Ahab as a Bazel module. That is `packaging/`'s job,
+in a sibling workspace where Ahab is somebody else's dependency.
 
 **Setup fetches over the network** and `check`/`update` run a full Bazel
 analysis of the target project, so these are not part of `bazel test //...`
