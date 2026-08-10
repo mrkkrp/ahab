@@ -188,9 +188,23 @@ def place_expectation(name, work):
         )
     shutil.copyfile(recorded, work / REPORT)
 
-def bazel(work, target):
-    """Run one of the injected targets, propagating its exit code."""
-    completed = run(["bazel", "run", target], cwd=work, check=False)
+def output_base(name):
+    """Where a target's Bazel state lives.
+
+    Its own, rather than whatever the environment would otherwise pick. CI
+    pins one `--output_base` for the whole runner, which in absence of an
+    override would make `clean --expunge` invocations quite
+    counter-productive.
+    """
+    return Path.home() / ".cache" / "ahab-fishery" / name
+
+def bazel_run(name, target):
+    """`bazel run` one of the injected targets, propagating its exit code."""
+    completed = run(
+        ["bazel", f"--output_base={output_base(name)}", "run", target],
+        cwd=require_work(name),
+        check=False,
+    )
     return completed.returncode
 
 def cmd_setup(name):
@@ -208,11 +222,11 @@ def cmd_setup(name):
     return 0
 
 def cmd_check(name):
-    return bazel(require_work(name), "//:ahab.check")
+    return bazel_run(name, "//:ahab.check")
 
 def cmd_update(name):
     work = require_work(name)
-    code = bazel(work, "//:ahab.update")
+    code = bazel_run(name, "//:ahab.update")
     if code != 0:
         return code
     recorded = target_dir(name) / "expectation.json"
@@ -221,17 +235,22 @@ def cmd_update(name):
     return 0
 
 def cmd_explain(name):
-    return bazel(require_work(name), "//:ahab.explain")
+    return bazel_run(name, "//:ahab.explain")
 
 def cmd_clean(name):
     work = work_dir(name)
     if not work.exists():
         print(f"fishery: {name} has nothing to clean")
         return 0
-    run(["bazel", "clean", "--expunge"], cwd=work, check=False)
+    run(
+        ["bazel", f"--output_base={output_base(name)}", "clean", "--expunge"],
+        cwd=work,
+        check=False,
+    )
     shutil.rmtree(work, ignore_errors=True)
     if work.exists():
         shutil.rmtree(work)
+    shutil.rmtree(output_base(name), ignore_errors=True)
     print(f"fishery: removed {work.relative_to(AHAB)}")
     return 0
 
