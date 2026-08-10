@@ -17,21 +17,74 @@ use std::fmt;
 /// seen leak into an action.
 #[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord)]
 pub struct Glob {
+    /// The pattern as written. First field, so the derived ordering is the
+    /// ordering of the pattern—everything after it is a function of it.
     pattern: String,
+    /// What the pattern turned out to be, decided once.
+    shape: Shape,
+}
+
+/// The shape of a pattern, worked out when it is compiled.
+///
+/// Matching is on the hot path—every argument of every action, against
+/// every pattern of every clause—and the general algorithm has to index
+/// both sides, which means walking the characters of each. Almost every
+/// pattern anyone writes is one of the first four shapes, and those are
+/// answerable by a substring test that touches no memory at all.
+#[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord)]
+enum Shape {
+    /// No wildcards: the text must equal the pattern.
+    Literal,
+    /// `abc*`: the text must start with this.
+    Prefix(String),
+    /// `*abc`: the text must end with this.
+    Suffix(String),
+    /// `*abc*`: the text must contain this.
+    Contains(String),
+    /// Anything else, matched by the general algorithm over these
+    /// characters.
+    General(Vec<char>),
 }
 
 impl Glob {
     /// Compile a pattern. Every string is a valid glob—there is no syntax
     /// to get wrong—so this cannot fail.
     pub fn new(pattern: &str) -> Glob {
+        let stars = pattern.matches('*').count();
+        let inner = pattern.trim_start_matches('*').trim_end_matches('*');
+        let simple = !inner.contains(['*', '?']);
+
+        let shape = match (stars, simple) {
+            (0, _) if !pattern.contains('?') => Shape::Literal,
+            (1, true) if pattern.ends_with('*') => {
+                Shape::Prefix(inner.to_owned())
+            }
+            (1, true) if pattern.starts_with('*') => {
+                Shape::Suffix(inner.to_owned())
+            }
+            (2, true)
+                if pattern.starts_with('*') && pattern.ends_with('*') =>
+            {
+                Shape::Contains(inner.to_owned())
+            }
+            _ => Shape::General(pattern.chars().collect()),
+        };
+
         Glob {
             pattern: pattern.to_owned(),
+            shape,
         }
     }
 
     /// Whether the whole of `text` matches.
     pub fn matches(&self, text: &str) -> bool {
-        let pattern: Vec<char> = self.pattern.chars().collect();
+        let pattern = match &self.shape {
+            Shape::Literal => return self.pattern == text,
+            Shape::Prefix(what) => return text.starts_with(what.as_str()),
+            Shape::Suffix(what) => return text.ends_with(what.as_str()),
+            Shape::Contains(what) => return text.contains(what.as_str()),
+            Shape::General(chars) => chars,
+        };
         let text: Vec<char> = text.chars().collect();
 
         let (mut p, mut t) = (0, 0);

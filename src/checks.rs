@@ -663,25 +663,59 @@ fn artifact_path(
     Some(segments.join("/"))
 }
 
-/// Every artifact reachable from a set of dep sets, direct and transitive.
-fn artifacts_of(
-    roots: &[u32],
+/// For every dep set, which of `wanted` it reaches—directly or through
+/// another set.
+///
+/// Answered once for the whole graph rather than once per action. Dep sets
+/// are shared, deeply nested and numerous, so walking each action's inputs
+/// separately re-treads the same ground thousands of times; this walks each
+/// set once and lets every action that names it read the answer off.
+fn reachable_from_each(
     sets: &HashMap<u32, &DepSetOfFiles>,
-) -> BTreeSet<u32> {
-    let mut found = BTreeSet::new();
-    let mut seen: BTreeSet<u32> = BTreeSet::new();
-    let mut pending: Vec<u32> = roots.to_vec();
+    wanted: &HashMap<u32, String>,
+) -> HashMap<u32, BTreeSet<u32>> {
+    let mut found: HashMap<u32, BTreeSet<u32>> = HashMap::new();
 
-    // Dep sets are shared between actions and nest arbitrarily deep, so
-    // this is a graph walk rather than a recursion, and `seen` is what
-    // keeps a diamond from being explored twice.
-    while let Some(id) = pending.pop() {
-        if !seen.insert(id) {
-            continue;
+    for &root in sets.keys() {
+        // An explicit stack rather than recursion: these nest as deeply as
+        // the build does. `open` holds the sets on the current path, so a
+        // cycle contributes nothing instead of looping forever.
+        let mut open: BTreeSet<u32> = BTreeSet::new();
+        let mut stack = vec![(root, false)];
+
+        while let Some((id, ready)) = stack.pop() {
+            if found.contains_key(&id) {
+                continue;
+            }
+            let Some(set) = sets.get(&id) else {
+                found.insert(id, BTreeSet::new());
+                continue;
+            };
+            if ready {
+                let mut reached: BTreeSet<u32> = set
+                    .direct_artifact_ids
+                    .iter()
+                    .filter(|artifact| wanted.contains_key(artifact))
+                    .copied()
+                    .collect();
+                for child in &set.transitive_dep_set_ids {
+                    if let Some(sub) = found.get(child) {
+                        reached.extend(sub.iter().copied());
+                    }
+                }
+                open.remove(&id);
+                found.insert(id, reached);
+            } else {
+                open.insert(id);
+                stack.push((id, true));
+                for &child in &set.transitive_dep_set_ids {
+                    if !found.contains_key(&child) && !open.contains(&child)
+                    {
+                        stack.push((child, false));
+                    }
+                }
+            }
         }
-        let Some(set) = sets.get(&id) else { continue };
-        found.extend(set.direct_artifact_ids.iter().copied());
-        pending.extend(set.transitive_dep_set_ids.iter().copied());
     }
 
     found
@@ -707,14 +741,17 @@ fn check_workspace_status(
     let paths: HashMap<u32, String> = container
         .artifacts
         .iter()
+        .filter(|artifact| {
+            fragments
+                .get(&artifact.path_fragment_id)
+                .is_some_and(|leaf| {
+                    leaf.label == STABLE_STATUS
+                        || leaf.label == VOLATILE_STATUS
+                })
+        })
         .filter_map(|artifact| {
             let path =
                 artifact_path(artifact.path_fragment_id, &fragments)?;
-            // Only the two that matter: reconstructing every path in a
-            // large graph would cost more than the rest of the analysis.
-            path.ends_with(STABLE_STATUS).then_some(()).or_else(|| {
-                path.ends_with(VOLATILE_STATUS).then_some(())
-            })?;
             Some((artifact.id, path))
         })
         .collect();
@@ -723,8 +760,16 @@ fn check_workspace_status(
         return violations;
     }
 
+    let reached = reachable_from_each(&sets, &paths);
+
     for action in &container.actions {
-        for id in artifacts_of(&action.input_dep_set_ids, &sets) {
+        let found: BTreeSet<u32> = action
+            .input_dep_set_ids
+            .iter()
+            .filter_map(|id| reached.get(id))
+            .flat_map(|ids| ids.iter().copied())
+            .collect();
+        for id in found {
             if let Some(path) = paths.get(&id) {
                 violations.push(Violation::WorkspaceStatus {
                     action: ActionRef::of(action, &targets),
