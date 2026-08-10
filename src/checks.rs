@@ -1,8 +1,10 @@
 //! Pure hermeticity checks over a decoded `analysis.ActionGraphContainer`.
 
-use std::collections::{BTreeMap, HashMap};
+use std::collections::{BTreeMap, BTreeSet, HashMap};
 
-use analysis_v2_proto::analysis::{Action, ActionGraphContainer};
+use analysis_v2_proto::analysis::{
+    Action, ActionGraphContainer, DepSetOfFiles, PathFragment,
+};
 use serde::{Deserialize, Serialize};
 
 use crate::param_files::{
@@ -282,6 +284,16 @@ pub(crate) enum Violation {
         /// program's own.
         synonym: Option<ProgramId>,
     },
+    /// An action reads one of Bazel's workspace status files, so what it
+    /// produces depends on values gathered about the build rather than on
+    /// the action's declared inputs. What those values are is up to the
+    /// project's `--workspace_status_command`, so the violation names the
+    /// file and does not guess at its contents.
+    WorkspaceStatus {
+        action: ActionRef,
+        /// The status file the action reads.
+        path: String,
+    },
     /// An action runs a conditionally-reproducible program, but this
     /// invocation does not meet the conditions: required flags are missing
     /// and/or breaking flags are present. At least one of the two lists is
@@ -365,6 +377,10 @@ impl Violation {
             } => Facets {
                 requirement: Some(requirement),
                 ..bare("execution_requirement", action)
+            },
+            Violation::WorkspaceStatus { action, path } => Facets {
+                path: Some(path),
+                ..bare("workspace_status", action)
             },
             Violation::AbsolutePath { action, path, site } => Facets {
                 path: Some(path),
@@ -466,6 +482,19 @@ impl Violation {
                 at(action),
                 found(&format!("{requirement:?}")),
             ),
+            Violation::WorkspaceStatus { action, path } => {
+                let why = if path.ends_with(VOLATILE_STATUS) {
+                    "which carries generated and potentially volatile data \
+                    which Bazel deliberately does not invalidate on"
+                } else {
+                    "which carries generated and potentially volatile data"
+                };
+                format!(
+                    "{hermeticity}: {} reads {}, {why}",
+                    at(action),
+                    found(&format!("{path:?}")),
+                )
+            }
             Violation::AbsolutePath { action, path, site } => {
                 let action = at(action);
                 let path = found(&format!("{path:?}"));
@@ -595,6 +624,7 @@ pub(crate) fn check_all(
     violations.extend(check_path(container));
     violations.extend(check_absolute_paths(container));
     violations.extend(check_execution_requirements(container));
+    violations.extend(check_workspace_status(container));
     violations.extend(check_reproducibility(container, library));
 
     let mut counted = BTreeMap::new();
@@ -602,6 +632,109 @@ pub(crate) fn check_all(
         *counted.entry(violation).or_insert(0) += 1;
     }
     counted
+}
+
+/// The two files Bazel writes the workspace status into, relative to the
+/// output path.
+const STABLE_STATUS: &str = "stable-status.txt";
+const VOLATILE_STATUS: &str = "volatile-status.txt";
+
+/// Reconstruct an artifact's execution-root-relative path.
+///
+/// The proto stores paths as a tree of segments—each fragment naming one
+/// and pointing at its parent—so a path is read by walking up to the root
+/// and reversing. The walk is bounded by the number of fragments, since a
+/// malformed graph could otherwise describe a cycle.
+fn artifact_path(
+    id: u32,
+    fragments: &HashMap<u32, &PathFragment>,
+) -> Option<String> {
+    let mut segments = Vec::new();
+    let mut at = Some(id);
+    while let Some(current) = at {
+        let fragment = fragments.get(&current)?;
+        segments.push(fragment.label.as_str());
+        at = (fragment.parent_id != 0).then_some(fragment.parent_id);
+        if segments.len() > fragments.len() {
+            return None;
+        }
+    }
+    segments.reverse();
+    Some(segments.join("/"))
+}
+
+/// Every artifact reachable from a set of dep sets, direct and transitive.
+fn artifacts_of(
+    roots: &[u32],
+    sets: &HashMap<u32, &DepSetOfFiles>,
+) -> BTreeSet<u32> {
+    let mut found = BTreeSet::new();
+    let mut seen: BTreeSet<u32> = BTreeSet::new();
+    let mut pending: Vec<u32> = roots.to_vec();
+
+    // Dep sets are shared between actions and nest arbitrarily deep, so
+    // this is a graph walk rather than a recursion, and `seen` is what
+    // keeps a diamond from being explored twice.
+    while let Some(id) = pending.pop() {
+        if !seen.insert(id) {
+            continue;
+        }
+        let Some(set) = sets.get(&id) else { continue };
+        found.extend(set.direct_artifact_ids.iter().copied());
+        pending.extend(set.transitive_dep_set_ids.iter().copied());
+    }
+
+    found
+}
+
+/// Find every action that reads Bazel's workspace status files.
+fn check_workspace_status(
+    container: &ActionGraphContainer,
+) -> Vec<Violation> {
+    let mut violations = Vec::new();
+    let targets = target_labels(container);
+
+    let fragments: HashMap<u32, &PathFragment> = container
+        .path_fragments
+        .iter()
+        .map(|fragment| (fragment.id, fragment))
+        .collect();
+    let sets: HashMap<u32, &DepSetOfFiles> = container
+        .dep_set_of_files
+        .iter()
+        .map(|set| (set.id, set))
+        .collect();
+    let paths: HashMap<u32, String> = container
+        .artifacts
+        .iter()
+        .filter_map(|artifact| {
+            let path =
+                artifact_path(artifact.path_fragment_id, &fragments)?;
+            // Only the two that matter: reconstructing every path in a
+            // large graph would cost more than the rest of the analysis.
+            path.ends_with(STABLE_STATUS).then_some(()).or_else(|| {
+                path.ends_with(VOLATILE_STATUS).then_some(())
+            })?;
+            Some((artifact.id, path))
+        })
+        .collect();
+
+    if paths.is_empty() {
+        return violations;
+    }
+
+    for action in &container.actions {
+        for id in artifacts_of(&action.input_dep_set_ids, &sets) {
+            if let Some(path) = paths.get(&id) {
+                violations.push(Violation::WorkspaceStatus {
+                    action: ActionRef::of(action, &targets),
+                    path: path.clone(),
+                });
+            }
+        }
+    }
+
+    violations
 }
 
 /// Execution requirements that say an action is not an ordinary hermetic
@@ -1116,6 +1249,157 @@ mod tests {
             targets,
             ..Default::default()
         }
+    }
+
+    /// A container whose one action takes `inputs` (exec-root-relative
+    /// paths) as its inputs, described the way a real dump describes
+    /// them—as a tree of path fragments behind a dep set.
+    fn container_with_inputs(inputs: &[&str]) -> ActionGraphContainer {
+        let mut fragments: Vec<PathFragment> = Vec::new();
+        let mut artifacts: Vec<analysis_v2_proto::analysis::Artifact> =
+            Vec::new();
+
+        for (index, path) in inputs.iter().enumerate() {
+            // Ids start at 1: the proto spells "no parent" as 0, so a
+            // fragment with that id could not be pointed at.
+            let mut parent = 0;
+            for segment in path.split('/') {
+                let id = fragments.len() as u32 + 1;
+                fragments.push(PathFragment {
+                    id,
+                    label: segment.to_owned(),
+                    parent_id: parent,
+                });
+                parent = id;
+            }
+            artifacts.push(analysis_v2_proto::analysis::Artifact {
+                id: index as u32 + 1,
+                path_fragment_id: parent,
+                ..Default::default()
+            });
+        }
+
+        let mut action = action_with_args("Tool", 1, &["/bin/tool"]);
+        action.input_dep_set_ids = vec![1];
+
+        ActionGraphContainer {
+            dep_set_of_files: vec![DepSetOfFiles {
+                id: 1,
+                direct_artifact_ids: artifacts
+                    .iter()
+                    .map(|artifact| artifact.id)
+                    .collect(),
+                ..Default::default()
+            }],
+            artifacts,
+            path_fragments: fragments,
+            ..container(vec![action])
+        }
+    }
+
+    #[test]
+    fn reading_the_status_files_is_reported_once_for_each() {
+        let c = container_with_inputs(&[
+            "bazel-out/stable-status.txt",
+            "bazel-out/volatile-status.txt",
+            "src/main.cc",
+        ]);
+        let found = check_workspace_status(&c);
+        let paths: Vec<&str> = found
+            .iter()
+            .map(|violation| match violation {
+                Violation::WorkspaceStatus { path, .. } => path.as_str(),
+                other => panic!("unexpected {other:?}"),
+            })
+            .collect();
+        assert_eq!(
+            paths,
+            vec![
+                "bazel-out/stable-status.txt",
+                "bazel-out/volatile-status.txt",
+            ],
+        );
+    }
+
+    #[test]
+    fn an_action_that_reads_neither_is_not_reported() {
+        // The overwhelming majority: nothing stamped, nothing to say.
+        let c = container_with_inputs(&["src/main.cc", "src/main.h"]);
+        assert!(check_workspace_status(&c).is_empty());
+    }
+
+    #[test]
+    fn the_two_status_files_are_told_apart_in_the_report() {
+        // What separates them is not what they hold—that is the project's
+        // to decide—but that Bazel refuses to invalidate on one of them.
+        // Only the volatile line should say so.
+        let c = container_with_inputs(&[
+            "bazel-out/stable-status.txt",
+            "bazel-out/volatile-status.txt",
+        ]);
+        let rendered: Vec<String> = check_workspace_status(&c)
+            .iter()
+            .map(|violation| violation.render(Palette::plain()))
+            .collect();
+        // Neither names a key, since neither can know one.
+        for line in &rendered {
+            for guess in ["BUILD_USER", "BUILD_HOST", "BUILD_TIMESTAMP"] {
+                assert!(!line.contains(guess), "{line}");
+            }
+        }
+        assert!(
+            !rendered[0].contains("does not invalidate"),
+            "{rendered:?}",
+        );
+        assert!(
+            rendered[1].contains("does not invalidate"),
+            "{rendered:?}",
+        );
+    }
+
+    #[test]
+    fn a_status_file_reached_only_transitively_is_still_found() {
+        // Dep sets nest, and an input three sets deep is as much an input
+        // as a direct one.
+        let mut c = container_with_inputs(&["bazel-out/stable-status.txt"]);
+        c.dep_set_of_files = vec![
+            DepSetOfFiles {
+                id: 1,
+                transitive_dep_set_ids: vec![2],
+                ..Default::default()
+            },
+            DepSetOfFiles {
+                id: 2,
+                transitive_dep_set_ids: vec![3],
+                ..Default::default()
+            },
+            DepSetOfFiles {
+                id: 3,
+                direct_artifact_ids: vec![1],
+                ..Default::default()
+            },
+        ];
+        assert_eq!(check_workspace_status(&c).len(), 1);
+    }
+
+    #[test]
+    fn a_cycle_among_dep_sets_does_not_hang_the_walk() {
+        // Nothing Bazel emits is cyclic, but a walk over ids from a file
+        // should not be the thing that finds out.
+        let mut c = container_with_inputs(&["bazel-out/stable-status.txt"]);
+        c.dep_set_of_files = vec![
+            DepSetOfFiles {
+                id: 1,
+                transitive_dep_set_ids: vec![2],
+                direct_artifact_ids: vec![1],
+            },
+            DepSetOfFiles {
+                id: 2,
+                transitive_dep_set_ids: vec![1],
+                ..Default::default()
+            },
+        ];
+        assert_eq!(check_workspace_status(&c).len(), 1);
     }
 
     /// The label [`container`] gives the target with this id.

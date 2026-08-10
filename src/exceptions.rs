@@ -16,6 +16,7 @@ enum Kind {
     BadPath,
     ExecutionRequirement,
     AbsolutePath,
+    WorkspaceStatus,
     SystemProgram,
     HostDerivedProgram,
     UnknownProgram,
@@ -25,11 +26,12 @@ enum Kind {
 
 impl Kind {
     /// Every kind, in the order [`Violation`] declares them.
-    const ALL: [Kind; 9] = [
+    const ALL: [Kind; 10] = [
         Kind::EnvironmentLeak,
         Kind::BadPath,
         Kind::ExecutionRequirement,
         Kind::AbsolutePath,
+        Kind::WorkspaceStatus,
         Kind::SystemProgram,
         Kind::HostDerivedProgram,
         Kind::UnknownProgram,
@@ -44,6 +46,7 @@ impl Kind {
             Kind::BadPath => "bad_path",
             Kind::ExecutionRequirement => "execution_requirement",
             Kind::AbsolutePath => "absolute_path",
+            Kind::WorkspaceStatus => "workspace_status",
             Kind::SystemProgram => "system_program",
             Kind::HostDerivedProgram => "host_derived_program",
             Kind::UnknownProgram => "unknown_program",

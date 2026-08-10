@@ -8,6 +8,7 @@
   * [`PATH`](#path)
   * [Execution requirements](#execution-requirements)
   * [Absolute paths](#absolute-paths)
+  * [Workspace status](#workspace-status)
   * [Reproducibility](#reproducibility)
 * [Reproducibility specifications](#reproducibility-specifications)
   * [Naming a program](#naming-a-program)
@@ -35,8 +36,9 @@ so producing one means building everything—twice, if you mean to compare.
 Bazel's aquery instead describes what *would* run, which costs an analysis
 phase and no build at all. Ahab reads that description and reports what it
 finds there: values that leaked in from the environment, absolute paths,
-actions declaring that they need the network or must not be sandboxed, and
-programs whose reproducibility nobody has vouched for.
+actions declaring that they need the network or must not be sandboxed,
+actions reading build metadata rather than their own inputs, and programs
+whose reproducibility nobody has vouched for.
 
 The two answer different questions, and Ahab does not replace log
 comparison. Comparing logs is empirical—it catches a compiler embedding a
@@ -192,6 +194,30 @@ silence rather than noise.
 Any `/`-rooted run appearing in an argument, a param file line, or an
 environment variable value. A build that names `/opt/toolchain/bin/cc` is a
 build that only works where that exists.
+
+### Workspace status
+
+An action that reads `bazel-out/stable-status.txt` or
+`bazel-out/volatile-status.txt`. These are where Bazel writes the workspace
+status, and an action reading one produces output that depends on values
+gathered about the build rather than on anything it declared as an input.
+
+Ahab does not say what is in them, because it cannot: the contents come from
+`--workspace_status_command` and a project may put anything there. Nor are
+the two told apart by meaning—a key goes to the stable file if it is spelled
+`STABLE_` and to the volatile one otherwise, so the volatile file is not the
+one about time, it is the one holding whatever was not declared stable.
+
+What does distinguish them is what Bazel does with them. A change to the
+stable file invalidates the actions that read it; a change to the volatile
+file deliberately does not, since a timestamp that changed on every build
+would otherwise rebuild the world. So an action reading the volatile file is
+not merely one whose output varies—its cached output can be stale.
+
+Reading these files is often deliberate: it is how a release binary carries
+a version. Like a `local` tag, that makes it a fact worth having on the
+record rather than a mistake, and [exceptions](#exceptions) are how you say
+so.
 
 ### Reproducibility
 
@@ -448,11 +474,13 @@ Every field except `reason` and `kind` is a pattern, with the same `*` and
 | `env_var`            | the same, in an env var | the variable's name          |
 
 The kinds are `environment_leak`, `bad_path`, `execution_requirement`,
-`absolute_path`, `system_program`, `host_derived_program`,
-`unknown_program`, `never_reproducible` and `conditional_reproducibility`.
+`absolute_path`, `workspace_status`, `system_program`,
+`host_derived_program`, `unknown_program`, `never_reproducible` and
+`conditional_reproducibility`.
 
-Fields that only some kinds carry are self-restricting: `path` can only ever
-match an absolute-path finding, so naming one already implies the kind.
+Fields that only some kinds carry narrow an exception on their own: `path`
+can only match an absolute-path or a workspace-status finding, so naming one
+already rules out the rest—though not, in that case, down to a single kind.
 Naming a field the stated kind cannot carry is refused when the file loads,
 rather than quietly matching nothing.
 

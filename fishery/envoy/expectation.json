@@ -44,6 +44,28 @@
         },
         "wrappers": []
       }
+    },
+    {
+      "count": 1,
+      "violation": {
+        "kind": "workspace_status",
+        "action": {
+          "mnemonic": "Genrule",
+          "target": "//source/common/version:generate_version_linkstamp"
+        },
+        "path": "bazel-out/stable-status.txt"
+      }
+    },
+    {
+      "count": 1,
+      "violation": {
+        "kind": "workspace_status",
+        "action": {
+          "mnemonic": "Genrule",
+          "target": "//source/common/version:generate_version_linkstamp"
+        },
+        "path": "bazel-out/volatile-status.txt"
+      }
     }
   ]
 }
