@@ -308,6 +308,11 @@ def cmd_ci():
     totals = {}
     for name in names:
         print(f"\n=== fishery: {name} ===", flush=True)
+        if work_dir(name).exists():
+            try:
+                cmd_clean(name)
+            except (TargetError, subprocess.CalledProcessError) as error:
+                report_error(error)
         for step, command in (("setup", cmd_setup), ("check", cmd_check)):
             try:
                 code = command(name)
