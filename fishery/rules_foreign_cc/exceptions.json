@@ -1,0 +1,18 @@
+{
+  "exceptions": [
+    {
+      "reason": "the Go tooling links with Bazel's autoconfigured C++ toolchain",
+      "kind": "bad_path"
+    },
+    {
+      "reason": "the Go tooling links with Bazel's autoconfigured C++ toolchain",
+      "kind": "absolute_path",
+      "path": "*/bin/gcc"
+    },
+    {
+      "reason": "the Go tooling links with Bazel's autoconfigured C++ toolchain",
+      "kind": "absolute_path",
+      "path": "*/bin/ar"
+    }
+  ]
+}

@@ -114,6 +114,17 @@ fn language_agnostic() -> Vec<(ProgramId, Entry)> {
             ProgramId::extension("protobuf", "protoc", "bin/protoc"),
             Entry::Spec(always()),
         ),
+        // Bazel's own zip tool, which every rule set reaches for when it
+        // has to put a tree in an archive. A zip normally records the
+        // moment each entry was added, which would make the archive a
+        // function of when it was built; zipper writes one constant into
+        // every entry instead—2010-01-01, observed across all 2237 entries
+        // of a real archive—so what comes out depends on the contents and
+        // the order it was handed them, both of which the action states.
+        (
+            ProgramId::module("bazel_tools", "tools/zip/zipper/zipper"),
+            Entry::Spec(always()),
+        ),
         // Bazel's test shim. Its outputs—the log and the JUnit XML—carry
         // timings and so are never byte-identical, but they are terminal:
         // no other action consumes them, so that variation cannot reach a
@@ -396,6 +407,28 @@ pub fn parse_entries(
 mod tests {
     use super::*;
     use crate::reproducibility_spec::program_id::Origin;
+
+    #[test]
+    fn the_zip_tool_is_vouched_for_however_it_is_asked_to_pack() {
+        // `cC` is create-and-compress, and the entries that follow are
+        // `name=source` pairs. None of it says anything about time, because
+        // zipper does not offer the choice: it writes one fixed timestamp
+        // into every entry whatever it is told.
+        let resolution = Library::builtin().resolve(
+            ProgramId::module("bazel_tools", "tools/zip/zipper/zipper"),
+            vec![
+                "cC",
+                "bazel-out/k8-fastbuild/bin/tool.zip",
+                "__main__.py=bazel-out/k8-fastbuild/bin/tool.temp",
+                "runfiles/_main/__init__.py=",
+            ],
+        );
+        let (_, spec) = resolution.spec.expect("a spec for zipper");
+        assert_eq!(
+            spec.assess(resolution.args),
+            crate::reproducibility_spec::Conformance::Reproducible,
+        );
+    }
 
     /// A library holding exactly these entries and nothing built in.
     fn index(entries: Vec<(ProgramId, Entry)>) -> Library {

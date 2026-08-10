@@ -1,0 +1,6 @@
+{
+  "repo": "https://github.com/bazel-contrib/rules_foreign_cc",
+  "commit": "66b9b3242ca791e2147b8789e82c708ee8bc4f1a",
+  "label": "//...",
+  "configs": []
+}

@@ -1,0 +1,94 @@
+{
+  "violations": [
+    {
+      "count": 2,
+      "violation": {
+        "kind": "system_program",
+        "action": {
+          "mnemonic": "AspectRulesLintShellCheck",
+          "target": "//test:tool_build_scripts"
+        },
+        "program": {
+          "origin": "system",
+          "path": "/bin/bash"
+        },
+        "wrappers": []
+      }
+    },
+    {
+      "count": 2,
+      "violation": {
+        "kind": "system_program",
+        "action": {
+          "mnemonic": "BootstrapGNUMake",
+          "target": "//toolchains/private:make_tool"
+        },
+        "program": {
+          "origin": "system",
+          "path": "/bin/bash"
+        },
+        "wrappers": []
+      }
+    },
+    {
+      "count": 2,
+      "violation": {
+        "kind": "system_program",
+        "action": {
+          "mnemonic": "BootstrapNinjaBuild",
+          "target": "//toolchains/private:ninja_tool"
+        },
+        "program": {
+          "origin": "system",
+          "path": "/bin/bash"
+        },
+        "wrappers": []
+      }
+    },
+    {
+      "count": 2,
+      "violation": {
+        "kind": "system_program",
+        "action": {
+          "mnemonic": "BootstrapPkgConfig",
+          "target": "//toolchains/private:pkgconfig_tool_default"
+        },
+        "program": {
+          "origin": "system",
+          "path": "/bin/bash"
+        },
+        "wrappers": []
+      }
+    },
+    {
+      "count": 2,
+      "violation": {
+        "kind": "system_program",
+        "action": {
+          "mnemonic": "CcConfigureMakeRule",
+          "target": "//toolchains/private:cmake_tool_default"
+        },
+        "program": {
+          "origin": "system",
+          "path": "/bin/bash"
+        },
+        "wrappers": []
+      }
+    },
+    {
+      "count": 1,
+      "violation": {
+        "kind": "system_program",
+        "action": {
+          "mnemonic": "TestSymlinkContentsToDir",
+          "target": "//test:symlink_dirs"
+        },
+        "program": {
+          "origin": "system",
+          "path": "/bin/bash"
+        },
+        "wrappers": []
+      }
+    }
+  ]
+}
