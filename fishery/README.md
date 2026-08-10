@@ -40,7 +40,8 @@ $ ./fishery.py <command> <target>
 * `update` rewrites `expectation.json` with what Ahab reports now.
 * `explain` prints the recorded report without analyzing anything.
 * `clean` expunges the project's Bazel state and removes `work/`.
-* `ci` runs `setup` and then `check` on every target.
+* `ci` runs `setup`, `check` and `clean` on every target, summarizing
+  each expectation as it goes.
 
 `setup` does four things: a depth-1 fetch of exactly the pinned commit, a
 `bazel_dep` plus `local_path_override` appended to the project's

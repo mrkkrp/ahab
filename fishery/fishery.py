@@ -304,6 +304,11 @@ def cmd_ci():
 
         distinct, occurrences, kinds = summarize(name)
         print_summary("expectation", distinct, occurrences, kinds)
+
+        try:
+            cmd_clean(name)
+        except (TargetError, subprocess.CalledProcessError) as error:
+            report_error(error)
         for kind, (kind_distinct, kind_occurrences) in kinds.items():
             total_distinct, total_occurrences = totals.get(kind, (0, 0))
             totals[kind] = (
