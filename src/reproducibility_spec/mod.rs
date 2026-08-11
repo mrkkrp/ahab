@@ -153,6 +153,8 @@ pub struct ReproducibilitySpec {
     /// Flags whose value is the argument that follows them, rather than
     /// part of the same one.
     pub takes_value: BTreeSet<Glob>,
+    /// Options in which an absolute path does not represent an input.
+    pub declared_paths: BTreeSet<Glob>,
     /// Map a raw argument to the canonical option it represents, or `None`
     /// if it is not recognized as an option of this program.
     pub recognize: Recognize,
@@ -166,6 +168,7 @@ impl fmt::Debug for ReproducibilitySpec {
             .field("requirements", &self.requirements)
             .field("prohibitions", &self.prohibitions)
             .field("takes_value", &self.takes_value)
+            .field("declared_paths", &self.declared_paths)
             .field("recognize", &"<function>")
             .finish()
     }
@@ -184,6 +187,7 @@ impl PartialEq for ReproducibilitySpec {
             && self.requirements == other.requirements
             && self.prohibitions == other.prohibitions
             && self.takes_value == other.takes_value
+            && self.declared_paths == other.declared_paths
     }
 }
 
@@ -231,22 +235,13 @@ impl ReproducibilitySpec {
                 })
                 .collect(),
             takes_value: BTreeSet::new(),
+            declared_paths: BTreeSet::new(),
             recognize: Arc::new(|arg: &str| Some(arg.to_owned())),
         }
     }
 
     /// Declare the flags whose value is the next argument, returning the
     /// updated spec.
-    ///
-    /// Tools spell a flag's value two ways—`--mtime=portable` in one
-    /// argument, `--invalidation_mode unchecked_hash` in two—and a pattern
-    /// sees one argument at a time, so the second form leaves the value
-    /// out of reach. Naming the flag here folds the pair together with an
-    /// `=`, which brings both spellings to the same shape: one pattern
-    /// then covers a tool however it was invoked.
-    ///
-    /// Declaring a flag that takes no value would swallow whatever follows
-    /// it, so this is a statement about the tool rather than a guess.
     pub fn with_valued_flags<F>(mut self, flags: F) -> Self
     where
         F: IntoIterator,
@@ -259,12 +254,30 @@ impl ReproducibilitySpec {
         self
     }
 
-    /// Fold each declared flag together with the argument after it.
+    /// Declare the options in which an absolute path is part of what the
+    /// program was asked to produce, returning the updated spec.
+    ///
+    /// Patterns are matched against whole options, with a flag's value
+    /// folded onto it, so one pattern covers both spellings.
+    pub fn with_declared_paths<P>(mut self, patterns: P) -> Self
+    where
+        P: IntoIterator,
+        P::Item: Into<String>,
+    {
+        self.declared_paths = patterns
+            .into_iter()
+            .map(|pattern| Glob::new(&pattern.into()))
+            .collect();
+        self
+    }
+
+    /// Fold each declared flag together with the argument after it, keeping
+    /// the number of arguments each option was written as.
     ///
     /// A flag at the very end has nothing to take, and is left alone. A
     /// flag followed by another flag still takes it, because that is what
     /// the tool would do.
-    fn join_values(&self, args: &[&str]) -> Vec<String> {
+    fn join_values(&self, args: &[&str]) -> Vec<(String, usize)> {
         let mut joined = Vec::with_capacity(args.len());
         let mut at = 0;
         while at < args.len() {
@@ -272,14 +285,40 @@ impl ReproducibilitySpec {
             let takes =
                 self.takes_value.iter().any(|flag| flag.matches(arg));
             if takes && at + 1 < args.len() {
-                joined.push(format!("{arg}={}", args[at + 1]));
+                joined.push((format!("{arg}={}", args[at + 1]), 2));
                 at += 2;
             } else {
-                joined.push(arg.to_owned());
+                joined.push((arg.to_owned(), 1));
                 at += 1;
             }
         }
         joined
+    }
+
+    /// The arguments in which this program declares a path inside the
+    /// artifact it produces, rather than naming one it reads.
+    ///
+    /// A flag and the value it took are both returned, so that a caller
+    /// scanning the raw command line passes over the option however it was
+    /// spelled.
+    pub fn declared_path_args<'a>(&self, args: &[&'a str]) -> Vec<&'a str> {
+        if self.declared_paths.is_empty() {
+            return Vec::new();
+        }
+
+        let mut declared = Vec::new();
+        let mut at = 0;
+        for (option, width) in self.join_values(args) {
+            if self
+                .declared_paths
+                .iter()
+                .any(|pattern| pattern.matches(&option))
+            {
+                declared.extend_from_slice(&args[at..at + width]);
+            }
+            at += width;
+        }
+        declared
     }
 
     /// Add clauses that say more than a bare flag can, returning the
@@ -359,8 +398,8 @@ impl ReproducibilitySpec {
                 } else {
                     let raw: Vec<&str> = args.into_iter().collect();
                     self.join_values(&raw)
-                        .iter()
-                        .filter_map(|arg| self.recognize(arg))
+                        .into_iter()
+                        .filter_map(|(option, _)| self.recognize(&option))
                         .collect()
                 };
 

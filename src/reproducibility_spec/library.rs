@@ -326,6 +326,10 @@ struct SpecFields {
     /// Flags whose value is the argument that follows them.
     #[serde(default)]
     takes_value: BTreeSet<String>,
+    /// Options in which an absolute path describes what the program
+    /// produces rather than the machine producing it.
+    #[serde(default)]
+    declared_paths: BTreeSet<String>,
     /// Arguments that stand for a different option, as `argument -> option`.
     /// Anything unlisted stands for itself.
     #[serde(default)]
@@ -411,6 +415,7 @@ pub fn parse_entries(
                         fields.prohibitions.into_iter().map(Clause::from),
                     )
                     .with_valued_flags(fields.takes_value)
+                    .with_declared_paths(fields.declared_paths)
                     .with_translations(fields.recognize),
                 ),
                 EntryFile::SameAs(target) => {

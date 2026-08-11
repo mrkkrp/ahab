@@ -754,6 +754,49 @@ mod tests {
     }
 
     #[test]
+    fn a_file_may_say_which_options_describe_what_is_produced() {
+        // The shape the README documents under "Writing one", kept here so
+        // the two cannot drift apart.
+        let specs = specs_from(
+            "declared.json",
+            r#"{"programs": {
+                 "@acme//bin/mkimage": {
+                   "spec": {
+                     "reproducibility": "always",
+                     "takes_value": ["--working-dir", "--entrypoint"],
+                     "declared_paths": [
+                       "--working-dir=*",
+                       "--entrypoint=*"
+                     ]
+                   }
+                 }
+               }}"#,
+        )
+        .expect("should load");
+
+        let Entry::Spec(spec) = &specs[0].1 else {
+            panic!("expected a spec");
+        };
+
+        // Both spellings reach the same answer, and it is the argument
+        // holding the path that gets passed over either way.
+        assert_eq!(
+            spec.declared_path_args(&["--working-dir", "/app"]),
+            ["--working-dir", "/app"],
+        );
+        assert_eq!(
+            spec.declared_path_args(&["--entrypoint=/app/bin/server"]),
+            ["--entrypoint=/app/bin/server"],
+        );
+        // An option the file did not name is nobody's business but the
+        // absolute-path check's.
+        assert!(
+            spec.declared_path_args(&["--output", "/tmp/out.tar"])
+                .is_empty()
+        );
+    }
+
+    #[test]
     fn a_file_names_programs_the_way_a_report_does() {
         let specs = specs_from(
             "specs.json",

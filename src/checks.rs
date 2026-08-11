@@ -1,6 +1,6 @@
 //! Pure hermeticity checks over a decoded `analysis.ActionGraphContainer`.
 
-use std::collections::{BTreeMap, BTreeSet, HashMap};
+use std::collections::{BTreeMap, BTreeSet, HashMap, HashSet};
 
 use analysis_v2_proto::analysis::{
     Action, ActionGraphContainer, DepSetOfFiles, PathFragment,
@@ -616,7 +616,7 @@ pub(crate) fn check_all(
 ) -> BTreeMap<Violation, usize> {
     let mut violations = check_environment_leaks(container, user, hostname);
     violations.extend(check_path(container));
-    violations.extend(check_absolute_paths(container));
+    violations.extend(check_absolute_paths(container, library));
     violations.extend(check_execution_requirements(container));
     violations.extend(check_workspace_status(container));
     violations.extend(check_reproducibility(container, library));
@@ -1064,6 +1064,32 @@ fn is_allowed_absolute_path(path: &str) -> bool {
     ALLOWED_ABSOLUTE_PATHS.contains(&path)
 }
 
+/// The strings with which this action's program declares a path inside the
+/// artifact it produces, as the library describes that program.
+///
+/// Matched by value rather than by position, because the scan runs over the
+/// raw command line followed by every param file, which is not the sequence
+/// the program itself receives.
+fn declared_path_strings<'a>(
+    action: &'a Action,
+    library: &Library,
+) -> HashSet<&'a str> {
+    let command_line = expanded_command_line(action);
+    let Some((executable, args)) = command_line.split_first() else {
+        return HashSet::new();
+    };
+    let resolved = library.resolve(
+        ProgramId::of(executable.value),
+        args.iter().map(|sourced| sourced.value).collect(),
+    );
+    let Some((_, spec)) = &resolved.spec else {
+        return HashSet::new();
+    };
+    spec.declared_path_args(&resolved.args)
+        .into_iter()
+        .collect()
+}
+
 /// Find every absolute path (a `/`-rooted run) referenced in an action's
 /// command line, in one of its param files, or in the value of any of its
 /// `environment_variables`, and return one [`Violation`] per path found.
@@ -1074,17 +1100,35 @@ fn is_allowed_absolute_path(path: &str) -> bool {
 /// `/dev/null`) are also skipped.
 fn check_absolute_paths(
     container: &ActionGraphContainer,
+    library: &Library,
 ) -> Vec<Violation> {
     let mut violations = Vec::new();
     let targets = target_labels(container);
 
     for action in &container.actions {
+        // Worked out at the first path we would otherwise report, so that
+        // the great majority of actions—which have no absolute path in them
+        // at all—never pay for resolving their program a second time.
+        let mut declared: Option<HashSet<&str>> = None;
+
         // Spilling a command line into a param file must not launder an
         // absolute path out of the report, so both are scanned.
         let program = usize::from(!action.arguments.is_empty());
         for sourced in analyzable_strings(action).into_iter().skip(program)
         {
-            for path in absolute_paths(sourced.value) {
+            let paths = absolute_paths(sourced.value);
+            if paths.is_empty() {
+                continue;
+            }
+            if declared
+                .get_or_insert_with(|| {
+                    declared_path_strings(action, library)
+                })
+                .contains(sourced.value)
+            {
+                continue;
+            }
+            for path in paths {
                 if is_allowed_absolute_path(&path) {
                     continue;
                 }
@@ -2024,7 +2068,7 @@ pub(crate) mod tests {
             1,
             &["tool", "-I/usr/include"],
         )]);
-        let found = check_absolute_paths(&c);
+        let found = check_absolute_paths(&c, &Library::default());
         assert_eq!(found.len(), 1);
         assert_abs_path(
             &found[0],
@@ -2044,7 +2088,7 @@ pub(crate) mod tests {
             2,
             &[("CC", "/usr/bin/gcc")],
         )]);
-        let found = check_absolute_paths(&c);
+        let found = check_absolute_paths(&c, &Library::default());
         assert_eq!(found.len(), 1);
         assert_abs_path(
             &found[0],
@@ -2065,7 +2109,7 @@ pub(crate) mod tests {
             1,
             &["tool", "/bin:/usr/bin"],
         )]);
-        let found = check_absolute_paths(&c);
+        let found = check_absolute_paths(&c, &Library::default());
         assert_eq!(found.len(), 2);
         assert_abs_path(
             &found[0],
@@ -2096,7 +2140,7 @@ pub(crate) mod tests {
             1,
             &[("PATH", EXPECTED_PATH)],
         )]);
-        assert!(check_absolute_paths(&c).is_empty());
+        assert!(check_absolute_paths(&c, &Library::default()).is_empty());
     }
 
     #[test]
@@ -2107,7 +2151,7 @@ pub(crate) mod tests {
             1,
             &[("LD_LIBRARY_PATH", "/opt/lib")],
         )]);
-        let found = check_absolute_paths(&c);
+        let found = check_absolute_paths(&c, &Library::default());
         assert_eq!(found.len(), 1);
         assert_abs_path(
             &found[0],
@@ -2121,6 +2165,78 @@ pub(crate) mod tests {
         );
     }
 
+    // ---- check_absolute_paths: paths the program declares ----
+
+    /// An `img manifest` command line, as rules_img writes it: an in-image
+    /// working directory, and a real output under `bazel-out`.
+    fn image_manifest_action() -> Action {
+        action_with_args(
+            "ImageManifest",
+            1,
+            &[
+                "bazel-out/k8-opt-exec/bin/external/rules_img_tool+/cmd/img\
+                 /img_linux_amd64_/img_linux_amd64",
+                "manifest",
+                "--working-dir",
+                "/app",
+                "--manifest",
+                "bazel-out/k8-fastbuild/bin/img/base/scratch_manifest.json",
+            ],
+        )
+    }
+
+    #[test]
+    fn a_path_the_program_declares_in_its_output_is_not_reported() {
+        // `/app` does not exist on this machine and is not supposed to: it
+        // is where the image will put things once someone runs it.
+        let c = container(vec![image_manifest_action()]);
+        assert!(check_absolute_paths(&c, &Library::builtin()).is_empty());
+    }
+
+    #[test]
+    fn the_same_path_is_reported_when_the_library_says_nothing() {
+        // The whole difference is the library. Without an entry for the
+        // program there is nothing to say the path describes an image, and
+        // Ahab reports it—which is what it should do for a tool it has
+        // never heard of.
+        let c = container(vec![image_manifest_action()]);
+        let found = check_absolute_paths(&c, &Library::default());
+        assert_eq!(found.len(), 1);
+        assert_abs_path(
+            &found[0],
+            "ImageManifest",
+            1,
+            "/app",
+            LeakSite::Argument {
+                value: "/app".to_owned(),
+            },
+        );
+    }
+
+    #[test]
+    fn declaring_paths_does_not_excuse_the_rest_of_the_action() {
+        // An entry naming some of a program's options must not turn into a
+        // blanket pardon for the program: an absolute path anywhere else on
+        // the same command line is still a finding.
+        let mut action = image_manifest_action();
+        action.arguments.push("--annotations-file".to_owned());
+        action
+            .arguments
+            .push("/home/someone/annotations.json".to_owned());
+        let c = container(vec![action]);
+        let found = check_absolute_paths(&c, &Library::builtin());
+        assert_eq!(found.len(), 1);
+        assert_abs_path(
+            &found[0],
+            "ImageManifest",
+            1,
+            "/home/someone/annotations.json",
+            LeakSite::Argument {
+                value: "/home/someone/annotations.json".to_owned(),
+            },
+        );
+    }
+
     // ---- check_absolute_paths: benign cases (expect no violations) ----
 
     #[test]
@@ -2130,7 +2246,7 @@ pub(crate) mod tests {
             1,
             &["-Irelative/include", "//pkg:target", "foo.o"],
         )]);
-        assert!(check_absolute_paths(&c).is_empty());
+        assert!(check_absolute_paths(&c, &Library::default()).is_empty());
     }
 
     #[test]
@@ -2148,7 +2264,7 @@ pub(crate) mod tests {
                 ("CARGO_MANIFEST_DIR", "${pwd}/proto"),
             ],
         )]);
-        assert!(check_absolute_paths(&c).is_empty());
+        assert!(check_absolute_paths(&c, &Library::default()).is_empty());
     }
 
     #[test]
@@ -2166,7 +2282,7 @@ pub(crate) mod tests {
                 "$pwd/external/thing",
             ],
         )]);
-        let found = check_absolute_paths(&c);
+        let found = check_absolute_paths(&c, &Library::default());
         assert!(found.is_empty(), "{found:?}");
     }
 
@@ -2186,7 +2302,7 @@ pub(crate) mod tests {
                 "$(realpath x)/y",
             ],
         )]);
-        let found = check_absolute_paths(&c);
+        let found = check_absolute_paths(&c, &Library::default());
         assert_eq!(found.len(), 3, "{found:?}");
     }
 
@@ -2199,7 +2315,7 @@ pub(crate) mod tests {
             1,
             &["tool", "[pwd]/usr/lib", "{pwd}/opt/tool"],
         )]);
-        let found = check_absolute_paths(&c);
+        let found = check_absolute_paths(&c, &Library::default());
         assert_eq!(found.len(), 2, "{found:?}");
     }
 
@@ -2212,7 +2328,7 @@ pub(crate) mod tests {
             1,
             &["tool", "${pwd}/external/ok:/usr/lib"],
         )]);
-        let found = check_absolute_paths(&c);
+        let found = check_absolute_paths(&c, &Library::default());
         assert_eq!(found.len(), 1, "{found:?}");
         assert_abs_path(
             &found[0],
@@ -2235,7 +2351,7 @@ pub(crate) mod tests {
             1,
             &[("PWD", "/proc/self/cwd")],
         )]);
-        assert!(check_absolute_paths(&c).is_empty());
+        assert!(check_absolute_paths(&c, &Library::default()).is_empty());
     }
 
     #[test]
@@ -2248,7 +2364,7 @@ pub(crate) mod tests {
             1,
             &["tool", "/proc/self/cwd/foo", "/proc/self/root"],
         )]);
-        let found = check_absolute_paths(&c);
+        let found = check_absolute_paths(&c, &Library::default());
         assert_eq!(found.len(), 2, "{found:?}");
     }
 
@@ -2257,7 +2373,7 @@ pub(crate) mod tests {
         // /dev/null is a portable special file, not a hermeticity leak.
         let c =
             container(vec![action_with_args("A", 1, &["-o", "/dev/null"])]);
-        assert!(check_absolute_paths(&c).is_empty());
+        assert!(check_absolute_paths(&c, &Library::default()).is_empty());
     }
 
     #[test]
@@ -2269,7 +2385,7 @@ pub(crate) mod tests {
             1,
             &["tool", "/dev/null:/opt/bin"],
         )]);
-        let found = check_absolute_paths(&c);
+        let found = check_absolute_paths(&c, &Library::default());
         assert_eq!(found.len(), 1);
         assert_abs_path(
             &found[0],
@@ -2469,7 +2585,7 @@ pub(crate) mod tests {
             1,
             &["/bin/bash", "-c", "true"],
         )]);
-        assert!(check_absolute_paths(&c).is_empty());
+        assert!(check_absolute_paths(&c, &Library::default()).is_empty());
         assert_eq!(check_reproducibility(&c, &Library::builtin()).len(), 1);
     }
 
@@ -2481,7 +2597,7 @@ pub(crate) mod tests {
             1,
             &["/bin/bash", "-I/usr/include"],
         )]);
-        let found = check_absolute_paths(&c);
+        let found = check_absolute_paths(&c, &Library::default());
         assert_eq!(found.len(), 1);
         assert_abs_path(
             &found[0],
@@ -2503,7 +2619,7 @@ pub(crate) mod tests {
         let found = check_reproducibility(&c, &Library::builtin());
         assert_eq!(found.len(), 1);
         assert!(matches!(found[0], Violation::SystemProgram { .. }));
-        assert!(check_absolute_paths(&c).is_empty());
+        assert!(check_absolute_paths(&c, &Library::default()).is_empty());
     }
 
     #[test]
@@ -2643,7 +2759,7 @@ pub(crate) mod tests {
         let mut individually =
             check_environment_leaks(&c, USER_SENTINEL, HOST_SENTINEL);
         individually.extend(check_path(&c));
-        individually.extend(check_absolute_paths(&c));
+        individually.extend(check_absolute_paths(&c, &Library::default()));
         individually.extend(check_reproducibility(&c, &Library::builtin()));
 
         let combined = check_all(
@@ -2783,7 +2899,7 @@ pub(crate) mod tests {
             &["clang", "@out/foo.params"],
             &[("out/foo.params", &["-L/opt/lib"])],
         )]);
-        let found = check_absolute_paths(&c);
+        let found = check_absolute_paths(&c, &Library::default());
         assert_eq!(found.len(), 1, "{found:?}");
         match &found[0] {
             Violation::AbsolutePath { path, site, .. } => {
@@ -2810,7 +2926,7 @@ pub(crate) mod tests {
             &["clang", "-fmodule-map-file=out/m.cppmap"],
             &[("out/m.cppmap", &["umbrella \"/usr/include\""])],
         )]);
-        let found = check_absolute_paths(&c);
+        let found = check_absolute_paths(&c, &Library::default());
         assert_eq!(found.len(), 1, "{found:?}");
     }
 
@@ -2823,7 +2939,7 @@ pub(crate) mod tests {
             &["clang", "@out/foo.params", "@out/foo.params"],
             &[("out/foo.params", &["-L/opt/lib"])],
         )]);
-        assert_eq!(check_absolute_paths(&c).len(), 1);
+        assert_eq!(check_absolute_paths(&c, &Library::default()).len(), 1);
     }
 
     #[test]

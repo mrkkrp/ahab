@@ -18,7 +18,6 @@
 * [Exceptions](#exceptions)
   * [How they match](#how-they-match)
   * [What they will not let you do](#what-they-will-not-let-you-do)
-  * [Being specific](#being-specific)
 * [Development](#development)
 * [The fishery](#the-fishery)
 * [License](#license)
@@ -78,10 +77,8 @@ That prints every violation found and exits non-zero if there were any.
 Nothing is built: Ahab asks Bazel for the action graph with `aquery` and
 reads it, so the cost is one analysis phase rather than one build.
 
-One has to use `bazel run` and not `bazel test` with Ahab targets. Ahab
-shells out to Bazel, and a nested invocation inside a build action would
-contend for the output base with the invocation that started it—so it is
-deliberately not offered as a test rule.
+One has to use `bazel run` and not `bazel test` with Ahab targets in order
+to avoid nested Bazel invocations.
 
 ### Recording what you find
 
@@ -114,8 +111,7 @@ as they do not. That is the target to put in CI.
 cannot drift apart. `ahab_update` writes relative to the workspace root, so
 it lands in the same place whatever directory you ran it from.
 
-`ahab_explain` prints a recorded report without analyzing anything, which is
-how you read one produced on another machine:
+`ahab_explain` prints a recorded report without analyzing anything:
 
 ```starlark
 ahab_explain(
@@ -135,11 +131,8 @@ through, so `visibility` and `tags` work as usual.
 `configs` forwards `--config=<name>` values to the underlying `aquery`,
 which matters when the thing worth analyzing is a particular configuration.
 
-`compilation_mode` asks for `fastbuild`, `dbg` or `opt` rather than the
-default. It is worth its own attribute because a toolchain does different
-work in each: a debug build compiles with information a fast one leaves out,
-and the flags that keep that information reproducible are only passed when
-it is being produced.
+`compilation_mode` sets the compilation mode to `fastbuild`, `dbg` or `opt`
+rather than the default.
 
 The binary is also usable directly—`bazel run @ahab//:ahab -- --help` lists
 the flags the macros set for you.
@@ -147,9 +140,9 @@ the flags the macros set for you.
 ## Checks
 
 Ahab reports two kinds of finding. A **hermeticity violation** says the
-action's behaviour can depend on the machine it runs on. A
-**reproducibility violation** says the action runs a program that will not
-produce the same output twice, or that Ahab cannot vouch for.
+action's behaviour can depend on the machine it runs on. A **reproducibility
+violation** says the action runs a program that will not produce the same
+output twice, or that Ahab cannot vouch for.
 
 ### Environment leaks
 
@@ -195,24 +188,25 @@ Any `/`-rooted run appearing in an argument, a param file line, or an
 environment variable value. A build that names `/opt/toolchain/bin/cc` is a
 build that only works where that exists.
 
+Not every absolute path is a path on the build machine, though. A tool that
+builds a container image, a package or an installer is routinely told where
+a file will sit once the artifact is unpacked *somewhere else*:
+
+```
+img manifest --working-dir /app --entrypoint /app/bin/server
+```
+
+`/app` is a directory the image will have, not an input path on the system
+where we are running the build. Ahab has the necessary knowledge in order
+make a distinction. See [`declared_paths`](#writing-one) below.
+
 ### Workspace status
 
 An action that reads `bazel-out/stable-status.txt` or
-`bazel-out/volatile-status.txt`. These are where Bazel writes the workspace
-status, and an action reading one produces output that depends on values
-gathered about the build rather than on anything it declared as an input.
-
-Ahab does not say what is in them, because it cannot: the contents come from
-`--workspace_status_command` and a project may put anything there. Nor are
-the two told apart by meaning—a key goes to the stable file if it is spelled
-`STABLE_` and to the volatile one otherwise, so the volatile file is not the
-one about time, it is the one holding whatever was not declared stable.
-
-What does distinguish them is what Bazel does with them. A change to the
-stable file invalidates the actions that read it; a change to the volatile
-file deliberately does not, since a timestamp that changed on every build
-would otherwise rebuild the world. So an action reading the volatile file is
-not merely one whose output varies—its cached output can be stale.
+`bazel-out/volatile-status.txt` is reported by default. These are where
+Bazel writes the workspace status, and an action reading one produces output
+that depends on values gathered about the build rather than on anything it
+declared as an input.
 
 Reading these files is often deliberate: it is how a release binary carries
 a version. Like a `local` tag, that makes it a fact worth having on the
@@ -233,16 +227,14 @@ out of that:
 | never reproducible          | the program cannot be made deterministic by any flags |
 | conditional reproducibility | the program is deterministic only under conditions this invocation does not meet |
 
-Unknown is reported rather than passed over. A tool nobody has described is
-not evidence of anything, and treating silence as approval is how a total
-check stops being total.
+Unknown programs are reported rather than passed over. A tool nobody has
+described is not evidence of anything, and treating silence as approval is
+how a total check stops being total.
 
 ## Reproducibility specifications
 
-A specification says what Ahab knows about one program. The library it ships
-with is small and deliberately so—every entry is a claim somebody had to
-justify—so describing your own tools is the normal case, not an advanced
-one.
+A specification says what Ahab knows about one program. It can be extended
+by users and this section explains how to do it.
 
 ### Naming a program
 
@@ -261,9 +253,8 @@ The form is `@<module>+<extension>//<path>`, dropping to `@<module>//...` if
 no extension is involved, `//<path>` for a program in the main module, and a
 bare path for anything outside the execution root. Everything unstable is
 normalized away: the Bazel version's separator, the module version, the
-generated repository name—which braids together names your project chose,
-dependency versions and platform triples. What is left is the module and
-extension names, fixed by whoever wrote the tool, and the path within them.
+generated repository name. What is left is the module and extension names,
+fixed by whoever wrote the tool, and the path within them.
 
 The consequence worth knowing is that every repository generated by one
 extension shares an identity. Each `crate_universe` build script is
@@ -304,6 +295,7 @@ The fields live directly under `spec`, and only the first is required:
 | `requirements`    | optional | the same, said conditionally         |
 | `prohibitions`    | optional | the same, said conditionally         |
 | `takes_value`     | optional | flags whose value is the next word   |
+| `declared_paths`  | optional | absolute paths here are not inputs   |
 | `recognize`       | optional | how to transform options             |
 
 `reproducibility` is one of:
@@ -331,9 +323,9 @@ only that some remapping happens; `--remap-path-prefix=${pwd}=*` says the
 execution root is what gets remapped, which is the thing actually worth
 requiring.
 
-`takes_value` names the flags whose value arrives as a separate argument.
-A pattern sees one argument at a time, so `--mtime=portable` is within
-reach and `--invalidation_mode unchecked_hash` is not—the value is simply a
+`takes_value` names the flags whose value arrives as a separate argument. A
+pattern sees one argument at a time, so `--mtime=portable` is within reach
+and `--invalidation_mode unchecked_hash` is not—the value is simply a
 different word. Naming the flag folds the pair together with an `=` before
 anything looks at it:
 
@@ -347,6 +339,18 @@ anything looks at it:
 
 Folding with `=` is what makes the two spellings converge, so one pattern
 covers a tool however it was invoked—`-t 5` and `-t=5` both become `-t=5`.
+
+`declared_paths` names the options in which an absolute path describes the
+artifact the program produces rather than the machine producing it, and so
+is not an [absolute-path](#absolute-paths) violation:
+
+```json
+{
+  "reproducibility": "always",
+  "takes_value": ["--working-dir", "--entrypoint"],
+  "declared_paths": ["--working-dir=*", "--entrypoint=*"]
+}
+```
 
 `recognize` is applied to each argument before the patterns see it, which is
 what lets one specification cover a tool with several spellings for the same
@@ -419,8 +423,7 @@ records the directory it was compiled in (none of ["-fdebug-compilation-dir=*",
 
 `required_flags` and `breaking_flags` remain the short way to say the
 unconditional case, and mean exactly what a clause with no `when` and a
-single pattern means. Use them where a rule really does hold however the
-program was invoked.
+single pattern means.
 
 ### Saying it another way
 
@@ -447,10 +450,6 @@ which program answered for it. `wraps` says the real command follows a
 separator in this one's arguments, so Ahab unwraps and judges what is
 underneath. That is how e.g. `process_wrapper` is handled.
 
-A file given later overrides one given earlier, and both override Ahab's
-built-in knowledge—so a project can correct what Ahab believes about
-anyone's tools, not only its own.
-
 ## Exceptions
 
 An exception excuses violations you have decided to live with. They are
@@ -473,7 +472,7 @@ exceptions = [
 ```
 
 A lone `mnemonic` would excuse everything that mnemonic's actions do. With a
-`path` beside it, only that path is excused, and only there.
+`path` beside it, only that path is excused.
 
 Every field except `reason` and `kind` is a pattern, with the same `*` and
 `?` as everywhere else.
@@ -498,9 +497,8 @@ The kinds are `environment_leak`, `bad_path`, `execution_requirement`,
 
 Fields that only some kinds carry narrow an exception on their own: `path`
 can only match an absolute-path or a workspace-status finding, so naming one
-already rules out the rest—though not, in that case, down to a single kind.
-Naming a field the stated kind cannot carry is refused when the file loads,
-rather than quietly matching nothing.
+already rules out the rest. Naming a field the stated kind cannot carry is
+refused when the file loads, rather than quietly matching nothing.
 
 ### What they will not let you do
 
@@ -518,16 +516,8 @@ warning: 1 exception matched nothing:
   - "clang finds its own headers through the sysroot" (exceptions.json)
 ```
 
-That is how you find out a problem was fixed years ago. It is a warning
-rather than an error, because turning good news into a failed build teaches
-people to stop fixing things.
-
-### Being specific
-
-Prefer exact conditions to patterns that happen to cover them. Two
-exceptions naming `no-sandbox` and `no-cache` will each tell you when it
-stops matching; one naming `no-*` covers both, stays in use while either
-matches, and would silently swallow `no-remote` as well.
+It is a warning rather than an error, because turning good news into a
+failed build teaches people to stop fixing things.
 
 ## Development
 
