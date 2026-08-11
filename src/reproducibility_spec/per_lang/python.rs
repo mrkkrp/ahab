@@ -1,4 +1,4 @@
-use super::super::library::{Entry, Transition};
+use super::super::library::{Entry, Transition, always};
 use super::super::program_id::ProgramId;
 use super::super::{Reproducibility, ReproducibilitySpec};
 
@@ -43,6 +43,28 @@ pub(in crate::reproducibility_spec) fn entries() -> Vec<(ProgramId, Entry)>
                 )
                 .with_valued_flags(["--invalidation_mode"]),
             ),
+        ),
+        // The same precompiler under the name a later rules_python gives
+        // it. Both are the script the interpreter is handed; only the file
+        // name changed.
+        (
+            rules_python("tools/precompiler/precompiler_.py"),
+            Entry::SameAs(rules_python("tools/precompiler/precompiler")),
+        ),
+        // Writes the handful of facts a `py_binary` can report about how it
+        // was built: its label, its compilation mode, and whether it was
+        // stamped. All three arrive in the environment from the target's
+        // own attributes.
+        //
+        // When stamping is on it also copies in Bazel's workspace status
+        // files, and that is deliberately not stated here—the same call as
+        // rules_pkg's `--stamp_from`. Reading a status file is a dependency
+        // rather than a flag, and the workspace status check reads it off
+        // the action's inputs already, so saying it twice would report one
+        // problem as two.
+        (
+            rules_python("python/private/build_data_writer.sh"),
+            Entry::Spec(always()),
         ),
     ]
 }
@@ -120,6 +142,38 @@ mod tests {
             mode("timestamp"),
             Conformance::Conditional { .. }
         ));
+    }
+
+    #[test]
+    fn the_precompiler_answers_under_either_of_its_file_names() {
+        let resolution = Library::builtin().resolve(
+            rules_python("tools/precompiler/precompiler_.py"),
+            vec!["--invalidation_mode", "timestamp", "--src", "x.py"],
+        );
+        assert_eq!(
+            resolution.synonym(),
+            Some(&rules_python("tools/precompiler/precompiler")),
+        );
+        // The verdict travels with the name, conditions and all.
+        let (_, spec) = resolution.spec.clone().expect("a spec");
+        assert!(matches!(
+            spec.assess(resolution.args),
+            Conformance::Conditional { .. }
+        ));
+    }
+
+    #[test]
+    fn writing_build_data_is_vouched_for() {
+        // What it writes comes from the target's own attributes. Stamping
+        // adds Bazel's status files to the action's inputs, which is the
+        // workspace status check's business rather than this spec's.
+        assert_eq!(
+            assess(
+                rules_python("python/private/build_data_writer.sh"),
+                vec![],
+            ),
+            Conformance::Reproducible,
+        );
     }
 
     #[test]

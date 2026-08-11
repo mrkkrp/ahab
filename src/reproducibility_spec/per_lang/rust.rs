@@ -87,6 +87,49 @@ pub(in crate::reproducibility_spec) fn entries() -> Vec<(ProgramId, Entry)>
             ProgramId::module("rules_rust_prost", "private/protoc_wrapper"),
             Entry::Spec(always()),
         ),
+        // rustdoc, which takes rustc's flags and is emphatically *not*
+        // declared its synonym. rustc needs `--remap-path-prefix` because
+        // it bakes the execution-time path into debug info; rustdoc cannot
+        // be given it at all on a stable toolchain—rules_rust passes
+        // `remap_path_prefix = None` and says why: "rustdoc only supports
+        // `--remap-path-prefix` behind `-Zunstable-options`". A spec
+        // requiring the remaps would demand something no user could
+        // provide.
+        //
+        // It does not need them. Measured on the 1.93.1 rustdoc analyzed
+        // here: documenting the same crate from two different working
+        // directories, two seconds apart, produced 55 byte-identical
+        // files—source-view pages included, which is where a path would
+        // show up—and nothing in the output names the directory it ran in.
+        (rust_tool("rustdoc"), Entry::Spec(always())),
+        // rustfmt, which rules_rust runs only in `--check` mode: it writes
+        // nothing and reports by exit status. The action's sole declared
+        // output is the empty file `process_wrapper --touch-file` creates,
+        // so what it produces is a constant.
+        //
+        // Not under `rust_toolchain/bin` like the rest: rustfmt comes from
+        // a repository of its own, which can be pinned to a different
+        // channel from the toolchain it formats for.
+        (
+            ProgramId::extension("rules_rust", "rust", "bin/rustfmt"),
+            Entry::Spec(always()),
+        ),
+        // Packs a rustdoc output directory into a zip, stripping a prefix
+        // from each name. It runs no zip logic of its own—the first
+        // argument is the zip tool, which it spawns—so it is exactly as
+        // reproducible as whatever it was handed, which is what `Wraps`
+        // says. In practice that is Bazel's zipper, already vouched for.
+        //
+        // The arguments carried across are not literally the ones it will
+        // pass on (it rewrites them into `name=path` pairs), but they are
+        // not consulted: what matters is which program answers.
+        (
+            ProgramId::module(
+                "rules_rust",
+                "rust/private/rustdoc/dir_zipper/dir_zipper",
+            ),
+            Entry::Wraps(Transition::FirstArgument),
+        ),
     ]
 }
 
@@ -110,6 +153,71 @@ mod tests {
             "--edition=2021",
             "-Cembed-bitcode=no",
         ]
+    }
+
+    #[test]
+    fn rustdoc_is_not_held_to_rustcs_remapping() {
+        // rules_rust gives rustdoc the same flags as rustc but none of the
+        // remaps, because a stable rustdoc will not take them. Judging it
+        // by rustc's spec would report every documented crate for missing
+        // something nobody can pass.
+        assert_eq!(
+            assess(rust_tool("rustdoc"), without_remappings()),
+            Conformance::Reproducible,
+        );
+        // And the same arguments still fail for rustc, so the two really
+        // are being held to different standards rather than the
+        // requirement having quietly gone away.
+        assert!(matches!(
+            assess(rust_tool("rustc"), without_remappings()),
+            Conformance::Conditional { .. }
+        ));
+    }
+
+    #[test]
+    fn rustfmt_only_checks_and_so_writes_a_constant() {
+        assert_eq!(
+            assess(
+                ProgramId::extension("rules_rust", "rust", "bin/rustfmt"),
+                vec![
+                    "--config-path",
+                    "external/rules_rust+/rust/settings/.rustfmt.toml",
+                    "--edition",
+                    "2024",
+                    "--config",
+                    "skip_children=true",
+                    "--check",
+                    "nativelink-config/src/lib.rs",
+                ],
+            ),
+            Conformance::Reproducible,
+        );
+    }
+
+    #[test]
+    fn the_rustdoc_zipper_answers_for_the_tool_it_is_handed() {
+        // Its first argument is the zip tool it spawns, so the verdict
+        // belongs to that—Bazel's zipper, which writes a fixed timestamp
+        // into every entry—and the report still names dir_zipper as the
+        // wrapper that led there.
+        let zipper =
+            ProgramId::module("bazel_tools", "tools/zip/zipper/zipper");
+        let resolution = Library::builtin().resolve(
+            ProgramId::module(
+                "rules_rust",
+                "rust/private/rustdoc/dir_zipper/dir_zipper",
+            ),
+            vec![
+                "external/bazel_tools/tools/zip/zipper/zipper",
+                "bazel-out/k8-fastbuild/bin/nativelink-macro/docs.zip",
+                "bazel-out/k8-fastbuild/bin",
+                "bazel-out/k8-fastbuild/bin/nativelink-macro/docs.rustdoc",
+            ],
+        );
+        assert_eq!(resolution.program, zipper);
+        assert_eq!(resolution.wrappers.len(), 1);
+        let (_, spec) = resolution.spec.clone().expect("a spec");
+        assert_eq!(spec.assess(resolution.args), Conformance::Reproducible,);
     }
 
     #[test]
