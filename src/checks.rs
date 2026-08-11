@@ -150,6 +150,22 @@ impl LeakSite {
             },
         }
     }
+
+    /// How a report names where something was found, and the text it was
+    /// found in.
+    fn describe(&self) -> (String, &str) {
+        match self {
+            LeakSite::Argument { value } => {
+                ("an argument".to_owned(), value.as_str())
+            }
+            LeakSite::ParamFile { exec_path, value } => {
+                (format!("param file {exec_path:?}"), value.as_str())
+            }
+            LeakSite::EnvVar { key, value } => {
+                (format!("environment variable {key:?}"), value.as_str())
+            }
+        }
+    }
 }
 
 /// A parenthetical describing how the analysis reached the program it
@@ -445,28 +461,15 @@ impl Violation {
             Violation::EnvironmentLeak {
                 action,
                 source,
-                sentinel,
+                sentinel: _,
                 site,
             } => {
-                let source = found(source.as_str());
-                let action = at(action);
-                match site {
-                    LeakSite::Argument { value } => format!(
-                        "{hermeticity}: {source} leaked into an argument of \
-                         {action} (found sentinel {sentinel:?} in argument \
-                         {value:?})",
-                    ),
-                    LeakSite::ParamFile { exec_path, value } => format!(
-                        "{hermeticity}: {source} leaked into param file \
-                         {exec_path:?} of {action} (found sentinel \
-                         {sentinel:?} in line {value:?})",
-                    ),
-                    LeakSite::EnvVar { key, value } => format!(
-                        "{hermeticity}: {source} leaked into environment \
-                         variable {key:?} of {action} (found sentinel \
-                         {sentinel:?} in value {value:?})",
-                    ),
-                }
+                let (where_, text) = site.describe();
+                format!(
+                    "{hermeticity}: {} leaked into {where_} of {}: {text}",
+                    found(source.as_str()),
+                    at(action),
+                )
             }
             Violation::BadPath { action, actual } => format!(
                 "{hermeticity}: {} sets PATH to {}, expected {EXPECTED_PATH:?}",
@@ -496,23 +499,13 @@ impl Violation {
                 )
             }
             Violation::AbsolutePath { action, path, site } => {
-                let action = at(action);
-                let path = found(&format!("{path:?}"));
-                match site {
-                    LeakSite::Argument { value } => format!(
-                        "{hermeticity}: {action} references absolute path \
-                         {path} in argument {value:?}",
-                    ),
-                    LeakSite::ParamFile { exec_path, value } => format!(
-                        "{hermeticity}: {action} references absolute path \
-                         {path} in param file {exec_path:?} (line {value:?})",
-                    ),
-                    LeakSite::EnvVar { key, value } => format!(
-                        "{hermeticity}: {action} references absolute path \
-                         {path} in environment variable {key:?} \
-                         (value {value:?})",
-                    ),
-                }
+                let (where_, text) = site.describe();
+                format!(
+                    "{hermeticity}: {} references absolute path {} in \
+                     {where_}: {text}",
+                    at(action),
+                    found(&format!("{path:?}")),
+                )
             }
             // Programs render through their `Display`
             // (`@rules_rust//util/…`) rather than their `Debug`, then quote
@@ -579,7 +572,10 @@ impl Violation {
                                 .join(" ")
                         };
                         let evidence = if clause.present.is_empty() {
-                            format!("none of {}", names(&clause.any_of))
+                            format!(
+                                "but none of {} was passed",
+                                names(&clause.any_of)
+                            )
                         } else {
                             names(&clause.present)
                         };
@@ -2977,7 +2973,9 @@ pub(crate) mod tests {
         };
         let r = v.render(Palette::plain());
         assert!(r.contains(r#"param file "out/foo.params""#), "{r}");
-        assert!(r.contains(r#"line "-L/opt/lib""#), "{r}");
+        // The line itself ends the report and is quoted by nothing: it is
+        // the thing to look at, not a parenthetical about it.
+        assert!(r.ends_with(": -L/opt/lib"), "{r}");
     }
 
     #[test]
@@ -3085,7 +3083,10 @@ pub(crate) mod tests {
         // Each clause speaks in the words its spec gave it, and shows the
         // patterns that would have met it or the arguments that broke it.
         assert!(r.contains("it needs an option it was not given"), "{r}");
-        assert!(r.contains("none of --deterministic"), "{r}");
+        assert!(
+            r.contains("but none of --deterministic was passed"),
+            "{r}"
+        );
         assert!(r.contains("it was given an option that breaks it"), "{r}");
         assert!(r.contains("breaks it, --timestamp"), "{r}");
     }
@@ -3108,7 +3109,7 @@ pub(crate) mod tests {
         };
         let r = v.render(Palette::plain());
         assert!(r.contains("it needs an option it was not given"), "{r}");
-        assert!(r.contains("none of --sorted"), "{r}");
+        assert!(r.contains("but none of --sorted was passed"), "{r}");
         // Plainly: the options are bare, with no brackets or quotes of
         // their own. The program name is quoted; that is a different
         // thing and stays.

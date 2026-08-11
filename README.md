@@ -415,10 +415,11 @@ them has to be met.
 unmet, so it should finish the sentence "this is not reproducible because…":
 
 ```
-CppCompile for //source/common/common:assert_lib runs
+reproducibility violation: CppCompile action for target
+//source/common/common:assert_lib runs program
 "@llvm_toolchain//bin/cc_wrapper.sh" non-reproducibly: debugging information
-records the directory it was compiled in (none of ["-fdebug-compilation-dir=*",
-"-ffile-prefix-map=*"])
+records the directory it was compiled in, but none of
+-fdebug-compilation-dir=* -ffile-prefix-map=* was passed
 ```
 
 `required_flags` and `breaking_flags` remain the short way to say the
