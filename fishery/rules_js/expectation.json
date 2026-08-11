@@ -1,0 +1,2472 @@
+{
+  "violations": [
+    {
+      "count": 1,
+      "violation": {
+        "kind": "execution_requirement",
+        "action": {
+          "mnemonic": "CopyFile",
+          "target": "//js/private/test/js_run_devserver:node_modules_symlink_to_execroot_test"
+        },
+        "requirement": "no-remote-exec"
+      }
+    },
+    {
+      "count": 1,
+      "violation": {
+        "kind": "execution_requirement",
+        "action": {
+          "mnemonic": "CopyFile",
+          "target": "//js/private/test/js_run_devserver:node_modules_symlink_to_execroot_test"
+        },
+        "requirement": "no-sandbox"
+      }
+    },
+    {
+      "count": 1,
+      "violation": {
+        "kind": "execution_requirement",
+        "action": {
+          "mnemonic": "NpmLifecycleHook",
+          "target": "//:.aspect_rules_js/node_modules/@figma+nodegit@0.28.0-figma.9_encoding@0.1.13/lc"
+        },
+        "requirement": "no-sandbox"
+      }
+    },
+    {
+      "count": 1,
+      "violation": {
+        "kind": "execution_requirement",
+        "action": {
+          "mnemonic": "NpmLifecycleHook",
+          "target": "//:.aspect_rules_js/node_modules/@figma+nodegit@0.28.0-figma.9_encoding@0.1.13/lc"
+        },
+        "requirement": "requires-network"
+      }
+    },
+    {
+      "count": 1,
+      "violation": {
+        "kind": "execution_requirement",
+        "action": {
+          "mnemonic": "NpmLifecycleHook",
+          "target": "//:.aspect_rules_js/node_modules/bufferutil@4.0.8/lc"
+        },
+        "requirement": "no-sandbox"
+      }
+    },
+    {
+      "count": 1,
+      "violation": {
+        "kind": "execution_requirement",
+        "action": {
+          "mnemonic": "NpmLifecycleHook",
+          "target": "//:.aspect_rules_js/node_modules/esbuild@0.24.0/lc"
+        },
+        "requirement": "no-sandbox"
+      }
+    },
+    {
+      "count": 1,
+      "violation": {
+        "kind": "execution_requirement",
+        "action": {
+          "mnemonic": "NpmLifecycleHook",
+          "target": "//:.aspect_rules_js/node_modules/esbuild@0.24.0/lc"
+        },
+        "requirement": "requires-network"
+      }
+    },
+    {
+      "count": 1,
+      "violation": {
+        "kind": "execution_requirement",
+        "action": {
+          "mnemonic": "NpmLifecycleHook",
+          "target": "//:.aspect_rules_js/node_modules/puppeteer@19.11.1_230959327/lc"
+        },
+        "requirement": "no-remote"
+      }
+    },
+    {
+      "count": 1,
+      "violation": {
+        "kind": "execution_requirement",
+        "action": {
+          "mnemonic": "NpmLifecycleHook",
+          "target": "//:.aspect_rules_js/node_modules/puppeteer@19.11.1_230959327/lc"
+        },
+        "requirement": "no-sandbox"
+      }
+    },
+    {
+      "count": 1,
+      "violation": {
+        "kind": "execution_requirement",
+        "action": {
+          "mnemonic": "NpmLifecycleHook",
+          "target": "//:.aspect_rules_js/node_modules/puppeteer@19.11.1_230959327/lc"
+        },
+        "requirement": "requires-network"
+      }
+    },
+    {
+      "count": 1,
+      "violation": {
+        "kind": "execution_requirement",
+        "action": {
+          "mnemonic": "NpmLifecycleHook",
+          "target": "//:.aspect_rules_js/node_modules/segfault-handler@1.3.0/lc"
+        },
+        "requirement": "no-sandbox"
+      }
+    },
+    {
+      "count": 1,
+      "violation": {
+        "kind": "execution_requirement",
+        "action": {
+          "mnemonic": "NpmLifecycleHook",
+          "target": "//:.aspect_rules_js/node_modules/segfault-handler@1.3.0/lc"
+        },
+        "requirement": "requires-network"
+      }
+    },
+    {
+      "count": 1,
+      "violation": {
+        "kind": "execution_requirement",
+        "action": {
+          "mnemonic": "TestRunner",
+          "target": "//js/private/test/js_run_devserver:node_modules_symlink_to_execroot_test"
+        },
+        "requirement": "no-remote-exec"
+      }
+    },
+    {
+      "count": 1,
+      "violation": {
+        "kind": "execution_requirement",
+        "action": {
+          "mnemonic": "TestRunner",
+          "target": "//js/private/test/js_run_devserver:node_modules_symlink_to_execroot_test"
+        },
+        "requirement": "no-sandbox"
+      }
+    },
+    {
+      "count": 1,
+      "violation": {
+        "kind": "execution_requirement",
+        "action": {
+          "mnemonic": "TestRunner",
+          "target": "//js/private/test/node-patches:escape_node20_test"
+        },
+        "requirement": "no-sandbox"
+      }
+    },
+    {
+      "count": 1,
+      "violation": {
+        "kind": "execution_requirement",
+        "action": {
+          "mnemonic": "TestRunner",
+          "target": "//js/private/test/node-patches:escape_node22_test"
+        },
+        "requirement": "no-sandbox"
+      }
+    },
+    {
+      "count": 1,
+      "violation": {
+        "kind": "execution_requirement",
+        "action": {
+          "mnemonic": "TestRunner",
+          "target": "//js/private/test/node-patches:escape_node24_test"
+        },
+        "requirement": "no-sandbox"
+      }
+    },
+    {
+      "count": 1,
+      "violation": {
+        "kind": "execution_requirement",
+        "action": {
+          "mnemonic": "TestRunner",
+          "target": "//js/private/test/node-patches:escape_nodejs_test"
+        },
+        "requirement": "no-sandbox"
+      }
+    },
+    {
+      "count": 1,
+      "violation": {
+        "kind": "execution_requirement",
+        "action": {
+          "mnemonic": "TestRunner",
+          "target": "//js/private/test/node-patches:lstat_node20_cjs_test"
+        },
+        "requirement": "no-sandbox"
+      }
+    },
+    {
+      "count": 1,
+      "violation": {
+        "kind": "execution_requirement",
+        "action": {
+          "mnemonic": "TestRunner",
+          "target": "//js/private/test/node-patches:lstat_node20_test"
+        },
+        "requirement": "no-sandbox"
+      }
+    },
+    {
+      "count": 1,
+      "violation": {
+        "kind": "execution_requirement",
+        "action": {
+          "mnemonic": "TestRunner",
+          "target": "//js/private/test/node-patches:lstat_node22_cjs_test"
+        },
+        "requirement": "no-sandbox"
+      }
+    },
+    {
+      "count": 1,
+      "violation": {
+        "kind": "execution_requirement",
+        "action": {
+          "mnemonic": "TestRunner",
+          "target": "//js/private/test/node-patches:lstat_node22_test"
+        },
+        "requirement": "no-sandbox"
+      }
+    },
+    {
+      "count": 1,
+      "violation": {
+        "kind": "execution_requirement",
+        "action": {
+          "mnemonic": "TestRunner",
+          "target": "//js/private/test/node-patches:lstat_node24_cjs_test"
+        },
+        "requirement": "no-sandbox"
+      }
+    },
+    {
+      "count": 1,
+      "violation": {
+        "kind": "execution_requirement",
+        "action": {
+          "mnemonic": "TestRunner",
+          "target": "//js/private/test/node-patches:lstat_node24_test"
+        },
+        "requirement": "no-sandbox"
+      }
+    },
+    {
+      "count": 1,
+      "violation": {
+        "kind": "execution_requirement",
+        "action": {
+          "mnemonic": "TestRunner",
+          "target": "//js/private/test/node-patches:lstat_nodejs_cjs_test"
+        },
+        "requirement": "no-sandbox"
+      }
+    },
+    {
+      "count": 1,
+      "violation": {
+        "kind": "execution_requirement",
+        "action": {
+          "mnemonic": "TestRunner",
+          "target": "//js/private/test/node-patches:lstat_nodejs_test"
+        },
+        "requirement": "no-sandbox"
+      }
+    },
+    {
+      "count": 1,
+      "violation": {
+        "kind": "execution_requirement",
+        "action": {
+          "mnemonic": "TestRunner",
+          "target": "//js/private/test/node-patches:opendir_node20_cjs_test"
+        },
+        "requirement": "no-sandbox"
+      }
+    },
+    {
+      "count": 1,
+      "violation": {
+        "kind": "execution_requirement",
+        "action": {
+          "mnemonic": "TestRunner",
+          "target": "//js/private/test/node-patches:opendir_node20_test"
+        },
+        "requirement": "no-sandbox"
+      }
+    },
+    {
+      "count": 1,
+      "violation": {
+        "kind": "execution_requirement",
+        "action": {
+          "mnemonic": "TestRunner",
+          "target": "//js/private/test/node-patches:opendir_node22_cjs_test"
+        },
+        "requirement": "no-sandbox"
+      }
+    },
+    {
+      "count": 1,
+      "violation": {
+        "kind": "execution_requirement",
+        "action": {
+          "mnemonic": "TestRunner",
+          "target": "//js/private/test/node-patches:opendir_node22_test"
+        },
+        "requirement": "no-sandbox"
+      }
+    },
+    {
+      "count": 1,
+      "violation": {
+        "kind": "execution_requirement",
+        "action": {
+          "mnemonic": "TestRunner",
+          "target": "//js/private/test/node-patches:opendir_node24_cjs_test"
+        },
+        "requirement": "no-sandbox"
+      }
+    },
+    {
+      "count": 1,
+      "violation": {
+        "kind": "execution_requirement",
+        "action": {
+          "mnemonic": "TestRunner",
+          "target": "//js/private/test/node-patches:opendir_node24_test"
+        },
+        "requirement": "no-sandbox"
+      }
+    },
+    {
+      "count": 1,
+      "violation": {
+        "kind": "execution_requirement",
+        "action": {
+          "mnemonic": "TestRunner",
+          "target": "//js/private/test/node-patches:opendir_nodejs_cjs_test"
+        },
+        "requirement": "no-sandbox"
+      }
+    },
+    {
+      "count": 1,
+      "violation": {
+        "kind": "execution_requirement",
+        "action": {
+          "mnemonic": "TestRunner",
+          "target": "//js/private/test/node-patches:opendir_nodejs_test"
+        },
+        "requirement": "no-sandbox"
+      }
+    },
+    {
+      "count": 1,
+      "violation": {
+        "kind": "execution_requirement",
+        "action": {
+          "mnemonic": "TestRunner",
+          "target": "//js/private/test/node-patches:readdir_node20_cjs_test"
+        },
+        "requirement": "no-sandbox"
+      }
+    },
+    {
+      "count": 1,
+      "violation": {
+        "kind": "execution_requirement",
+        "action": {
+          "mnemonic": "TestRunner",
+          "target": "//js/private/test/node-patches:readdir_node20_test"
+        },
+        "requirement": "no-sandbox"
+      }
+    },
+    {
+      "count": 1,
+      "violation": {
+        "kind": "execution_requirement",
+        "action": {
+          "mnemonic": "TestRunner",
+          "target": "//js/private/test/node-patches:readdir_node22_cjs_test"
+        },
+        "requirement": "no-sandbox"
+      }
+    },
+    {
+      "count": 1,
+      "violation": {
+        "kind": "execution_requirement",
+        "action": {
+          "mnemonic": "TestRunner",
+          "target": "//js/private/test/node-patches:readdir_node22_test"
+        },
+        "requirement": "no-sandbox"
+      }
+    },
+    {
+      "count": 1,
+      "violation": {
+        "kind": "execution_requirement",
+        "action": {
+          "mnemonic": "TestRunner",
+          "target": "//js/private/test/node-patches:readdir_node24_cjs_test"
+        },
+        "requirement": "no-sandbox"
+      }
+    },
+    {
+      "count": 1,
+      "violation": {
+        "kind": "execution_requirement",
+        "action": {
+          "mnemonic": "TestRunner",
+          "target": "//js/private/test/node-patches:readdir_node24_test"
+        },
+        "requirement": "no-sandbox"
+      }
+    },
+    {
+      "count": 1,
+      "violation": {
+        "kind": "execution_requirement",
+        "action": {
+          "mnemonic": "TestRunner",
+          "target": "//js/private/test/node-patches:readdir_nodejs_cjs_test"
+        },
+        "requirement": "no-sandbox"
+      }
+    },
+    {
+      "count": 1,
+      "violation": {
+        "kind": "execution_requirement",
+        "action": {
+          "mnemonic": "TestRunner",
+          "target": "//js/private/test/node-patches:readdir_nodejs_test"
+        },
+        "requirement": "no-sandbox"
+      }
+    },
+    {
+      "count": 1,
+      "violation": {
+        "kind": "execution_requirement",
+        "action": {
+          "mnemonic": "TestRunner",
+          "target": "//js/private/test/node-patches:readlink_node20_cjs_test"
+        },
+        "requirement": "no-sandbox"
+      }
+    },
+    {
+      "count": 1,
+      "violation": {
+        "kind": "execution_requirement",
+        "action": {
+          "mnemonic": "TestRunner",
+          "target": "//js/private/test/node-patches:readlink_node20_test"
+        },
+        "requirement": "no-sandbox"
+      }
+    },
+    {
+      "count": 1,
+      "violation": {
+        "kind": "execution_requirement",
+        "action": {
+          "mnemonic": "TestRunner",
+          "target": "//js/private/test/node-patches:readlink_node22_cjs_test"
+        },
+        "requirement": "no-sandbox"
+      }
+    },
+    {
+      "count": 1,
+      "violation": {
+        "kind": "execution_requirement",
+        "action": {
+          "mnemonic": "TestRunner",
+          "target": "//js/private/test/node-patches:readlink_node22_test"
+        },
+        "requirement": "no-sandbox"
+      }
+    },
+    {
+      "count": 1,
+      "violation": {
+        "kind": "execution_requirement",
+        "action": {
+          "mnemonic": "TestRunner",
+          "target": "//js/private/test/node-patches:readlink_node24_cjs_test"
+        },
+        "requirement": "no-sandbox"
+      }
+    },
+    {
+      "count": 1,
+      "violation": {
+        "kind": "execution_requirement",
+        "action": {
+          "mnemonic": "TestRunner",
+          "target": "//js/private/test/node-patches:readlink_node24_test"
+        },
+        "requirement": "no-sandbox"
+      }
+    },
+    {
+      "count": 1,
+      "violation": {
+        "kind": "execution_requirement",
+        "action": {
+          "mnemonic": "TestRunner",
+          "target": "//js/private/test/node-patches:readlink_nodejs_cjs_test"
+        },
+        "requirement": "no-sandbox"
+      }
+    },
+    {
+      "count": 1,
+      "violation": {
+        "kind": "execution_requirement",
+        "action": {
+          "mnemonic": "TestRunner",
+          "target": "//js/private/test/node-patches:readlink_nodejs_test"
+        },
+        "requirement": "no-sandbox"
+      }
+    },
+    {
+      "count": 1,
+      "violation": {
+        "kind": "execution_requirement",
+        "action": {
+          "mnemonic": "TestRunner",
+          "target": "//js/private/test/node-patches:realpath_node20_cjs_test"
+        },
+        "requirement": "no-sandbox"
+      }
+    },
+    {
+      "count": 1,
+      "violation": {
+        "kind": "execution_requirement",
+        "action": {
+          "mnemonic": "TestRunner",
+          "target": "//js/private/test/node-patches:realpath_node20_test"
+        },
+        "requirement": "no-sandbox"
+      }
+    },
+    {
+      "count": 1,
+      "violation": {
+        "kind": "execution_requirement",
+        "action": {
+          "mnemonic": "TestRunner",
+          "target": "//js/private/test/node-patches:realpath_node22_cjs_test"
+        },
+        "requirement": "no-sandbox"
+      }
+    },
+    {
+      "count": 1,
+      "violation": {
+        "kind": "execution_requirement",
+        "action": {
+          "mnemonic": "TestRunner",
+          "target": "//js/private/test/node-patches:realpath_node22_test"
+        },
+        "requirement": "no-sandbox"
+      }
+    },
+    {
+      "count": 1,
+      "violation": {
+        "kind": "execution_requirement",
+        "action": {
+          "mnemonic": "TestRunner",
+          "target": "//js/private/test/node-patches:realpath_node24_cjs_test"
+        },
+        "requirement": "no-sandbox"
+      }
+    },
+    {
+      "count": 1,
+      "violation": {
+        "kind": "execution_requirement",
+        "action": {
+          "mnemonic": "TestRunner",
+          "target": "//js/private/test/node-patches:realpath_node24_test"
+        },
+        "requirement": "no-sandbox"
+      }
+    },
+    {
+      "count": 1,
+      "violation": {
+        "kind": "execution_requirement",
+        "action": {
+          "mnemonic": "TestRunner",
+          "target": "//js/private/test/node-patches:realpath_nodejs_cjs_test"
+        },
+        "requirement": "no-sandbox"
+      }
+    },
+    {
+      "count": 1,
+      "violation": {
+        "kind": "execution_requirement",
+        "action": {
+          "mnemonic": "TestRunner",
+          "target": "//js/private/test/node-patches:realpath_nodejs_test"
+        },
+        "requirement": "no-sandbox"
+      }
+    },
+    {
+      "count": 1,
+      "violation": {
+        "kind": "execution_requirement",
+        "action": {
+          "mnemonic": "TestRunner",
+          "target": "//npm/private/test/npm_package_publish:test"
+        },
+        "requirement": "no-remote-exec"
+      }
+    },
+    {
+      "count": 1,
+      "violation": {
+        "kind": "execution_requirement",
+        "action": {
+          "mnemonic": "TestRunner",
+          "target": "//npm/private/test/npm_package_publish:test"
+        },
+        "requirement": "no-sandbox"
+      }
+    },
+    {
+      "count": 5,
+      "violation": {
+        "kind": "absolute_path",
+        "action": {
+          "mnemonic": "Genrule",
+          "target": "//js/private/test:shell_launcher_sed"
+        },
+        "path": "/~",
+        "site": {
+          "location": "argument",
+          "value": "source external/bazel_tools/tools/genrule/genrule-setup.sh; cat bazel-out/k8-fastbuild/bin/js/private/test/shellcheck_launcher_/shellcheck_launcher | sed \"s#bazel-out/k8-fastbuild/bin#bazel-out/k8-fastbuild/bin#\" | sed \"s#JS_BINARY__TARGET_CPU=\\\"k8\\\"#JS_BINARY__TARGET_CPU=\\\"k8\\\"#\" | sed \"s#linux_amd64#linux_amd64#\" | sed \"s#\\\"linux\\\"#\\\"k8\\\"#\" | sed -E -e 's/~~/++/g' -e 's|([+][+][^/~]+)~([^/~]+)~([^/~]+)|\\1+\\2+\\3|g' -e 's|([+][+][^/~]+)~([^/~]+)|\\1+\\2|g' > bazel-out/k8-fastbuild/bin/js/private/test/shellcheck_launcher_sed.sh"
+        }
+      }
+    },
+    {
+      "count": 1,
+      "violation": {
+        "kind": "system_program",
+        "action": {
+          "mnemonic": "Genrule",
+          "target": "//:node_modules_build_test_0__deps"
+        },
+        "program": {
+          "origin": "system",
+          "path": "/bin/bash"
+        },
+        "wrappers": []
+      }
+    },
+    {
+      "count": 1,
+      "violation": {
+        "kind": "system_program",
+        "action": {
+          "mnemonic": "Genrule",
+          "target": "//:npm_link_targets_node_modules_build_test_0__deps"
+        },
+        "program": {
+          "origin": "system",
+          "path": "/bin/bash"
+        },
+        "wrappers": []
+      }
+    },
+    {
+      "count": 1,
+      "violation": {
+        "kind": "system_program",
+        "action": {
+          "mnemonic": "Genrule",
+          "target": "//js/private/node-bootstrap/src:fs_generated"
+        },
+        "program": {
+          "origin": "system",
+          "path": "/bin/bash"
+        },
+        "wrappers": []
+      }
+    },
+    {
+      "count": 2,
+      "violation": {
+        "kind": "system_program",
+        "action": {
+          "mnemonic": "Genrule",
+          "target": "//js/private/test/data:data-genrule"
+        },
+        "program": {
+          "origin": "system",
+          "path": "/bin/bash"
+        },
+        "wrappers": []
+      }
+    },
+    {
+      "count": 2,
+      "violation": {
+        "kind": "system_program",
+        "action": {
+          "mnemonic": "Genrule",
+          "target": "//js/private/test/data:data-genrule-filegroup-srcs"
+        },
+        "program": {
+          "origin": "system",
+          "path": "/bin/bash"
+        },
+        "wrappers": []
+      }
+    },
+    {
+      "count": 1,
+      "violation": {
+        "kind": "system_program",
+        "action": {
+          "mnemonic": "Genrule",
+          "target": "//js/private/test/data:extract-js_library-srcs-data_0__deps"
+        },
+        "program": {
+          "origin": "system",
+          "path": "/bin/bash"
+        },
+        "wrappers": []
+      }
+    },
+    {
+      "count": 1,
+      "violation": {
+        "kind": "system_program",
+        "action": {
+          "mnemonic": "Genrule",
+          "target": "//js/private/test/data:extract-js_library-srcs2_0__deps"
+        },
+        "program": {
+          "origin": "system",
+          "path": "/bin/bash"
+        },
+        "wrappers": []
+      }
+    },
+    {
+      "count": 1,
+      "violation": {
+        "kind": "system_program",
+        "action": {
+          "mnemonic": "Genrule",
+          "target": "//js/private/test/data:extract-js_run_binary-srcs_0__deps"
+        },
+        "program": {
+          "origin": "system",
+          "path": "/bin/bash"
+        },
+        "wrappers": []
+      }
+    },
+    {
+      "count": 1,
+      "violation": {
+        "kind": "system_program",
+        "action": {
+          "mnemonic": "Genrule",
+          "target": "//js/private/test/data:extract-write-generated_0__deps"
+        },
+        "program": {
+          "origin": "system",
+          "path": "/bin/bash"
+        },
+        "wrappers": []
+      }
+    },
+    {
+      "count": 1,
+      "violation": {
+        "kind": "system_program",
+        "action": {
+          "mnemonic": "Genrule",
+          "target": "//js/private/test/data:extract-write-js_library-data_0__deps"
+        },
+        "program": {
+          "origin": "system",
+          "path": "/bin/bash"
+        },
+        "wrappers": []
+      }
+    },
+    {
+      "count": 1,
+      "violation": {
+        "kind": "system_program",
+        "action": {
+          "mnemonic": "Genrule",
+          "target": "//js/private/test/data:extract-write-js_library-srcs_0__deps"
+        },
+        "program": {
+          "origin": "system",
+          "path": "/bin/bash"
+        },
+        "wrappers": []
+      }
+    },
+    {
+      "count": 1,
+      "violation": {
+        "kind": "system_program",
+        "action": {
+          "mnemonic": "Genrule",
+          "target": "//js/private/test/js_binary_sh:regexy-args_0__deps"
+        },
+        "program": {
+          "origin": "system",
+          "path": "/bin/bash"
+        },
+        "wrappers": []
+      }
+    },
+    {
+      "count": 1,
+      "violation": {
+        "kind": "system_program",
+        "action": {
+          "mnemonic": "Genrule",
+          "target": "//js/private/test/js_run_binary:expected_target_cfg_location"
+        },
+        "program": {
+          "origin": "system",
+          "path": "/bin/bash"
+        },
+        "wrappers": []
+      }
+    },
+    {
+      "count": 1,
+      "violation": {
+        "kind": "system_program",
+        "action": {
+          "mnemonic": "Genrule",
+          "target": "//js/private/test/launcher:stdin_run"
+        },
+        "program": {
+          "origin": "system",
+          "path": "/bin/bash"
+        },
+        "wrappers": []
+      }
+    },
+    {
+      "count": 1,
+      "violation": {
+        "kind": "system_program",
+        "action": {
+          "mnemonic": "Genrule",
+          "target": "//js/private/test:data-genrule"
+        },
+        "program": {
+          "origin": "system",
+          "path": "/bin/bash"
+        },
+        "wrappers": []
+      }
+    },
+    {
+      "count": 1,
+      "violation": {
+        "kind": "system_program",
+        "action": {
+          "mnemonic": "Genrule",
+          "target": "//js/private/test:shell_launcher_sed"
+        },
+        "program": {
+          "origin": "system",
+          "path": "/bin/bash"
+        },
+        "wrappers": []
+      }
+    },
+    {
+      "count": 1,
+      "violation": {
+        "kind": "system_program",
+        "action": {
+          "mnemonic": "Genrule",
+          "target": "//npm/private/test/subs:subs_test_0__deps"
+        },
+        "program": {
+          "origin": "system",
+          "path": "/bin/bash"
+        },
+        "wrappers": []
+      }
+    },
+    {
+      "count": 1,
+      "violation": {
+        "kind": "system_program",
+        "action": {
+          "mnemonic": "Genrule",
+          "target": "//npm/private/test/subs:subs_test_1__deps"
+        },
+        "program": {
+          "origin": "system",
+          "path": "/bin/bash"
+        },
+        "wrappers": []
+      }
+    },
+    {
+      "count": 1,
+      "violation": {
+        "kind": "system_program",
+        "action": {
+          "mnemonic": "Genrule",
+          "target": "//npm/private/test/subs:subs_test_2__deps"
+        },
+        "program": {
+          "origin": "system",
+          "path": "/bin/bash"
+        },
+        "wrappers": []
+      }
+    },
+    {
+      "count": 1,
+      "violation": {
+        "kind": "system_program",
+        "action": {
+          "mnemonic": "Genrule",
+          "target": "//npm/private/test:node_modules_test_0__deps"
+        },
+        "program": {
+          "origin": "system",
+          "path": "/bin/bash"
+        },
+        "wrappers": []
+      }
+    },
+    {
+      "count": 1,
+      "violation": {
+        "kind": "system_program",
+        "action": {
+          "mnemonic": "Genrule",
+          "target": "//npm/private/test:node_modules_test_10__deps"
+        },
+        "program": {
+          "origin": "system",
+          "path": "/bin/bash"
+        },
+        "wrappers": []
+      }
+    },
+    {
+      "count": 1,
+      "violation": {
+        "kind": "system_program",
+        "action": {
+          "mnemonic": "Genrule",
+          "target": "//npm/private/test:node_modules_test_11__deps"
+        },
+        "program": {
+          "origin": "system",
+          "path": "/bin/bash"
+        },
+        "wrappers": []
+      }
+    },
+    {
+      "count": 1,
+      "violation": {
+        "kind": "system_program",
+        "action": {
+          "mnemonic": "Genrule",
+          "target": "//npm/private/test:node_modules_test_12__deps"
+        },
+        "program": {
+          "origin": "system",
+          "path": "/bin/bash"
+        },
+        "wrappers": []
+      }
+    },
+    {
+      "count": 1,
+      "violation": {
+        "kind": "system_program",
+        "action": {
+          "mnemonic": "Genrule",
+          "target": "//npm/private/test:node_modules_test_13__deps"
+        },
+        "program": {
+          "origin": "system",
+          "path": "/bin/bash"
+        },
+        "wrappers": []
+      }
+    },
+    {
+      "count": 1,
+      "violation": {
+        "kind": "system_program",
+        "action": {
+          "mnemonic": "Genrule",
+          "target": "//npm/private/test:node_modules_test_14__deps"
+        },
+        "program": {
+          "origin": "system",
+          "path": "/bin/bash"
+        },
+        "wrappers": []
+      }
+    },
+    {
+      "count": 1,
+      "violation": {
+        "kind": "system_program",
+        "action": {
+          "mnemonic": "Genrule",
+          "target": "//npm/private/test:node_modules_test_15__deps"
+        },
+        "program": {
+          "origin": "system",
+          "path": "/bin/bash"
+        },
+        "wrappers": []
+      }
+    },
+    {
+      "count": 1,
+      "violation": {
+        "kind": "system_program",
+        "action": {
+          "mnemonic": "Genrule",
+          "target": "//npm/private/test:node_modules_test_16__deps"
+        },
+        "program": {
+          "origin": "system",
+          "path": "/bin/bash"
+        },
+        "wrappers": []
+      }
+    },
+    {
+      "count": 1,
+      "violation": {
+        "kind": "system_program",
+        "action": {
+          "mnemonic": "Genrule",
+          "target": "//npm/private/test:node_modules_test_17__deps"
+        },
+        "program": {
+          "origin": "system",
+          "path": "/bin/bash"
+        },
+        "wrappers": []
+      }
+    },
+    {
+      "count": 1,
+      "violation": {
+        "kind": "system_program",
+        "action": {
+          "mnemonic": "Genrule",
+          "target": "//npm/private/test:node_modules_test_1__deps"
+        },
+        "program": {
+          "origin": "system",
+          "path": "/bin/bash"
+        },
+        "wrappers": []
+      }
+    },
+    {
+      "count": 1,
+      "violation": {
+        "kind": "system_program",
+        "action": {
+          "mnemonic": "Genrule",
+          "target": "//npm/private/test:node_modules_test_2__deps"
+        },
+        "program": {
+          "origin": "system",
+          "path": "/bin/bash"
+        },
+        "wrappers": []
+      }
+    },
+    {
+      "count": 1,
+      "violation": {
+        "kind": "system_program",
+        "action": {
+          "mnemonic": "Genrule",
+          "target": "//npm/private/test:node_modules_test_3__deps"
+        },
+        "program": {
+          "origin": "system",
+          "path": "/bin/bash"
+        },
+        "wrappers": []
+      }
+    },
+    {
+      "count": 1,
+      "violation": {
+        "kind": "system_program",
+        "action": {
+          "mnemonic": "Genrule",
+          "target": "//npm/private/test:node_modules_test_4__deps"
+        },
+        "program": {
+          "origin": "system",
+          "path": "/bin/bash"
+        },
+        "wrappers": []
+      }
+    },
+    {
+      "count": 1,
+      "violation": {
+        "kind": "system_program",
+        "action": {
+          "mnemonic": "Genrule",
+          "target": "//npm/private/test:node_modules_test_5__deps"
+        },
+        "program": {
+          "origin": "system",
+          "path": "/bin/bash"
+        },
+        "wrappers": []
+      }
+    },
+    {
+      "count": 1,
+      "violation": {
+        "kind": "system_program",
+        "action": {
+          "mnemonic": "Genrule",
+          "target": "//npm/private/test:node_modules_test_6__deps"
+        },
+        "program": {
+          "origin": "system",
+          "path": "/bin/bash"
+        },
+        "wrappers": []
+      }
+    },
+    {
+      "count": 1,
+      "violation": {
+        "kind": "system_program",
+        "action": {
+          "mnemonic": "Genrule",
+          "target": "//npm/private/test:node_modules_test_7__deps"
+        },
+        "program": {
+          "origin": "system",
+          "path": "/bin/bash"
+        },
+        "wrappers": []
+      }
+    },
+    {
+      "count": 1,
+      "violation": {
+        "kind": "system_program",
+        "action": {
+          "mnemonic": "Genrule",
+          "target": "//npm/private/test:node_modules_test_8__deps"
+        },
+        "program": {
+          "origin": "system",
+          "path": "/bin/bash"
+        },
+        "wrappers": []
+      }
+    },
+    {
+      "count": 1,
+      "violation": {
+        "kind": "system_program",
+        "action": {
+          "mnemonic": "Genrule",
+          "target": "//npm/private/test:node_modules_test_9__deps"
+        },
+        "program": {
+          "origin": "system",
+          "path": "/bin/bash"
+        },
+        "wrappers": []
+      }
+    },
+    {
+      "count": 1,
+      "violation": {
+        "kind": "unknown_program",
+        "action": {
+          "mnemonic": "Babel",
+          "target": "//js/private/test/node-patches:babel_mjs2js"
+        },
+        "program": {
+          "origin": {
+            "main": {
+              "extension": null
+            }
+          },
+          "path": "js/private/test/node-patches/babel_mjs2js__js_binary_/babel_mjs2js__js_binary"
+        },
+        "wrappers": []
+      }
+    },
+    {
+      "count": 1,
+      "violation": {
+        "kind": "unknown_program",
+        "action": {
+          "mnemonic": "CopyDirectory",
+          "target": "//:.aspect_rules_js/node_modules/@subs+b@0.0.0"
+        },
+        "program": {
+          "origin": {
+            "module": {
+              "name": "bazel_lib",
+              "extension": "toolchains"
+            }
+          },
+          "path": "copy_directory"
+        },
+        "wrappers": []
+      }
+    },
+    {
+      "count": 1,
+      "violation": {
+        "kind": "unknown_program",
+        "action": {
+          "mnemonic": "CopyDirectory",
+          "target": "//:.aspect_rules_js/node_modules/is-odd@file+npm+private+test+vendored+is-odd"
+        },
+        "program": {
+          "origin": {
+            "module": {
+              "name": "bazel_lib",
+              "extension": "toolchains"
+            }
+          },
+          "path": "copy_directory"
+        },
+        "wrappers": []
+      }
+    },
+    {
+      "count": 1,
+      "violation": {
+        "kind": "unknown_program",
+        "action": {
+          "mnemonic": "CopyDirectory",
+          "target": "//:.aspect_rules_js/node_modules/pnpm@10.34.5"
+        },
+        "program": {
+          "origin": {
+            "module": {
+              "name": "bazel_lib",
+              "extension": "toolchains"
+            }
+          },
+          "path": "copy_directory"
+        },
+        "wrappers": []
+      }
+    },
+    {
+      "count": 1,
+      "violation": {
+        "kind": "unknown_program",
+        "action": {
+          "mnemonic": "CopyDirectory",
+          "target": "//:.aspect_rules_js/node_modules/semver-max@file+npm+private+test+vendored+semver-max"
+        },
+        "program": {
+          "origin": {
+            "module": {
+              "name": "bazel_lib",
+              "extension": "toolchains"
+            }
+          },
+          "path": "copy_directory"
+        },
+        "wrappers": []
+      }
+    },
+    {
+      "count": 1,
+      "violation": {
+        "kind": "unknown_program",
+        "action": {
+          "mnemonic": "CopyDirectory",
+          "target": "//:.aspect_rules_js/node_modules/test-npm_package@0.0.0"
+        },
+        "program": {
+          "origin": {
+            "module": {
+              "name": "bazel_lib",
+              "extension": "toolchains"
+            }
+          },
+          "path": "copy_directory"
+        },
+        "wrappers": []
+      }
+    },
+    {
+      "count": 1,
+      "violation": {
+        "kind": "unknown_program",
+        "action": {
+          "mnemonic": "CopyToDirectory",
+          "target": "//npm/private/test/npm_package:expected_no-sources_pkg"
+        },
+        "program": {
+          "origin": {
+            "module": {
+              "name": "bazel_lib",
+              "extension": "toolchains"
+            }
+          },
+          "path": "copy_to_directory"
+        },
+        "wrappers": []
+      }
+    },
+    {
+      "count": 1,
+      "violation": {
+        "kind": "unknown_program",
+        "action": {
+          "mnemonic": "CopyToDirectory",
+          "target": "//npm/private/test/npm_package:expected_no-types_pkg"
+        },
+        "program": {
+          "origin": {
+            "module": {
+              "name": "bazel_lib",
+              "extension": "toolchains"
+            }
+          },
+          "path": "copy_to_directory"
+        },
+        "wrappers": []
+      }
+    },
+    {
+      "count": 1,
+      "violation": {
+        "kind": "unknown_program",
+        "action": {
+          "mnemonic": "CopyToDirectory",
+          "target": "//npm/private/test/npm_package:expected_pkg"
+        },
+        "program": {
+          "origin": {
+            "module": {
+              "name": "bazel_lib",
+              "extension": "toolchains"
+            }
+          },
+          "path": "copy_to_directory"
+        },
+        "wrappers": []
+      }
+    },
+    {
+      "count": 1,
+      "violation": {
+        "kind": "unknown_program",
+        "action": {
+          "mnemonic": "CopyToDirectory",
+          "target": "//npm/private/test/npm_package:expected_pkg_with_node_modules"
+        },
+        "program": {
+          "origin": {
+            "module": {
+              "name": "bazel_lib",
+              "extension": "toolchains"
+            }
+          },
+          "path": "copy_to_directory"
+        },
+        "wrappers": []
+      }
+    },
+    {
+      "count": 1,
+      "violation": {
+        "kind": "unknown_program",
+        "action": {
+          "mnemonic": "CopyToDirectory",
+          "target": "//npm/private/test/npm_package:pkg"
+        },
+        "program": {
+          "origin": {
+            "module": {
+              "name": "bazel_lib",
+              "extension": "toolchains"
+            }
+          },
+          "path": "copy_to_directory"
+        },
+        "wrappers": []
+      }
+    },
+    {
+      "count": 1,
+      "violation": {
+        "kind": "unknown_program",
+        "action": {
+          "mnemonic": "CopyToDirectory",
+          "target": "//npm/private/test/npm_package:pkg_2"
+        },
+        "program": {
+          "origin": {
+            "module": {
+              "name": "bazel_lib",
+              "extension": "toolchains"
+            }
+          },
+          "path": "copy_to_directory"
+        },
+        "wrappers": []
+      }
+    },
+    {
+      "count": 1,
+      "violation": {
+        "kind": "unknown_program",
+        "action": {
+          "mnemonic": "CopyToDirectory",
+          "target": "//npm/private/test/npm_package:pkg_3"
+        },
+        "program": {
+          "origin": {
+            "module": {
+              "name": "bazel_lib",
+              "extension": "toolchains"
+            }
+          },
+          "path": "copy_to_directory"
+        },
+        "wrappers": []
+      }
+    },
+    {
+      "count": 1,
+      "violation": {
+        "kind": "unknown_program",
+        "action": {
+          "mnemonic": "CopyToDirectory",
+          "target": "//npm/private/test/npm_package:pkg_4"
+        },
+        "program": {
+          "origin": {
+            "module": {
+              "name": "bazel_lib",
+              "extension": "toolchains"
+            }
+          },
+          "path": "copy_to_directory"
+        },
+        "wrappers": []
+      }
+    },
+    {
+      "count": 1,
+      "violation": {
+        "kind": "unknown_program",
+        "action": {
+          "mnemonic": "CopyToDirectory",
+          "target": "//npm/private/test/npm_package:pkg_5"
+        },
+        "program": {
+          "origin": {
+            "module": {
+              "name": "bazel_lib",
+              "extension": "toolchains"
+            }
+          },
+          "path": "copy_to_directory"
+        },
+        "wrappers": []
+      }
+    },
+    {
+      "count": 1,
+      "violation": {
+        "kind": "unknown_program",
+        "action": {
+          "mnemonic": "CopyToDirectory",
+          "target": "//npm/private/test/npm_package:pkg_6"
+        },
+        "program": {
+          "origin": {
+            "module": {
+              "name": "bazel_lib",
+              "extension": "toolchains"
+            }
+          },
+          "path": "copy_to_directory"
+        },
+        "wrappers": []
+      }
+    },
+    {
+      "count": 1,
+      "violation": {
+        "kind": "unknown_program",
+        "action": {
+          "mnemonic": "CopyToDirectory",
+          "target": "//npm/private/test/npm_package:pkg_with_node_modules"
+        },
+        "program": {
+          "origin": {
+            "module": {
+              "name": "bazel_lib",
+              "extension": "toolchains"
+            }
+          },
+          "path": "copy_to_directory"
+        },
+        "wrappers": []
+      }
+    },
+    {
+      "count": 1,
+      "violation": {
+        "kind": "unknown_program",
+        "action": {
+          "mnemonic": "CopyToDirectory",
+          "target": "//npm/private/test/npm_package_publish:pkg_a"
+        },
+        "program": {
+          "origin": {
+            "module": {
+              "name": "bazel_lib",
+              "extension": "toolchains"
+            }
+          },
+          "path": "copy_to_directory"
+        },
+        "wrappers": []
+      }
+    },
+    {
+      "count": 1,
+      "violation": {
+        "kind": "unknown_program",
+        "action": {
+          "mnemonic": "CopyToDirectory",
+          "target": "//npm/private/test/npm_package_publish:pkg_b"
+        },
+        "program": {
+          "origin": {
+            "module": {
+              "name": "bazel_lib",
+              "extension": "toolchains"
+            }
+          },
+          "path": "copy_to_directory"
+        },
+        "wrappers": []
+      }
+    },
+    {
+      "count": 1,
+      "violation": {
+        "kind": "unknown_program",
+        "action": {
+          "mnemonic": "CopyToDirectory",
+          "target": "//npm/private/test/npm_package_publish:pkg_nested"
+        },
+        "program": {
+          "origin": {
+            "module": {
+              "name": "bazel_lib",
+              "extension": "toolchains"
+            }
+          },
+          "path": "copy_to_directory"
+        },
+        "wrappers": []
+      }
+    },
+    {
+      "count": 1,
+      "violation": {
+        "kind": "unknown_program",
+        "action": {
+          "mnemonic": "CopyToDirectory",
+          "target": "//npm/private/test/subs/b:pkg"
+        },
+        "program": {
+          "origin": {
+            "module": {
+              "name": "bazel_lib",
+              "extension": "toolchains"
+            }
+          },
+          "path": "copy_to_directory"
+        },
+        "wrappers": []
+      }
+    },
+    {
+      "count": 1,
+      "violation": {
+        "kind": "unknown_program",
+        "action": {
+          "mnemonic": "CopyToDirectory",
+          "target": "//npm/private/test/vendored/is-odd:pkg"
+        },
+        "program": {
+          "origin": {
+            "module": {
+              "name": "bazel_lib",
+              "extension": "toolchains"
+            }
+          },
+          "path": "copy_to_directory"
+        },
+        "wrappers": []
+      }
+    },
+    {
+      "count": 1,
+      "violation": {
+        "kind": "unknown_program",
+        "action": {
+          "mnemonic": "CopyToDirectory",
+          "target": "//npm/private/test/vendored/semver-max:pkg"
+        },
+        "program": {
+          "origin": {
+            "module": {
+              "name": "bazel_lib",
+              "extension": "toolchains"
+            }
+          },
+          "path": "copy_to_directory"
+        },
+        "wrappers": []
+      }
+    },
+    {
+      "count": 1,
+      "violation": {
+        "kind": "unknown_program",
+        "action": {
+          "mnemonic": "JsRunBinary",
+          "target": "//js/private/test/data:run-write-generated"
+        },
+        "program": {
+          "origin": {
+            "main": {
+              "extension": null
+            }
+          },
+          "path": "js/private/test/data/write-genrule_/write-genrule"
+        },
+        "wrappers": []
+      }
+    },
+    {
+      "count": 1,
+      "violation": {
+        "kind": "unknown_program",
+        "action": {
+          "mnemonic": "JsRunBinary",
+          "target": "//js/private/test/data:run-write-generated-copied"
+        },
+        "program": {
+          "origin": {
+            "main": {
+              "extension": null
+            }
+          },
+          "path": "js/private/test/data/write-genrule-filegroup-srcs_/write-genrule-filegroup-srcs"
+        },
+        "wrappers": []
+      }
+    },
+    {
+      "count": 1,
+      "violation": {
+        "kind": "unknown_program",
+        "action": {
+          "mnemonic": "JsRunBinary",
+          "target": "//js/private/test/data:run-write-js_library-data"
+        },
+        "program": {
+          "origin": {
+            "main": {
+              "extension": null
+            }
+          },
+          "path": "js/private/test/data/write-js_library-data_/write-js_library-data"
+        },
+        "wrappers": []
+      }
+    },
+    {
+      "count": 1,
+      "violation": {
+        "kind": "unknown_program",
+        "action": {
+          "mnemonic": "JsRunBinary",
+          "target": "//js/private/test/data:run-write-js_library-srcs"
+        },
+        "program": {
+          "origin": {
+            "main": {
+              "extension": null
+            }
+          },
+          "path": "js/private/test/data/write-js_library-srcs_/write-js_library-srcs"
+        },
+        "wrappers": []
+      }
+    },
+    {
+      "count": 1,
+      "violation": {
+        "kind": "unknown_program",
+        "action": {
+          "mnemonic": "JsRunBinary",
+          "target": "//js/private/test/data:run-write-srcs"
+        },
+        "program": {
+          "origin": {
+            "main": {
+              "extension": null
+            }
+          },
+          "path": "js/private/test/data/write-js_library-srcs_/write-js_library-srcs"
+        },
+        "wrappers": []
+      }
+    },
+    {
+      "count": 1,
+      "violation": {
+        "kind": "unknown_program",
+        "action": {
+          "mnemonic": "JsRunBinary",
+          "target": "//js/private/test/fixed_args:run_args_binary"
+        },
+        "program": {
+          "origin": {
+            "main": {
+              "extension": null
+            }
+          },
+          "path": "js/private/test/fixed_args/args_bin_/args_bin"
+        },
+        "wrappers": []
+      }
+    },
+    {
+      "count": 1,
+      "violation": {
+        "kind": "unknown_program",
+        "action": {
+          "mnemonic": "JsRunBinary",
+          "target": "//js/private/test/fixed_args:run_fixed_args_binary"
+        },
+        "program": {
+          "origin": {
+            "main": {
+              "extension": null
+            }
+          },
+          "path": "js/private/test/fixed_args/fixed_args_bin_/fixed_args_bin"
+        },
+        "wrappers": []
+      }
+    },
+    {
+      "count": 1,
+      "violation": {
+        "kind": "unknown_program",
+        "action": {
+          "mnemonic": "JsRunBinary",
+          "target": "//js/private/test/fixed_args:run_locations"
+        },
+        "program": {
+          "origin": {
+            "main": {
+              "extension": null
+            }
+          },
+          "path": "js/private/test/fixed_args/locations_bin_/locations_bin"
+        },
+        "wrappers": []
+      }
+    },
+    {
+      "count": 1,
+      "violation": {
+        "kind": "unknown_program",
+        "action": {
+          "mnemonic": "JsRunBinary",
+          "target": "//js/private/test/fixed_args:run_locations_no_expand"
+        },
+        "program": {
+          "origin": {
+            "main": {
+              "extension": null
+            }
+          },
+          "path": "js/private/test/fixed_args/locations_bin_no_expand_/locations_bin_no_expand"
+        },
+        "wrappers": []
+      }
+    },
+    {
+      "count": 1,
+      "violation": {
+        "kind": "unknown_program",
+        "action": {
+          "mnemonic": "JsRunBinary",
+          "target": "//js/private/test/js_binary_sh:_compile_cache_bazel_run"
+        },
+        "program": {
+          "origin": {
+            "main": {
+              "extension": null
+            }
+          },
+          "path": "js/private/test/js_binary_sh/compile_cache_bazel_run_/compile_cache_bazel_run"
+        },
+        "wrappers": []
+      }
+    },
+    {
+      "count": 1,
+      "violation": {
+        "kind": "unknown_program",
+        "action": {
+          "mnemonic": "JsRunBinary",
+          "target": "//js/private/test/js_binary_sh:_compile_cache_default"
+        },
+        "program": {
+          "origin": {
+            "main": {
+              "extension": null
+            }
+          },
+          "path": "js/private/test/js_binary_sh/compile_cache_default_/compile_cache_default"
+        },
+        "wrappers": []
+      }
+    },
+    {
+      "count": 1,
+      "violation": {
+        "kind": "unknown_program",
+        "action": {
+          "mnemonic": "JsRunBinary",
+          "target": "//js/private/test/js_binary_sh:_compile_cache_explicit_disable"
+        },
+        "program": {
+          "origin": {
+            "main": {
+              "extension": null
+            }
+          },
+          "path": "js/private/test/js_binary_sh/compile_cache_explicit_disable_/compile_cache_explicit_disable"
+        },
+        "wrappers": []
+      }
+    },
+    {
+      "count": 1,
+      "violation": {
+        "kind": "unknown_program",
+        "action": {
+          "mnemonic": "JsRunBinary",
+          "target": "//js/private/test/js_binary_sh:_compile_cache_optin"
+        },
+        "program": {
+          "origin": {
+            "main": {
+              "extension": null
+            }
+          },
+          "path": "js/private/test/js_binary_sh/compile_cache_optin_/compile_cache_optin"
+        },
+        "wrappers": []
+      }
+    },
+    {
+      "count": 1,
+      "violation": {
+        "kind": "unknown_program",
+        "action": {
+          "mnemonic": "JsRunBinary",
+          "target": "//js/private/test/js_binary_sh:_env_json"
+        },
+        "program": {
+          "origin": {
+            "main": {
+              "extension": null
+            }
+          },
+          "path": "js/private/test/js_binary_sh/env_json_/env_json"
+        },
+        "wrappers": []
+      }
+    },
+    {
+      "count": 1,
+      "violation": {
+        "kind": "unknown_program",
+        "action": {
+          "mnemonic": "JsRunBinary",
+          "target": "//js/private/test/js_binary_sh:_regexy-args"
+        },
+        "program": {
+          "origin": {
+            "main": {
+              "extension": null
+            }
+          },
+          "path": "js/private/test/js_binary_sh/regexy_/regexy"
+        },
+        "wrappers": []
+      }
+    },
+    {
+      "count": 1,
+      "violation": {
+        "kind": "unknown_program",
+        "action": {
+          "mnemonic": "JsRunBinary",
+          "target": "//js/private/test/js_binary_sh:capture_stderr"
+        },
+        "program": {
+          "origin": {
+            "main": {
+              "extension": null
+            }
+          },
+          "path": "js/private/test/js_binary_sh/one_/one"
+        },
+        "wrappers": []
+      }
+    },
+    {
+      "count": 3,
+      "violation": {
+        "kind": "unknown_program",
+        "action": {
+          "mnemonic": "JsRunBinary",
+          "target": "//js/private/test/js_run_binary:gen_target_os"
+        },
+        "program": {
+          "origin": {
+            "main": {
+              "extension": null
+            }
+          },
+          "path": "js/private/test/js_run_binary/read_file_/read_file"
+        },
+        "wrappers": []
+      }
+    },
+    {
+      "count": 1,
+      "violation": {
+        "kind": "unknown_program",
+        "action": {
+          "mnemonic": "JsRunBinary",
+          "target": "//js/private/test/js_run_binary:label_capture"
+        },
+        "program": {
+          "origin": {
+            "main": {
+              "extension": null
+            }
+          },
+          "path": "js/private/test/js_run_binary/find_cfg_probe_/find_cfg_probe"
+        },
+        "wrappers": []
+      }
+    },
+    {
+      "count": 1,
+      "violation": {
+        "kind": "unknown_program",
+        "action": {
+          "mnemonic": "JsRunBinary",
+          "target": "//js/private/test/js_run_binary:runfiles_location"
+        },
+        "program": {
+          "origin": {
+            "main": {
+              "extension": null
+            }
+          },
+          "path": "js/private/test/js_run_binary/find_cfg_probe_/find_cfg_probe"
+        },
+        "wrappers": []
+      }
+    },
+    {
+      "count": 1,
+      "violation": {
+        "kind": "unknown_program",
+        "action": {
+          "mnemonic": "JsRunBinary",
+          "target": "//js/private/test/js_run_binary:target_cfg_location"
+        },
+        "program": {
+          "origin": {
+            "main": {
+              "extension": null
+            }
+          },
+          "path": "js/private/test/js_run_binary/find_cfg_probe_/find_cfg_probe"
+        },
+        "wrappers": []
+      }
+    },
+    {
+      "count": 1,
+      "violation": {
+        "kind": "unknown_program",
+        "action": {
+          "mnemonic": "JsRunBinary",
+          "target": "//js/private/test/launcher:exit_plain_run"
+        },
+        "program": {
+          "origin": {
+            "main": {
+              "extension": null
+            }
+          },
+          "path": "js/private/test/launcher/exit_plain_bin_/exit_plain_bin"
+        },
+        "wrappers": []
+      }
+    },
+    {
+      "count": 1,
+      "violation": {
+        "kind": "unknown_program",
+        "action": {
+          "mnemonic": "JsRunBinary",
+          "target": "//js/private/test/launcher:stdout_stderr_run"
+        },
+        "program": {
+          "origin": {
+            "main": {
+              "extension": null
+            }
+          },
+          "path": "js/private/test/launcher/stdout_stderr_bin_/stdout_stderr_bin"
+        },
+        "wrappers": []
+      }
+    },
+    {
+      "count": 1,
+      "violation": {
+        "kind": "unknown_program",
+        "action": {
+          "mnemonic": "JsRunBinary",
+          "target": "//npm/private/test/npm_package_publish:pkg_a.pack"
+        },
+        "program": {
+          "origin": {
+            "main": {
+              "extension": "pnpm"
+            }
+          },
+          "path": "pnpm_/pnpm"
+        },
+        "wrappers": []
+      }
+    },
+    {
+      "count": 1,
+      "violation": {
+        "kind": "unknown_program",
+        "action": {
+          "mnemonic": "JsRunBinary",
+          "target": "//npm/private/test/npm_package_publish:pkg_nested.pack"
+        },
+        "program": {
+          "origin": {
+            "main": {
+              "extension": "pnpm"
+            }
+          },
+          "path": "pnpm_/pnpm"
+        },
+        "wrappers": []
+      }
+    },
+    {
+      "count": 1,
+      "violation": {
+        "kind": "unknown_program",
+        "action": {
+          "mnemonic": "NextJs",
+          "target": "//contrib/nextjs/test/build_args:_nextjs_build_args_test.app"
+        },
+        "program": {
+          "origin": {
+            "main": {
+              "extension": null
+            }
+          },
+          "path": "contrib/nextjs/test/fake_next_binary_/fake_next_binary"
+        },
+        "wrappers": []
+      }
+    },
+    {
+      "count": 1,
+      "violation": {
+        "kind": "unknown_program",
+        "action": {
+          "mnemonic": "NextJs",
+          "target": "//contrib/nextjs/test/build_default_args:_nextjs_build_default_args_test.app"
+        },
+        "program": {
+          "origin": {
+            "main": {
+              "extension": null
+            }
+          },
+          "path": "contrib/nextjs/test/fake_next_binary_/fake_next_binary"
+        },
+        "wrappers": []
+      }
+    },
+    {
+      "count": 1,
+      "violation": {
+        "kind": "unknown_program",
+        "action": {
+          "mnemonic": "NextJs",
+          "target": "//contrib/nextjs/test/standalone_build_args:__nextjs_standalone_build_args_test.app.next_build"
+        },
+        "program": {
+          "origin": {
+            "main": {
+              "extension": null
+            }
+          },
+          "path": "contrib/nextjs/test/fake_next_binary_/fake_next_binary"
+        },
+        "wrappers": []
+      }
+    },
+    {
+      "count": 1,
+      "violation": {
+        "kind": "unknown_program",
+        "action": {
+          "mnemonic": "NpmLifecycleHook",
+          "target": "//:.aspect_rules_js/node_modules/@figma+nodegit@0.28.0-figma.9_encoding@0.1.13/lc"
+        },
+        "program": {
+          "origin": {
+            "main": {
+              "extension": null
+            }
+          },
+          "path": "npm/private/lifecycle/min/bin_/bin"
+        },
+        "wrappers": []
+      }
+    },
+    {
+      "count": 1,
+      "violation": {
+        "kind": "unknown_program",
+        "action": {
+          "mnemonic": "NpmLifecycleHook",
+          "target": "//:.aspect_rules_js/node_modules/@kubernetes+client-node@1838633845_1592917608/lc"
+        },
+        "program": {
+          "origin": {
+            "main": {
+              "extension": null
+            }
+          },
+          "path": "npm/private/lifecycle/min/bin_/bin"
+        },
+        "wrappers": []
+      }
+    },
+    {
+      "count": 1,
+      "violation": {
+        "kind": "unknown_program",
+        "action": {
+          "mnemonic": "NpmLifecycleHook",
+          "target": "//:.aspect_rules_js/node_modules/bufferutil@4.0.8/lc"
+        },
+        "program": {
+          "origin": {
+            "main": {
+              "extension": null
+            }
+          },
+          "path": "npm/private/lifecycle/min/bin_/bin"
+        },
+        "wrappers": []
+      }
+    },
+    {
+      "count": 1,
+      "violation": {
+        "kind": "unknown_program",
+        "action": {
+          "mnemonic": "NpmLifecycleHook",
+          "target": "//:.aspect_rules_js/node_modules/esbuild@0.24.0/lc"
+        },
+        "program": {
+          "origin": {
+            "main": {
+              "extension": null
+            }
+          },
+          "path": "npm/private/lifecycle/min/bin_/bin"
+        },
+        "wrappers": []
+      }
+    },
+    {
+      "count": 1,
+      "violation": {
+        "kind": "unknown_program",
+        "action": {
+          "mnemonic": "NpmLifecycleHook",
+          "target": "//:.aspect_rules_js/node_modules/pngjs@5.0.0/lc"
+        },
+        "program": {
+          "origin": {
+            "main": {
+              "extension": null
+            }
+          },
+          "path": "npm/private/lifecycle/min/bin_/bin"
+        },
+        "wrappers": []
+      }
+    },
+    {
+      "count": 1,
+      "violation": {
+        "kind": "unknown_program",
+        "action": {
+          "mnemonic": "NpmLifecycleHook",
+          "target": "//:.aspect_rules_js/node_modules/puppeteer@19.11.1_230959327/lc"
+        },
+        "program": {
+          "origin": {
+            "main": {
+              "extension": null
+            }
+          },
+          "path": "npm/private/lifecycle/min/bin_/bin"
+        },
+        "wrappers": []
+      }
+    },
+    {
+      "count": 1,
+      "violation": {
+        "kind": "unknown_program",
+        "action": {
+          "mnemonic": "NpmLifecycleHook",
+          "target": "//:.aspect_rules_js/node_modules/segfault-handler@1.3.0/lc"
+        },
+        "program": {
+          "origin": {
+            "main": {
+              "extension": null
+            }
+          },
+          "path": "npm/private/lifecycle/min/bin_/bin"
+        },
+        "wrappers": []
+      }
+    },
+    {
+      "count": 1,
+      "violation": {
+        "kind": "unknown_program",
+        "action": {
+          "mnemonic": "Rollup",
+          "target": "//js/private/coverage/bundle:bundle"
+        },
+        "program": {
+          "origin": {
+            "main": {
+              "extension": null
+            }
+          },
+          "path": "js/private/coverage/bundle/bundle__js_binary_/bundle__js_binary"
+        },
+        "wrappers": []
+      }
+    },
+    {
+      "count": 1,
+      "violation": {
+        "kind": "unknown_program",
+        "action": {
+          "mnemonic": "Rollup",
+          "target": "//js/private/devserver/src:js_run_devserver_bundle"
+        },
+        "program": {
+          "origin": {
+            "main": {
+              "extension": null
+            }
+          },
+          "path": "js/private/devserver/src/js_run_devserver_bundle__js_binary_/js_run_devserver_bundle__js_binary"
+        },
+        "wrappers": []
+      }
+    },
+    {
+      "count": 1,
+      "violation": {
+        "kind": "unknown_program",
+        "action": {
+          "mnemonic": "Rollup",
+          "target": "//js/private/worker/src:bundle"
+        },
+        "program": {
+          "origin": {
+            "main": {
+              "extension": null
+            }
+          },
+          "path": "js/private/worker/src/bundle__js_binary_/bundle__js_binary"
+        },
+        "wrappers": []
+      }
+    },
+    {
+      "count": 1,
+      "violation": {
+        "kind": "unknown_program",
+        "action": {
+          "mnemonic": "Rollup",
+          "target": "//npm/private/lifecycle/src:bundle"
+        },
+        "program": {
+          "origin": {
+            "main": {
+              "extension": null
+            }
+          },
+          "path": "npm/private/lifecycle/src/bundle__js_binary_/bundle__js_binary"
+        },
+        "wrappers": []
+      }
+    },
+    {
+      "count": 1,
+      "violation": {
+        "kind": "unknown_program",
+        "action": {
+          "mnemonic": "Rollup",
+          "target": "//npm/private/test:__rollup-target"
+        },
+        "program": {
+          "origin": {
+            "main": {
+              "extension": null
+            }
+          },
+          "path": "npm/private/test/__rollup-target__js_binary_/__rollup-target__js_binary"
+        },
+        "wrappers": []
+      }
+    },
+    {
+      "count": 1,
+      "violation": {
+        "kind": "unknown_program",
+        "action": {
+          "mnemonic": "Tsc",
+          "target": "//js/private/node-bootstrap/src:compile"
+        },
+        "program": {
+          "origin": {
+            "main": {
+              "extension": null
+            }
+          },
+          "path": "js/private/node-bootstrap/src/compile__js_binary_/compile__js_binary"
+        },
+        "wrappers": []
+      }
+    },
+    {
+      "count": 1,
+      "violation": {
+        "kind": "unknown_program",
+        "action": {
+          "mnemonic": "Tsc",
+          "target": "//js/private/watch/src:compile"
+        },
+        "program": {
+          "origin": {
+            "main": {
+              "extension": null
+            }
+          },
+          "path": "js/private/watch/src/compile__js_binary_/compile__js_binary"
+        },
+        "wrappers": []
+      }
+    }
+  ]
+}

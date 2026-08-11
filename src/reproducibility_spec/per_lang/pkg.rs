@@ -1,6 +1,6 @@
 use std::collections::BTreeSet;
 
-use super::super::library::{Entry, always};
+use super::super::library::{Entry, always, aspect_bazel_lib, bazel_lib};
 use super::super::program_id::ProgramId;
 use super::super::{Clause, Guard, Reproducibility, ReproducibilitySpec};
 use crate::glob::Glob;
@@ -165,10 +165,9 @@ pub(in crate::reproducibility_spec) fn entries() -> Vec<(ProgramId, Entry)>
     // opinion about reproducibility of its own, so what it does depends on
     // how it is asked—hence a spec with conditions rather than a verdict.
     entries.push((bsdtar("tar.bzl"), Entry::Spec(bsdtar_spec())));
-    entries.push((
-        bsdtar("aspect_bazel_lib"),
-        Entry::SameAs(bsdtar("tar.bzl")),
-    ));
+    for other in [bazel_lib("tar"), aspect_bazel_lib("tar")] {
+        entries.push((other, Entry::SameAs(bsdtar("tar.bzl"))));
+    }
 
     entries
 }

@@ -137,23 +137,34 @@ const HOST_SUBCOMMANDS: [&str; 20] = [
     "stty", "touch", "tty", "uname", "whoami",
 ];
 
+/// A tool from a toolchain the bazel_lib module registers.
+///
+/// The module was called `aspect_bazel_lib` up to its 2.x releases and
+/// `bazel_lib` from 3.0 on, and both are in the wild—a single build can
+/// depend on one directly and reach the other through a rule set. So each
+/// tool answers to both names, with the newer one carrying the claim.
+pub(super) fn bazel_lib(tool: &str) -> ProgramId {
+    ProgramId::extension("bazel_lib", "toolchains", tool)
+}
+
+/// The same tool under the name the 2.x module went by.
+pub(super) fn aspect_bazel_lib(tool: &str) -> ProgramId {
+    ProgramId::extension("aspect_bazel_lib", "toolchains", tool)
+}
+
 /// Entries for tools no one language owns.
 fn language_agnostic() -> Vec<(ProgramId, Entry)> {
     vec![
         // One binary standing in for the whole of coreutils, which the
-        // aspect_bazel_lib rules use wherever they would otherwise need a
-        // shell: copying a file, making a directory, writing a symlink.
-        // Those are functions of their inputs.
+        // bazel_lib rules use wherever they would otherwise need a shell:
+        // copying a file, making a directory, writing a symlink. Those are
+        // functions of their inputs.
         //
         // It also carries `date`, `hostname` and `uname`, and a verdict of
         // `always` would be vouching for those too—so the disposition is
         // conditional and the clause names them.
         (
-            ProgramId::extension(
-                "aspect_bazel_lib",
-                "toolchains",
-                "coreutils",
-            ),
+            bazel_lib("coreutils"),
             Entry::Spec(
                 ReproducibilitySpec::new(
                     Reproducibility::Sometimes,
@@ -176,10 +187,25 @@ fn language_agnostic() -> Vec<(ProgramId, Entry)> {
                 ),
             ),
         ),
-        // protoc is a pure function of the descriptors it is given.
+        (
+            aspect_bazel_lib("coreutils"),
+            Entry::SameAs(bazel_lib("coreutils")),
+        ),
+        // protoc is a pure function of the descriptors it is given, and
+        // arrives two ways: prebuilt from the module extension that
+        // downloads one, or as protobuf's own `cc_binary` when a project
+        // builds it from source.
         (
             ProgramId::extension("protobuf", "protoc", "bin/protoc"),
             Entry::Spec(always()),
+        ),
+        (
+            ProgramId::module("protobuf", "protoc"),
+            Entry::SameAs(ProgramId::extension(
+                "protobuf",
+                "protoc",
+                "bin/protoc",
+            )),
         ),
         // Bazel's own zip tool, which every rule set reaches for when it
         // has to put a tree in an archive. A zip normally records the
