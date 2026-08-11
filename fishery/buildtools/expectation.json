@@ -1,0 +1,1322 @@
+{
+  "violations": [
+    {
+      "count": 1,
+      "violation": {
+        "kind": "execution_requirement",
+        "action": {
+          "mnemonic": "CopyFile",
+          "target": "//buildifier/npm:copy_LICENSE"
+        },
+        "requirement": "no-cache"
+      }
+    },
+    {
+      "count": 1,
+      "violation": {
+        "kind": "execution_requirement",
+        "action": {
+          "mnemonic": "CopyFile",
+          "target": "//buildifier/npm:copy_LICENSE"
+        },
+        "requirement": "no-remote"
+      }
+    },
+    {
+      "count": 1,
+      "violation": {
+        "kind": "execution_requirement",
+        "action": {
+          "mnemonic": "CopyFile",
+          "target": "//buildifier/npm:copy_README.md"
+        },
+        "requirement": "no-cache"
+      }
+    },
+    {
+      "count": 1,
+      "violation": {
+        "kind": "execution_requirement",
+        "action": {
+          "mnemonic": "CopyFile",
+          "target": "//buildifier/npm:copy_README.md"
+        },
+        "requirement": "no-remote"
+      }
+    },
+    {
+      "count": 1,
+      "violation": {
+        "kind": "execution_requirement",
+        "action": {
+          "mnemonic": "CopyFile",
+          "target": "//buildifier/npm:copy_buildifier-darwin_amd64"
+        },
+        "requirement": "no-cache"
+      }
+    },
+    {
+      "count": 1,
+      "violation": {
+        "kind": "execution_requirement",
+        "action": {
+          "mnemonic": "CopyFile",
+          "target": "//buildifier/npm:copy_buildifier-darwin_amd64"
+        },
+        "requirement": "no-remote"
+      }
+    },
+    {
+      "count": 1,
+      "violation": {
+        "kind": "execution_requirement",
+        "action": {
+          "mnemonic": "CopyFile",
+          "target": "//buildifier/npm:copy_buildifier-darwin_arm64"
+        },
+        "requirement": "no-cache"
+      }
+    },
+    {
+      "count": 1,
+      "violation": {
+        "kind": "execution_requirement",
+        "action": {
+          "mnemonic": "CopyFile",
+          "target": "//buildifier/npm:copy_buildifier-darwin_arm64"
+        },
+        "requirement": "no-remote"
+      }
+    },
+    {
+      "count": 1,
+      "violation": {
+        "kind": "execution_requirement",
+        "action": {
+          "mnemonic": "CopyFile",
+          "target": "//buildifier/npm:copy_buildifier-linux_amd64"
+        },
+        "requirement": "no-cache"
+      }
+    },
+    {
+      "count": 1,
+      "violation": {
+        "kind": "execution_requirement",
+        "action": {
+          "mnemonic": "CopyFile",
+          "target": "//buildifier/npm:copy_buildifier-linux_amd64"
+        },
+        "requirement": "no-remote"
+      }
+    },
+    {
+      "count": 1,
+      "violation": {
+        "kind": "execution_requirement",
+        "action": {
+          "mnemonic": "CopyFile",
+          "target": "//buildifier/npm:copy_buildifier-linux_arm64"
+        },
+        "requirement": "no-cache"
+      }
+    },
+    {
+      "count": 1,
+      "violation": {
+        "kind": "execution_requirement",
+        "action": {
+          "mnemonic": "CopyFile",
+          "target": "//buildifier/npm:copy_buildifier-linux_arm64"
+        },
+        "requirement": "no-remote"
+      }
+    },
+    {
+      "count": 1,
+      "violation": {
+        "kind": "execution_requirement",
+        "action": {
+          "mnemonic": "CopyFile",
+          "target": "//buildifier/npm:copy_buildifier-linux_riscv64"
+        },
+        "requirement": "no-cache"
+      }
+    },
+    {
+      "count": 1,
+      "violation": {
+        "kind": "execution_requirement",
+        "action": {
+          "mnemonic": "CopyFile",
+          "target": "//buildifier/npm:copy_buildifier-linux_riscv64"
+        },
+        "requirement": "no-remote"
+      }
+    },
+    {
+      "count": 1,
+      "violation": {
+        "kind": "execution_requirement",
+        "action": {
+          "mnemonic": "CopyFile",
+          "target": "//buildifier/npm:copy_buildifier-windows_amd64.exe"
+        },
+        "requirement": "no-cache"
+      }
+    },
+    {
+      "count": 1,
+      "violation": {
+        "kind": "execution_requirement",
+        "action": {
+          "mnemonic": "CopyFile",
+          "target": "//buildifier/npm:copy_buildifier-windows_amd64.exe"
+        },
+        "requirement": "no-remote"
+      }
+    },
+    {
+      "count": 1,
+      "violation": {
+        "kind": "execution_requirement",
+        "action": {
+          "mnemonic": "CopyFile",
+          "target": "//buildifier/npm:copy_buildifier-windows_arm64.exe"
+        },
+        "requirement": "no-cache"
+      }
+    },
+    {
+      "count": 1,
+      "violation": {
+        "kind": "execution_requirement",
+        "action": {
+          "mnemonic": "CopyFile",
+          "target": "//buildifier/npm:copy_buildifier-windows_arm64.exe"
+        },
+        "requirement": "no-remote"
+      }
+    },
+    {
+      "count": 1,
+      "violation": {
+        "kind": "execution_requirement",
+        "action": {
+          "mnemonic": "CopyFile",
+          "target": "//buildifier/npm:integration_test"
+        },
+        "requirement": "no-sandbox"
+      }
+    },
+    {
+      "count": 1,
+      "violation": {
+        "kind": "execution_requirement",
+        "action": {
+          "mnemonic": "CopyFile",
+          "target": "//buildozer/npm:copy_LICENSE"
+        },
+        "requirement": "no-cache"
+      }
+    },
+    {
+      "count": 1,
+      "violation": {
+        "kind": "execution_requirement",
+        "action": {
+          "mnemonic": "CopyFile",
+          "target": "//buildozer/npm:copy_LICENSE"
+        },
+        "requirement": "no-remote"
+      }
+    },
+    {
+      "count": 1,
+      "violation": {
+        "kind": "execution_requirement",
+        "action": {
+          "mnemonic": "CopyFile",
+          "target": "//buildozer/npm:copy_README.md"
+        },
+        "requirement": "no-cache"
+      }
+    },
+    {
+      "count": 1,
+      "violation": {
+        "kind": "execution_requirement",
+        "action": {
+          "mnemonic": "CopyFile",
+          "target": "//buildozer/npm:copy_README.md"
+        },
+        "requirement": "no-remote"
+      }
+    },
+    {
+      "count": 1,
+      "violation": {
+        "kind": "execution_requirement",
+        "action": {
+          "mnemonic": "CopyFile",
+          "target": "//buildozer/npm:copy_buildozer-darwin_amd64"
+        },
+        "requirement": "no-cache"
+      }
+    },
+    {
+      "count": 1,
+      "violation": {
+        "kind": "execution_requirement",
+        "action": {
+          "mnemonic": "CopyFile",
+          "target": "//buildozer/npm:copy_buildozer-darwin_amd64"
+        },
+        "requirement": "no-remote"
+      }
+    },
+    {
+      "count": 1,
+      "violation": {
+        "kind": "execution_requirement",
+        "action": {
+          "mnemonic": "CopyFile",
+          "target": "//buildozer/npm:copy_buildozer-darwin_arm64"
+        },
+        "requirement": "no-cache"
+      }
+    },
+    {
+      "count": 1,
+      "violation": {
+        "kind": "execution_requirement",
+        "action": {
+          "mnemonic": "CopyFile",
+          "target": "//buildozer/npm:copy_buildozer-darwin_arm64"
+        },
+        "requirement": "no-remote"
+      }
+    },
+    {
+      "count": 1,
+      "violation": {
+        "kind": "execution_requirement",
+        "action": {
+          "mnemonic": "CopyFile",
+          "target": "//buildozer/npm:copy_buildozer-linux_amd64"
+        },
+        "requirement": "no-cache"
+      }
+    },
+    {
+      "count": 1,
+      "violation": {
+        "kind": "execution_requirement",
+        "action": {
+          "mnemonic": "CopyFile",
+          "target": "//buildozer/npm:copy_buildozer-linux_amd64"
+        },
+        "requirement": "no-remote"
+      }
+    },
+    {
+      "count": 1,
+      "violation": {
+        "kind": "execution_requirement",
+        "action": {
+          "mnemonic": "CopyFile",
+          "target": "//buildozer/npm:copy_buildozer-linux_arm64"
+        },
+        "requirement": "no-cache"
+      }
+    },
+    {
+      "count": 1,
+      "violation": {
+        "kind": "execution_requirement",
+        "action": {
+          "mnemonic": "CopyFile",
+          "target": "//buildozer/npm:copy_buildozer-linux_arm64"
+        },
+        "requirement": "no-remote"
+      }
+    },
+    {
+      "count": 1,
+      "violation": {
+        "kind": "execution_requirement",
+        "action": {
+          "mnemonic": "CopyFile",
+          "target": "//buildozer/npm:copy_buildozer-linux_riscv64"
+        },
+        "requirement": "no-cache"
+      }
+    },
+    {
+      "count": 1,
+      "violation": {
+        "kind": "execution_requirement",
+        "action": {
+          "mnemonic": "CopyFile",
+          "target": "//buildozer/npm:copy_buildozer-linux_riscv64"
+        },
+        "requirement": "no-remote"
+      }
+    },
+    {
+      "count": 1,
+      "violation": {
+        "kind": "execution_requirement",
+        "action": {
+          "mnemonic": "CopyFile",
+          "target": "//buildozer/npm:copy_buildozer-windows_amd64.exe"
+        },
+        "requirement": "no-cache"
+      }
+    },
+    {
+      "count": 1,
+      "violation": {
+        "kind": "execution_requirement",
+        "action": {
+          "mnemonic": "CopyFile",
+          "target": "//buildozer/npm:copy_buildozer-windows_amd64.exe"
+        },
+        "requirement": "no-remote"
+      }
+    },
+    {
+      "count": 1,
+      "violation": {
+        "kind": "execution_requirement",
+        "action": {
+          "mnemonic": "CopyFile",
+          "target": "//buildozer/npm:copy_buildozer-windows_arm64.exe"
+        },
+        "requirement": "no-cache"
+      }
+    },
+    {
+      "count": 1,
+      "violation": {
+        "kind": "execution_requirement",
+        "action": {
+          "mnemonic": "CopyFile",
+          "target": "//buildozer/npm:copy_buildozer-windows_arm64.exe"
+        },
+        "requirement": "no-remote"
+      }
+    },
+    {
+      "count": 1,
+      "violation": {
+        "kind": "execution_requirement",
+        "action": {
+          "mnemonic": "CopyFile",
+          "target": "//buildozer/npm:integration_test"
+        },
+        "requirement": "no-sandbox"
+      }
+    },
+    {
+      "count": 1,
+      "violation": {
+        "kind": "execution_requirement",
+        "action": {
+          "mnemonic": "CopyToDirectory",
+          "target": "//buildifier/npm:buildifier"
+        },
+        "requirement": "no-sandbox"
+      }
+    },
+    {
+      "count": 1,
+      "violation": {
+        "kind": "execution_requirement",
+        "action": {
+          "mnemonic": "CopyToDirectory",
+          "target": "//buildozer/npm:buildozer"
+        },
+        "requirement": "no-sandbox"
+      }
+    },
+    {
+      "count": 2,
+      "violation": {
+        "kind": "absolute_path",
+        "action": {
+          "mnemonic": "Genrule",
+          "target": "//api_proto:api.gen.pb.go_checksh"
+        },
+        "path": "/bazel_tools/tools/bash/runfiles/runfiles.bash",
+        "site": {
+          "location": "argument",
+          "value": "source external/bazel_tools/tools/genrule/genrule-setup.sh; cat >bazel-out/k8-fastbuild/bin/api_proto/api.gen.pb.go_check.sh <<'eof'\n#!/bin/bash\n# Script generated by @com_github_bazelbuild_buildtools//build:build_defs.bzl\n\n# --- begin runfiles.bash initialization ---\n# Copy-pasted from Bazel's Bash runfiles library (tools/bash/runfiles/runfiles.bash).\nset -euo pipefail\nif [[ ! -d \"${RUNFILES_DIR:-/dev/null}\" && ! -f \"${RUNFILES_MANIFEST_FILE:-/dev/null}\" ]]; then\n  if [[ -f \"$0.runfiles_manifest\" ]]; then\n    export RUNFILES_MANIFEST_FILE=\"$0.runfiles_manifest\"\n  elif [[ -f \"$0.runfiles/MANIFEST\" ]]; then\n    export RUNFILES_MANIFEST_FILE=\"$0.runfiles/MANIFEST\"\n  elif [[ -f \"$0.runfiles/bazel_tools/tools/bash/runfiles/runfiles.bash\" ]]; then\n    export RUNFILES_DIR=\"$0.runfiles\"\n  fi\nfi\nif [[ -f \"${RUNFILES_DIR:-/dev/null}/bazel_tools/tools/bash/runfiles/runfiles.bash\" ]]; then\n  source \"${RUNFILES_DIR}/bazel_tools/tools/bash/runfiles/runfiles.bash\"\nelif [[ -f \"${RUNFILES_MANIFEST_FILE:-/dev/null}\" ]]; then\n  source \"$(grep -m1 \"^bazel_tools/tools/bash/runfiles/runfiles.bash \" \\\n            \"$RUNFILES_MANIFEST_FILE\" | cut -d ' ' -f 2-)\"\nelse\n  echo >&2 \"ERROR: cannot find @bazel_tools//tools/bash/runfiles:runfiles.bash\"\n  exit 1\nfi\n# --- end runfiles.bash initialization ---\n\n[[ \"$1\" = external/* ]] && F1=\"${1#external/}\" || F1=\"$TEST_WORKSPACE/$1\"\n[[ \"$2\" = external/* ]] && F2=\"${2#external/}\" || F2=\"$TEST_WORKSPACE/$2\"\nF1=\"$(rlocation \"$F1\")\"\nF2=\"$(rlocation \"$F2\")\"\ndiff -q \"$F1\" \"$F2\"\neof\n"
+        }
+      }
+    },
+    {
+      "count": 1,
+      "violation": {
+        "kind": "absolute_path",
+        "action": {
+          "mnemonic": "Genrule",
+          "target": "//api_proto:api.gen.pb.go_checksh"
+        },
+        "path": "/bin/bash",
+        "site": {
+          "location": "argument",
+          "value": "source external/bazel_tools/tools/genrule/genrule-setup.sh; cat >bazel-out/k8-fastbuild/bin/api_proto/api.gen.pb.go_check.sh <<'eof'\n#!/bin/bash\n# Script generated by @com_github_bazelbuild_buildtools//build:build_defs.bzl\n\n# --- begin runfiles.bash initialization ---\n# Copy-pasted from Bazel's Bash runfiles library (tools/bash/runfiles/runfiles.bash).\nset -euo pipefail\nif [[ ! -d \"${RUNFILES_DIR:-/dev/null}\" && ! -f \"${RUNFILES_MANIFEST_FILE:-/dev/null}\" ]]; then\n  if [[ -f \"$0.runfiles_manifest\" ]]; then\n    export RUNFILES_MANIFEST_FILE=\"$0.runfiles_manifest\"\n  elif [[ -f \"$0.runfiles/MANIFEST\" ]]; then\n    export RUNFILES_MANIFEST_FILE=\"$0.runfiles/MANIFEST\"\n  elif [[ -f \"$0.runfiles/bazel_tools/tools/bash/runfiles/runfiles.bash\" ]]; then\n    export RUNFILES_DIR=\"$0.runfiles\"\n  fi\nfi\nif [[ -f \"${RUNFILES_DIR:-/dev/null}/bazel_tools/tools/bash/runfiles/runfiles.bash\" ]]; then\n  source \"${RUNFILES_DIR}/bazel_tools/tools/bash/runfiles/runfiles.bash\"\nelif [[ -f \"${RUNFILES_MANIFEST_FILE:-/dev/null}\" ]]; then\n  source \"$(grep -m1 \"^bazel_tools/tools/bash/runfiles/runfiles.bash \" \\\n            \"$RUNFILES_MANIFEST_FILE\" | cut -d ' ' -f 2-)\"\nelse\n  echo >&2 \"ERROR: cannot find @bazel_tools//tools/bash/runfiles:runfiles.bash\"\n  exit 1\nfi\n# --- end runfiles.bash initialization ---\n\n[[ \"$1\" = external/* ]] && F1=\"${1#external/}\" || F1=\"$TEST_WORKSPACE/$1\"\n[[ \"$2\" = external/* ]] && F2=\"${2#external/}\" || F2=\"$TEST_WORKSPACE/$2\"\nF1=\"$(rlocation \"$F1\")\"\nF2=\"$(rlocation \"$F2\")\"\ndiff -q \"$F1\" \"$F2\"\neof\n"
+        }
+      }
+    },
+    {
+      "count": 1,
+      "violation": {
+        "kind": "absolute_path",
+        "action": {
+          "mnemonic": "Genrule",
+          "target": "//api_proto:api.gen.pb.go_copysh"
+        },
+        "path": "/api_proto/api.gen.pb.go",
+        "site": {
+          "location": "argument",
+          "value": "source external/bazel_tools/tools/genrule/genrule-setup.sh; echo 'cp ${BUILD_WORKSPACE_DIRECTORY}/bazel-out/k8-fastbuild/bin/api_proto/api.gen.pb.go_genfile.go ${BUILD_WORKSPACE_DIRECTORY}/api_proto/api.gen.pb.go' > bazel-out/k8-fastbuild/bin/api_proto/api.gen.pb.gocopy.sh"
+        }
+      }
+    },
+    {
+      "count": 1,
+      "violation": {
+        "kind": "absolute_path",
+        "action": {
+          "mnemonic": "Genrule",
+          "target": "//api_proto:api.gen.pb.go_copysh"
+        },
+        "path": "/bazel-out/k8-fastbuild/bin/api_proto/api.gen.pb.go_genfile.go",
+        "site": {
+          "location": "argument",
+          "value": "source external/bazel_tools/tools/genrule/genrule-setup.sh; echo 'cp ${BUILD_WORKSPACE_DIRECTORY}/bazel-out/k8-fastbuild/bin/api_proto/api.gen.pb.go_genfile.go ${BUILD_WORKSPACE_DIRECTORY}/api_proto/api.gen.pb.go' > bazel-out/k8-fastbuild/bin/api_proto/api.gen.pb.gocopy.sh"
+        }
+      }
+    },
+    {
+      "count": 2,
+      "violation": {
+        "kind": "absolute_path",
+        "action": {
+          "mnemonic": "Genrule",
+          "target": "//build_proto:build.gen.pb.go_checksh"
+        },
+        "path": "/bazel_tools/tools/bash/runfiles/runfiles.bash",
+        "site": {
+          "location": "argument",
+          "value": "source external/bazel_tools/tools/genrule/genrule-setup.sh; cat >bazel-out/k8-fastbuild/bin/build_proto/build.gen.pb.go_check.sh <<'eof'\n#!/bin/bash\n# Script generated by @com_github_bazelbuild_buildtools//build:build_defs.bzl\n\n# --- begin runfiles.bash initialization ---\n# Copy-pasted from Bazel's Bash runfiles library (tools/bash/runfiles/runfiles.bash).\nset -euo pipefail\nif [[ ! -d \"${RUNFILES_DIR:-/dev/null}\" && ! -f \"${RUNFILES_MANIFEST_FILE:-/dev/null}\" ]]; then\n  if [[ -f \"$0.runfiles_manifest\" ]]; then\n    export RUNFILES_MANIFEST_FILE=\"$0.runfiles_manifest\"\n  elif [[ -f \"$0.runfiles/MANIFEST\" ]]; then\n    export RUNFILES_MANIFEST_FILE=\"$0.runfiles/MANIFEST\"\n  elif [[ -f \"$0.runfiles/bazel_tools/tools/bash/runfiles/runfiles.bash\" ]]; then\n    export RUNFILES_DIR=\"$0.runfiles\"\n  fi\nfi\nif [[ -f \"${RUNFILES_DIR:-/dev/null}/bazel_tools/tools/bash/runfiles/runfiles.bash\" ]]; then\n  source \"${RUNFILES_DIR}/bazel_tools/tools/bash/runfiles/runfiles.bash\"\nelif [[ -f \"${RUNFILES_MANIFEST_FILE:-/dev/null}\" ]]; then\n  source \"$(grep -m1 \"^bazel_tools/tools/bash/runfiles/runfiles.bash \" \\\n            \"$RUNFILES_MANIFEST_FILE\" | cut -d ' ' -f 2-)\"\nelse\n  echo >&2 \"ERROR: cannot find @bazel_tools//tools/bash/runfiles:runfiles.bash\"\n  exit 1\nfi\n# --- end runfiles.bash initialization ---\n\n[[ \"$1\" = external/* ]] && F1=\"${1#external/}\" || F1=\"$TEST_WORKSPACE/$1\"\n[[ \"$2\" = external/* ]] && F2=\"${2#external/}\" || F2=\"$TEST_WORKSPACE/$2\"\nF1=\"$(rlocation \"$F1\")\"\nF2=\"$(rlocation \"$F2\")\"\ndiff -q \"$F1\" \"$F2\"\neof\n"
+        }
+      }
+    },
+    {
+      "count": 1,
+      "violation": {
+        "kind": "absolute_path",
+        "action": {
+          "mnemonic": "Genrule",
+          "target": "//build_proto:build.gen.pb.go_checksh"
+        },
+        "path": "/bin/bash",
+        "site": {
+          "location": "argument",
+          "value": "source external/bazel_tools/tools/genrule/genrule-setup.sh; cat >bazel-out/k8-fastbuild/bin/build_proto/build.gen.pb.go_check.sh <<'eof'\n#!/bin/bash\n# Script generated by @com_github_bazelbuild_buildtools//build:build_defs.bzl\n\n# --- begin runfiles.bash initialization ---\n# Copy-pasted from Bazel's Bash runfiles library (tools/bash/runfiles/runfiles.bash).\nset -euo pipefail\nif [[ ! -d \"${RUNFILES_DIR:-/dev/null}\" && ! -f \"${RUNFILES_MANIFEST_FILE:-/dev/null}\" ]]; then\n  if [[ -f \"$0.runfiles_manifest\" ]]; then\n    export RUNFILES_MANIFEST_FILE=\"$0.runfiles_manifest\"\n  elif [[ -f \"$0.runfiles/MANIFEST\" ]]; then\n    export RUNFILES_MANIFEST_FILE=\"$0.runfiles/MANIFEST\"\n  elif [[ -f \"$0.runfiles/bazel_tools/tools/bash/runfiles/runfiles.bash\" ]]; then\n    export RUNFILES_DIR=\"$0.runfiles\"\n  fi\nfi\nif [[ -f \"${RUNFILES_DIR:-/dev/null}/bazel_tools/tools/bash/runfiles/runfiles.bash\" ]]; then\n  source \"${RUNFILES_DIR}/bazel_tools/tools/bash/runfiles/runfiles.bash\"\nelif [[ -f \"${RUNFILES_MANIFEST_FILE:-/dev/null}\" ]]; then\n  source \"$(grep -m1 \"^bazel_tools/tools/bash/runfiles/runfiles.bash \" \\\n            \"$RUNFILES_MANIFEST_FILE\" | cut -d ' ' -f 2-)\"\nelse\n  echo >&2 \"ERROR: cannot find @bazel_tools//tools/bash/runfiles:runfiles.bash\"\n  exit 1\nfi\n# --- end runfiles.bash initialization ---\n\n[[ \"$1\" = external/* ]] && F1=\"${1#external/}\" || F1=\"$TEST_WORKSPACE/$1\"\n[[ \"$2\" = external/* ]] && F2=\"${2#external/}\" || F2=\"$TEST_WORKSPACE/$2\"\nF1=\"$(rlocation \"$F1\")\"\nF2=\"$(rlocation \"$F2\")\"\ndiff -q \"$F1\" \"$F2\"\neof\n"
+        }
+      }
+    },
+    {
+      "count": 1,
+      "violation": {
+        "kind": "absolute_path",
+        "action": {
+          "mnemonic": "Genrule",
+          "target": "//build_proto:build.gen.pb.go_copysh"
+        },
+        "path": "/bazel-out/k8-fastbuild/bin/build_proto/build.gen.pb.go_genfile.go",
+        "site": {
+          "location": "argument",
+          "value": "source external/bazel_tools/tools/genrule/genrule-setup.sh; echo 'cp ${BUILD_WORKSPACE_DIRECTORY}/bazel-out/k8-fastbuild/bin/build_proto/build.gen.pb.go_genfile.go ${BUILD_WORKSPACE_DIRECTORY}/build_proto/build.gen.pb.go' > bazel-out/k8-fastbuild/bin/build_proto/build.gen.pb.gocopy.sh"
+        }
+      }
+    },
+    {
+      "count": 1,
+      "violation": {
+        "kind": "absolute_path",
+        "action": {
+          "mnemonic": "Genrule",
+          "target": "//build_proto:build.gen.pb.go_copysh"
+        },
+        "path": "/build_proto/build.gen.pb.go",
+        "site": {
+          "location": "argument",
+          "value": "source external/bazel_tools/tools/genrule/genrule-setup.sh; echo 'cp ${BUILD_WORKSPACE_DIRECTORY}/bazel-out/k8-fastbuild/bin/build_proto/build.gen.pb.go_genfile.go ${BUILD_WORKSPACE_DIRECTORY}/build_proto/build.gen.pb.go' > bazel-out/k8-fastbuild/bin/build_proto/build.gen.pb.gocopy.sh"
+        }
+      }
+    },
+    {
+      "count": 2,
+      "violation": {
+        "kind": "absolute_path",
+        "action": {
+          "mnemonic": "Genrule",
+          "target": "//deps_proto:deps.gen.pb.go_checksh"
+        },
+        "path": "/bazel_tools/tools/bash/runfiles/runfiles.bash",
+        "site": {
+          "location": "argument",
+          "value": "source external/bazel_tools/tools/genrule/genrule-setup.sh; cat >bazel-out/k8-fastbuild/bin/deps_proto/deps.gen.pb.go_check.sh <<'eof'\n#!/bin/bash\n# Script generated by @com_github_bazelbuild_buildtools//build:build_defs.bzl\n\n# --- begin runfiles.bash initialization ---\n# Copy-pasted from Bazel's Bash runfiles library (tools/bash/runfiles/runfiles.bash).\nset -euo pipefail\nif [[ ! -d \"${RUNFILES_DIR:-/dev/null}\" && ! -f \"${RUNFILES_MANIFEST_FILE:-/dev/null}\" ]]; then\n  if [[ -f \"$0.runfiles_manifest\" ]]; then\n    export RUNFILES_MANIFEST_FILE=\"$0.runfiles_manifest\"\n  elif [[ -f \"$0.runfiles/MANIFEST\" ]]; then\n    export RUNFILES_MANIFEST_FILE=\"$0.runfiles/MANIFEST\"\n  elif [[ -f \"$0.runfiles/bazel_tools/tools/bash/runfiles/runfiles.bash\" ]]; then\n    export RUNFILES_DIR=\"$0.runfiles\"\n  fi\nfi\nif [[ -f \"${RUNFILES_DIR:-/dev/null}/bazel_tools/tools/bash/runfiles/runfiles.bash\" ]]; then\n  source \"${RUNFILES_DIR}/bazel_tools/tools/bash/runfiles/runfiles.bash\"\nelif [[ -f \"${RUNFILES_MANIFEST_FILE:-/dev/null}\" ]]; then\n  source \"$(grep -m1 \"^bazel_tools/tools/bash/runfiles/runfiles.bash \" \\\n            \"$RUNFILES_MANIFEST_FILE\" | cut -d ' ' -f 2-)\"\nelse\n  echo >&2 \"ERROR: cannot find @bazel_tools//tools/bash/runfiles:runfiles.bash\"\n  exit 1\nfi\n# --- end runfiles.bash initialization ---\n\n[[ \"$1\" = external/* ]] && F1=\"${1#external/}\" || F1=\"$TEST_WORKSPACE/$1\"\n[[ \"$2\" = external/* ]] && F2=\"${2#external/}\" || F2=\"$TEST_WORKSPACE/$2\"\nF1=\"$(rlocation \"$F1\")\"\nF2=\"$(rlocation \"$F2\")\"\ndiff -q \"$F1\" \"$F2\"\neof\n"
+        }
+      }
+    },
+    {
+      "count": 1,
+      "violation": {
+        "kind": "absolute_path",
+        "action": {
+          "mnemonic": "Genrule",
+          "target": "//deps_proto:deps.gen.pb.go_checksh"
+        },
+        "path": "/bin/bash",
+        "site": {
+          "location": "argument",
+          "value": "source external/bazel_tools/tools/genrule/genrule-setup.sh; cat >bazel-out/k8-fastbuild/bin/deps_proto/deps.gen.pb.go_check.sh <<'eof'\n#!/bin/bash\n# Script generated by @com_github_bazelbuild_buildtools//build:build_defs.bzl\n\n# --- begin runfiles.bash initialization ---\n# Copy-pasted from Bazel's Bash runfiles library (tools/bash/runfiles/runfiles.bash).\nset -euo pipefail\nif [[ ! -d \"${RUNFILES_DIR:-/dev/null}\" && ! -f \"${RUNFILES_MANIFEST_FILE:-/dev/null}\" ]]; then\n  if [[ -f \"$0.runfiles_manifest\" ]]; then\n    export RUNFILES_MANIFEST_FILE=\"$0.runfiles_manifest\"\n  elif [[ -f \"$0.runfiles/MANIFEST\" ]]; then\n    export RUNFILES_MANIFEST_FILE=\"$0.runfiles/MANIFEST\"\n  elif [[ -f \"$0.runfiles/bazel_tools/tools/bash/runfiles/runfiles.bash\" ]]; then\n    export RUNFILES_DIR=\"$0.runfiles\"\n  fi\nfi\nif [[ -f \"${RUNFILES_DIR:-/dev/null}/bazel_tools/tools/bash/runfiles/runfiles.bash\" ]]; then\n  source \"${RUNFILES_DIR}/bazel_tools/tools/bash/runfiles/runfiles.bash\"\nelif [[ -f \"${RUNFILES_MANIFEST_FILE:-/dev/null}\" ]]; then\n  source \"$(grep -m1 \"^bazel_tools/tools/bash/runfiles/runfiles.bash \" \\\n            \"$RUNFILES_MANIFEST_FILE\" | cut -d ' ' -f 2-)\"\nelse\n  echo >&2 \"ERROR: cannot find @bazel_tools//tools/bash/runfiles:runfiles.bash\"\n  exit 1\nfi\n# --- end runfiles.bash initialization ---\n\n[[ \"$1\" = external/* ]] && F1=\"${1#external/}\" || F1=\"$TEST_WORKSPACE/$1\"\n[[ \"$2\" = external/* ]] && F2=\"${2#external/}\" || F2=\"$TEST_WORKSPACE/$2\"\nF1=\"$(rlocation \"$F1\")\"\nF2=\"$(rlocation \"$F2\")\"\ndiff -q \"$F1\" \"$F2\"\neof\n"
+        }
+      }
+    },
+    {
+      "count": 1,
+      "violation": {
+        "kind": "absolute_path",
+        "action": {
+          "mnemonic": "Genrule",
+          "target": "//deps_proto:deps.gen.pb.go_copysh"
+        },
+        "path": "/bazel-out/k8-fastbuild/bin/deps_proto/deps.gen.pb.go_genfile.go",
+        "site": {
+          "location": "argument",
+          "value": "source external/bazel_tools/tools/genrule/genrule-setup.sh; echo 'cp ${BUILD_WORKSPACE_DIRECTORY}/bazel-out/k8-fastbuild/bin/deps_proto/deps.gen.pb.go_genfile.go ${BUILD_WORKSPACE_DIRECTORY}/deps_proto/deps.gen.pb.go' > bazel-out/k8-fastbuild/bin/deps_proto/deps.gen.pb.gocopy.sh"
+        }
+      }
+    },
+    {
+      "count": 1,
+      "violation": {
+        "kind": "absolute_path",
+        "action": {
+          "mnemonic": "Genrule",
+          "target": "//deps_proto:deps.gen.pb.go_copysh"
+        },
+        "path": "/deps_proto/deps.gen.pb.go",
+        "site": {
+          "location": "argument",
+          "value": "source external/bazel_tools/tools/genrule/genrule-setup.sh; echo 'cp ${BUILD_WORKSPACE_DIRECTORY}/bazel-out/k8-fastbuild/bin/deps_proto/deps.gen.pb.go_genfile.go ${BUILD_WORKSPACE_DIRECTORY}/deps_proto/deps.gen.pb.go' > bazel-out/k8-fastbuild/bin/deps_proto/deps.gen.pb.gocopy.sh"
+        }
+      }
+    },
+    {
+      "count": 2,
+      "violation": {
+        "kind": "absolute_path",
+        "action": {
+          "mnemonic": "Genrule",
+          "target": "//extra_actions_base_proto:extra_actions_base.gen.pb.go_checksh"
+        },
+        "path": "/bazel_tools/tools/bash/runfiles/runfiles.bash",
+        "site": {
+          "location": "argument",
+          "value": "source external/bazel_tools/tools/genrule/genrule-setup.sh; cat >bazel-out/k8-fastbuild/bin/extra_actions_base_proto/extra_actions_base.gen.pb.go_check.sh <<'eof'\n#!/bin/bash\n# Script generated by @com_github_bazelbuild_buildtools//build:build_defs.bzl\n\n# --- begin runfiles.bash initialization ---\n# Copy-pasted from Bazel's Bash runfiles library (tools/bash/runfiles/runfiles.bash).\nset -euo pipefail\nif [[ ! -d \"${RUNFILES_DIR:-/dev/null}\" && ! -f \"${RUNFILES_MANIFEST_FILE:-/dev/null}\" ]]; then\n  if [[ -f \"$0.runfiles_manifest\" ]]; then\n    export RUNFILES_MANIFEST_FILE=\"$0.runfiles_manifest\"\n  elif [[ -f \"$0.runfiles/MANIFEST\" ]]; then\n    export RUNFILES_MANIFEST_FILE=\"$0.runfiles/MANIFEST\"\n  elif [[ -f \"$0.runfiles/bazel_tools/tools/bash/runfiles/runfiles.bash\" ]]; then\n    export RUNFILES_DIR=\"$0.runfiles\"\n  fi\nfi\nif [[ -f \"${RUNFILES_DIR:-/dev/null}/bazel_tools/tools/bash/runfiles/runfiles.bash\" ]]; then\n  source \"${RUNFILES_DIR}/bazel_tools/tools/bash/runfiles/runfiles.bash\"\nelif [[ -f \"${RUNFILES_MANIFEST_FILE:-/dev/null}\" ]]; then\n  source \"$(grep -m1 \"^bazel_tools/tools/bash/runfiles/runfiles.bash \" \\\n            \"$RUNFILES_MANIFEST_FILE\" | cut -d ' ' -f 2-)\"\nelse\n  echo >&2 \"ERROR: cannot find @bazel_tools//tools/bash/runfiles:runfiles.bash\"\n  exit 1\nfi\n# --- end runfiles.bash initialization ---\n\n[[ \"$1\" = external/* ]] && F1=\"${1#external/}\" || F1=\"$TEST_WORKSPACE/$1\"\n[[ \"$2\" = external/* ]] && F2=\"${2#external/}\" || F2=\"$TEST_WORKSPACE/$2\"\nF1=\"$(rlocation \"$F1\")\"\nF2=\"$(rlocation \"$F2\")\"\ndiff -q \"$F1\" \"$F2\"\neof\n"
+        }
+      }
+    },
+    {
+      "count": 1,
+      "violation": {
+        "kind": "absolute_path",
+        "action": {
+          "mnemonic": "Genrule",
+          "target": "//extra_actions_base_proto:extra_actions_base.gen.pb.go_checksh"
+        },
+        "path": "/bin/bash",
+        "site": {
+          "location": "argument",
+          "value": "source external/bazel_tools/tools/genrule/genrule-setup.sh; cat >bazel-out/k8-fastbuild/bin/extra_actions_base_proto/extra_actions_base.gen.pb.go_check.sh <<'eof'\n#!/bin/bash\n# Script generated by @com_github_bazelbuild_buildtools//build:build_defs.bzl\n\n# --- begin runfiles.bash initialization ---\n# Copy-pasted from Bazel's Bash runfiles library (tools/bash/runfiles/runfiles.bash).\nset -euo pipefail\nif [[ ! -d \"${RUNFILES_DIR:-/dev/null}\" && ! -f \"${RUNFILES_MANIFEST_FILE:-/dev/null}\" ]]; then\n  if [[ -f \"$0.runfiles_manifest\" ]]; then\n    export RUNFILES_MANIFEST_FILE=\"$0.runfiles_manifest\"\n  elif [[ -f \"$0.runfiles/MANIFEST\" ]]; then\n    export RUNFILES_MANIFEST_FILE=\"$0.runfiles/MANIFEST\"\n  elif [[ -f \"$0.runfiles/bazel_tools/tools/bash/runfiles/runfiles.bash\" ]]; then\n    export RUNFILES_DIR=\"$0.runfiles\"\n  fi\nfi\nif [[ -f \"${RUNFILES_DIR:-/dev/null}/bazel_tools/tools/bash/runfiles/runfiles.bash\" ]]; then\n  source \"${RUNFILES_DIR}/bazel_tools/tools/bash/runfiles/runfiles.bash\"\nelif [[ -f \"${RUNFILES_MANIFEST_FILE:-/dev/null}\" ]]; then\n  source \"$(grep -m1 \"^bazel_tools/tools/bash/runfiles/runfiles.bash \" \\\n            \"$RUNFILES_MANIFEST_FILE\" | cut -d ' ' -f 2-)\"\nelse\n  echo >&2 \"ERROR: cannot find @bazel_tools//tools/bash/runfiles:runfiles.bash\"\n  exit 1\nfi\n# --- end runfiles.bash initialization ---\n\n[[ \"$1\" = external/* ]] && F1=\"${1#external/}\" || F1=\"$TEST_WORKSPACE/$1\"\n[[ \"$2\" = external/* ]] && F2=\"${2#external/}\" || F2=\"$TEST_WORKSPACE/$2\"\nF1=\"$(rlocation \"$F1\")\"\nF2=\"$(rlocation \"$F2\")\"\ndiff -q \"$F1\" \"$F2\"\neof\n"
+        }
+      }
+    },
+    {
+      "count": 1,
+      "violation": {
+        "kind": "absolute_path",
+        "action": {
+          "mnemonic": "Genrule",
+          "target": "//extra_actions_base_proto:extra_actions_base.gen.pb.go_copysh"
+        },
+        "path": "/bazel-out/k8-fastbuild/bin/extra_actions_base_proto/extra_actions_base.gen.pb.go_genfile.go",
+        "site": {
+          "location": "argument",
+          "value": "source external/bazel_tools/tools/genrule/genrule-setup.sh; echo 'cp ${BUILD_WORKSPACE_DIRECTORY}/bazel-out/k8-fastbuild/bin/extra_actions_base_proto/extra_actions_base.gen.pb.go_genfile.go ${BUILD_WORKSPACE_DIRECTORY}/extra_actions_base_proto/extra_actions_base.gen.pb.go' > bazel-out/k8-fastbuild/bin/extra_actions_base_proto/extra_actions_base.gen.pb.gocopy.sh"
+        }
+      }
+    },
+    {
+      "count": 1,
+      "violation": {
+        "kind": "absolute_path",
+        "action": {
+          "mnemonic": "Genrule",
+          "target": "//extra_actions_base_proto:extra_actions_base.gen.pb.go_copysh"
+        },
+        "path": "/extra_actions_base_proto/extra_actions_base.gen.pb.go",
+        "site": {
+          "location": "argument",
+          "value": "source external/bazel_tools/tools/genrule/genrule-setup.sh; echo 'cp ${BUILD_WORKSPACE_DIRECTORY}/bazel-out/k8-fastbuild/bin/extra_actions_base_proto/extra_actions_base.gen.pb.go_genfile.go ${BUILD_WORKSPACE_DIRECTORY}/extra_actions_base_proto/extra_actions_base.gen.pb.go' > bazel-out/k8-fastbuild/bin/extra_actions_base_proto/extra_actions_base.gen.pb.gocopy.sh"
+        }
+      }
+    },
+    {
+      "count": 2,
+      "violation": {
+        "kind": "absolute_path",
+        "action": {
+          "mnemonic": "Genrule",
+          "target": "//lang:tables.gen.go_checksh"
+        },
+        "path": "/bazel_tools/tools/bash/runfiles/runfiles.bash",
+        "site": {
+          "location": "argument",
+          "value": "source external/bazel_tools/tools/genrule/genrule-setup.sh; cat >bazel-out/k8-fastbuild/bin/lang/tables.gen.go_check.sh <<'eof'\n#!/bin/bash\n# Script generated by @com_github_bazelbuild_buildtools//build:build_defs.bzl\n\n# --- begin runfiles.bash initialization ---\n# Copy-pasted from Bazel's Bash runfiles library (tools/bash/runfiles/runfiles.bash).\nset -euo pipefail\nif [[ ! -d \"${RUNFILES_DIR:-/dev/null}\" && ! -f \"${RUNFILES_MANIFEST_FILE:-/dev/null}\" ]]; then\n  if [[ -f \"$0.runfiles_manifest\" ]]; then\n    export RUNFILES_MANIFEST_FILE=\"$0.runfiles_manifest\"\n  elif [[ -f \"$0.runfiles/MANIFEST\" ]]; then\n    export RUNFILES_MANIFEST_FILE=\"$0.runfiles/MANIFEST\"\n  elif [[ -f \"$0.runfiles/bazel_tools/tools/bash/runfiles/runfiles.bash\" ]]; then\n    export RUNFILES_DIR=\"$0.runfiles\"\n  fi\nfi\nif [[ -f \"${RUNFILES_DIR:-/dev/null}/bazel_tools/tools/bash/runfiles/runfiles.bash\" ]]; then\n  source \"${RUNFILES_DIR}/bazel_tools/tools/bash/runfiles/runfiles.bash\"\nelif [[ -f \"${RUNFILES_MANIFEST_FILE:-/dev/null}\" ]]; then\n  source \"$(grep -m1 \"^bazel_tools/tools/bash/runfiles/runfiles.bash \" \\\n            \"$RUNFILES_MANIFEST_FILE\" | cut -d ' ' -f 2-)\"\nelse\n  echo >&2 \"ERROR: cannot find @bazel_tools//tools/bash/runfiles:runfiles.bash\"\n  exit 1\nfi\n# --- end runfiles.bash initialization ---\n\n[[ \"$1\" = external/* ]] && F1=\"${1#external/}\" || F1=\"$TEST_WORKSPACE/$1\"\n[[ \"$2\" = external/* ]] && F2=\"${2#external/}\" || F2=\"$TEST_WORKSPACE/$2\"\nF1=\"$(rlocation \"$F1\")\"\nF2=\"$(rlocation \"$F2\")\"\ndiff -q \"$F1\" \"$F2\"\neof\n"
+        }
+      }
+    },
+    {
+      "count": 1,
+      "violation": {
+        "kind": "absolute_path",
+        "action": {
+          "mnemonic": "Genrule",
+          "target": "//lang:tables.gen.go_checksh"
+        },
+        "path": "/bin/bash",
+        "site": {
+          "location": "argument",
+          "value": "source external/bazel_tools/tools/genrule/genrule-setup.sh; cat >bazel-out/k8-fastbuild/bin/lang/tables.gen.go_check.sh <<'eof'\n#!/bin/bash\n# Script generated by @com_github_bazelbuild_buildtools//build:build_defs.bzl\n\n# --- begin runfiles.bash initialization ---\n# Copy-pasted from Bazel's Bash runfiles library (tools/bash/runfiles/runfiles.bash).\nset -euo pipefail\nif [[ ! -d \"${RUNFILES_DIR:-/dev/null}\" && ! -f \"${RUNFILES_MANIFEST_FILE:-/dev/null}\" ]]; then\n  if [[ -f \"$0.runfiles_manifest\" ]]; then\n    export RUNFILES_MANIFEST_FILE=\"$0.runfiles_manifest\"\n  elif [[ -f \"$0.runfiles/MANIFEST\" ]]; then\n    export RUNFILES_MANIFEST_FILE=\"$0.runfiles/MANIFEST\"\n  elif [[ -f \"$0.runfiles/bazel_tools/tools/bash/runfiles/runfiles.bash\" ]]; then\n    export RUNFILES_DIR=\"$0.runfiles\"\n  fi\nfi\nif [[ -f \"${RUNFILES_DIR:-/dev/null}/bazel_tools/tools/bash/runfiles/runfiles.bash\" ]]; then\n  source \"${RUNFILES_DIR}/bazel_tools/tools/bash/runfiles/runfiles.bash\"\nelif [[ -f \"${RUNFILES_MANIFEST_FILE:-/dev/null}\" ]]; then\n  source \"$(grep -m1 \"^bazel_tools/tools/bash/runfiles/runfiles.bash \" \\\n            \"$RUNFILES_MANIFEST_FILE\" | cut -d ' ' -f 2-)\"\nelse\n  echo >&2 \"ERROR: cannot find @bazel_tools//tools/bash/runfiles:runfiles.bash\"\n  exit 1\nfi\n# --- end runfiles.bash initialization ---\n\n[[ \"$1\" = external/* ]] && F1=\"${1#external/}\" || F1=\"$TEST_WORKSPACE/$1\"\n[[ \"$2\" = external/* ]] && F2=\"${2#external/}\" || F2=\"$TEST_WORKSPACE/$2\"\nF1=\"$(rlocation \"$F1\")\"\nF2=\"$(rlocation \"$F2\")\"\ndiff -q \"$F1\" \"$F2\"\neof\n"
+        }
+      }
+    },
+    {
+      "count": 1,
+      "violation": {
+        "kind": "absolute_path",
+        "action": {
+          "mnemonic": "Genrule",
+          "target": "//lang:tables.gen.go_copysh"
+        },
+        "path": "/bazel-out/k8-fastbuild/bin/lang/tables.go",
+        "site": {
+          "location": "argument",
+          "value": "source external/bazel_tools/tools/genrule/genrule-setup.sh; echo 'cp ${BUILD_WORKSPACE_DIRECTORY}/bazel-out/k8-fastbuild/bin/lang/tables.go ${BUILD_WORKSPACE_DIRECTORY}/lang/tables.gen.go' > bazel-out/k8-fastbuild/bin/lang/tables.gen.gocopy.sh"
+        }
+      }
+    },
+    {
+      "count": 1,
+      "violation": {
+        "kind": "absolute_path",
+        "action": {
+          "mnemonic": "Genrule",
+          "target": "//lang:tables.gen.go_copysh"
+        },
+        "path": "/lang/tables.gen.go",
+        "site": {
+          "location": "argument",
+          "value": "source external/bazel_tools/tools/genrule/genrule-setup.sh; echo 'cp ${BUILD_WORKSPACE_DIRECTORY}/bazel-out/k8-fastbuild/bin/lang/tables.go ${BUILD_WORKSPACE_DIRECTORY}/lang/tables.gen.go' > bazel-out/k8-fastbuild/bin/lang/tables.gen.gocopy.sh"
+        }
+      }
+    },
+    {
+      "count": 1,
+      "violation": {
+        "kind": "system_program",
+        "action": {
+          "mnemonic": "CopyFile",
+          "target": "//buildifier/npm:copy_LICENSE"
+        },
+        "program": {
+          "origin": "system",
+          "path": "/bin/bash"
+        },
+        "wrappers": []
+      }
+    },
+    {
+      "count": 1,
+      "violation": {
+        "kind": "system_program",
+        "action": {
+          "mnemonic": "CopyFile",
+          "target": "//buildifier/npm:copy_README.md"
+        },
+        "program": {
+          "origin": "system",
+          "path": "/bin/bash"
+        },
+        "wrappers": []
+      }
+    },
+    {
+      "count": 1,
+      "violation": {
+        "kind": "system_program",
+        "action": {
+          "mnemonic": "CopyFile",
+          "target": "//buildifier/npm:copy_buildifier-darwin_amd64"
+        },
+        "program": {
+          "origin": "system",
+          "path": "/bin/bash"
+        },
+        "wrappers": []
+      }
+    },
+    {
+      "count": 1,
+      "violation": {
+        "kind": "system_program",
+        "action": {
+          "mnemonic": "CopyFile",
+          "target": "//buildifier/npm:copy_buildifier-darwin_arm64"
+        },
+        "program": {
+          "origin": "system",
+          "path": "/bin/bash"
+        },
+        "wrappers": []
+      }
+    },
+    {
+      "count": 1,
+      "violation": {
+        "kind": "system_program",
+        "action": {
+          "mnemonic": "CopyFile",
+          "target": "//buildifier/npm:copy_buildifier-linux_amd64"
+        },
+        "program": {
+          "origin": "system",
+          "path": "/bin/bash"
+        },
+        "wrappers": []
+      }
+    },
+    {
+      "count": 1,
+      "violation": {
+        "kind": "system_program",
+        "action": {
+          "mnemonic": "CopyFile",
+          "target": "//buildifier/npm:copy_buildifier-linux_arm64"
+        },
+        "program": {
+          "origin": "system",
+          "path": "/bin/bash"
+        },
+        "wrappers": []
+      }
+    },
+    {
+      "count": 1,
+      "violation": {
+        "kind": "system_program",
+        "action": {
+          "mnemonic": "CopyFile",
+          "target": "//buildifier/npm:copy_buildifier-linux_riscv64"
+        },
+        "program": {
+          "origin": "system",
+          "path": "/bin/bash"
+        },
+        "wrappers": []
+      }
+    },
+    {
+      "count": 1,
+      "violation": {
+        "kind": "system_program",
+        "action": {
+          "mnemonic": "CopyFile",
+          "target": "//buildifier/npm:copy_buildifier-windows_amd64.exe"
+        },
+        "program": {
+          "origin": "system",
+          "path": "/bin/bash"
+        },
+        "wrappers": []
+      }
+    },
+    {
+      "count": 1,
+      "violation": {
+        "kind": "system_program",
+        "action": {
+          "mnemonic": "CopyFile",
+          "target": "//buildifier/npm:copy_buildifier-windows_arm64.exe"
+        },
+        "program": {
+          "origin": "system",
+          "path": "/bin/bash"
+        },
+        "wrappers": []
+      }
+    },
+    {
+      "count": 1,
+      "violation": {
+        "kind": "system_program",
+        "action": {
+          "mnemonic": "CopyFile",
+          "target": "//buildozer/npm:copy_LICENSE"
+        },
+        "program": {
+          "origin": "system",
+          "path": "/bin/bash"
+        },
+        "wrappers": []
+      }
+    },
+    {
+      "count": 1,
+      "violation": {
+        "kind": "system_program",
+        "action": {
+          "mnemonic": "CopyFile",
+          "target": "//buildozer/npm:copy_README.md"
+        },
+        "program": {
+          "origin": "system",
+          "path": "/bin/bash"
+        },
+        "wrappers": []
+      }
+    },
+    {
+      "count": 1,
+      "violation": {
+        "kind": "system_program",
+        "action": {
+          "mnemonic": "CopyFile",
+          "target": "//buildozer/npm:copy_buildozer-darwin_amd64"
+        },
+        "program": {
+          "origin": "system",
+          "path": "/bin/bash"
+        },
+        "wrappers": []
+      }
+    },
+    {
+      "count": 1,
+      "violation": {
+        "kind": "system_program",
+        "action": {
+          "mnemonic": "CopyFile",
+          "target": "//buildozer/npm:copy_buildozer-darwin_arm64"
+        },
+        "program": {
+          "origin": "system",
+          "path": "/bin/bash"
+        },
+        "wrappers": []
+      }
+    },
+    {
+      "count": 1,
+      "violation": {
+        "kind": "system_program",
+        "action": {
+          "mnemonic": "CopyFile",
+          "target": "//buildozer/npm:copy_buildozer-linux_amd64"
+        },
+        "program": {
+          "origin": "system",
+          "path": "/bin/bash"
+        },
+        "wrappers": []
+      }
+    },
+    {
+      "count": 1,
+      "violation": {
+        "kind": "system_program",
+        "action": {
+          "mnemonic": "CopyFile",
+          "target": "//buildozer/npm:copy_buildozer-linux_arm64"
+        },
+        "program": {
+          "origin": "system",
+          "path": "/bin/bash"
+        },
+        "wrappers": []
+      }
+    },
+    {
+      "count": 1,
+      "violation": {
+        "kind": "system_program",
+        "action": {
+          "mnemonic": "CopyFile",
+          "target": "//buildozer/npm:copy_buildozer-linux_riscv64"
+        },
+        "program": {
+          "origin": "system",
+          "path": "/bin/bash"
+        },
+        "wrappers": []
+      }
+    },
+    {
+      "count": 1,
+      "violation": {
+        "kind": "system_program",
+        "action": {
+          "mnemonic": "CopyFile",
+          "target": "//buildozer/npm:copy_buildozer-windows_amd64.exe"
+        },
+        "program": {
+          "origin": "system",
+          "path": "/bin/bash"
+        },
+        "wrappers": []
+      }
+    },
+    {
+      "count": 1,
+      "violation": {
+        "kind": "system_program",
+        "action": {
+          "mnemonic": "CopyFile",
+          "target": "//buildozer/npm:copy_buildozer-windows_arm64.exe"
+        },
+        "program": {
+          "origin": "system",
+          "path": "/bin/bash"
+        },
+        "wrappers": []
+      }
+    },
+    {
+      "count": 1,
+      "violation": {
+        "kind": "system_program",
+        "action": {
+          "mnemonic": "Genrule",
+          "target": "//api_proto:api.gen.pb.go_checksh"
+        },
+        "program": {
+          "origin": "system",
+          "path": "/bin/bash"
+        },
+        "wrappers": []
+      }
+    },
+    {
+      "count": 1,
+      "violation": {
+        "kind": "system_program",
+        "action": {
+          "mnemonic": "Genrule",
+          "target": "//api_proto:api.gen.pb.go_copysh"
+        },
+        "program": {
+          "origin": "system",
+          "path": "/bin/bash"
+        },
+        "wrappers": []
+      }
+    },
+    {
+      "count": 1,
+      "violation": {
+        "kind": "system_program",
+        "action": {
+          "mnemonic": "Genrule",
+          "target": "//api_proto:api.gen.pb.go_genfile"
+        },
+        "program": {
+          "origin": "system",
+          "path": "/bin/bash"
+        },
+        "wrappers": []
+      }
+    },
+    {
+      "count": 1,
+      "violation": {
+        "kind": "system_program",
+        "action": {
+          "mnemonic": "Genrule",
+          "target": "//build_proto:build.gen.pb.go_checksh"
+        },
+        "program": {
+          "origin": "system",
+          "path": "/bin/bash"
+        },
+        "wrappers": []
+      }
+    },
+    {
+      "count": 1,
+      "violation": {
+        "kind": "system_program",
+        "action": {
+          "mnemonic": "Genrule",
+          "target": "//build_proto:build.gen.pb.go_copysh"
+        },
+        "program": {
+          "origin": "system",
+          "path": "/bin/bash"
+        },
+        "wrappers": []
+      }
+    },
+    {
+      "count": 1,
+      "violation": {
+        "kind": "system_program",
+        "action": {
+          "mnemonic": "Genrule",
+          "target": "//build_proto:build.gen.pb.go_genfile"
+        },
+        "program": {
+          "origin": "system",
+          "path": "/bin/bash"
+        },
+        "wrappers": []
+      }
+    },
+    {
+      "count": 1,
+      "violation": {
+        "kind": "system_program",
+        "action": {
+          "mnemonic": "Genrule",
+          "target": "//buildifier/npm:buildifier_launcher"
+        },
+        "program": {
+          "origin": "system",
+          "path": "/bin/bash"
+        },
+        "wrappers": []
+      }
+    },
+    {
+      "count": 1,
+      "violation": {
+        "kind": "system_program",
+        "action": {
+          "mnemonic": "Genrule",
+          "target": "//buildozer/npm:buildozer_launcher"
+        },
+        "program": {
+          "origin": "system",
+          "path": "/bin/bash"
+        },
+        "wrappers": []
+      }
+    },
+    {
+      "count": 1,
+      "violation": {
+        "kind": "system_program",
+        "action": {
+          "mnemonic": "Genrule",
+          "target": "//deps_proto:deps.gen.pb.go_checksh"
+        },
+        "program": {
+          "origin": "system",
+          "path": "/bin/bash"
+        },
+        "wrappers": []
+      }
+    },
+    {
+      "count": 1,
+      "violation": {
+        "kind": "system_program",
+        "action": {
+          "mnemonic": "Genrule",
+          "target": "//deps_proto:deps.gen.pb.go_copysh"
+        },
+        "program": {
+          "origin": "system",
+          "path": "/bin/bash"
+        },
+        "wrappers": []
+      }
+    },
+    {
+      "count": 1,
+      "violation": {
+        "kind": "system_program",
+        "action": {
+          "mnemonic": "Genrule",
+          "target": "//deps_proto:deps.gen.pb.go_genfile"
+        },
+        "program": {
+          "origin": "system",
+          "path": "/bin/bash"
+        },
+        "wrappers": []
+      }
+    },
+    {
+      "count": 1,
+      "violation": {
+        "kind": "system_program",
+        "action": {
+          "mnemonic": "Genrule",
+          "target": "//extra_actions_base_proto:extra_actions_base.gen.pb.go_checksh"
+        },
+        "program": {
+          "origin": "system",
+          "path": "/bin/bash"
+        },
+        "wrappers": []
+      }
+    },
+    {
+      "count": 1,
+      "violation": {
+        "kind": "system_program",
+        "action": {
+          "mnemonic": "Genrule",
+          "target": "//extra_actions_base_proto:extra_actions_base.gen.pb.go_copysh"
+        },
+        "program": {
+          "origin": "system",
+          "path": "/bin/bash"
+        },
+        "wrappers": []
+      }
+    },
+    {
+      "count": 1,
+      "violation": {
+        "kind": "system_program",
+        "action": {
+          "mnemonic": "Genrule",
+          "target": "//extra_actions_base_proto:extra_actions_base.gen.pb.go_genfile"
+        },
+        "program": {
+          "origin": "system",
+          "path": "/bin/bash"
+        },
+        "wrappers": []
+      }
+    },
+    {
+      "count": 1,
+      "violation": {
+        "kind": "system_program",
+        "action": {
+          "mnemonic": "Genrule",
+          "target": "//lang:tables.gen.go_checksh"
+        },
+        "program": {
+          "origin": "system",
+          "path": "/bin/bash"
+        },
+        "wrappers": []
+      }
+    },
+    {
+      "count": 1,
+      "violation": {
+        "kind": "system_program",
+        "action": {
+          "mnemonic": "Genrule",
+          "target": "//lang:tables.gen.go_copysh"
+        },
+        "program": {
+          "origin": "system",
+          "path": "/bin/bash"
+        },
+        "wrappers": []
+      }
+    },
+    {
+      "count": 1,
+      "violation": {
+        "kind": "system_program",
+        "action": {
+          "mnemonic": "Jq",
+          "target": "//buildifier/npm:package"
+        },
+        "program": {
+          "origin": "system",
+          "path": "/bin/bash"
+        },
+        "wrappers": []
+      }
+    },
+    {
+      "count": 1,
+      "violation": {
+        "kind": "system_program",
+        "action": {
+          "mnemonic": "Jq",
+          "target": "//buildozer/npm:package"
+        },
+        "program": {
+          "origin": "system",
+          "path": "/bin/bash"
+        },
+        "wrappers": []
+      }
+    },
+    {
+      "count": 10,
+      "violation": {
+        "kind": "unknown_program",
+        "action": {
+          "mnemonic": "Action",
+          "target": "//lang:generateTablesFile"
+        },
+        "program": {
+          "origin": {
+            "main": {
+              "extension": null
+            }
+          },
+          "path": "generatetables/generatetables_/generatetables"
+        },
+        "wrappers": []
+      }
+    },
+    {
+      "count": 1,
+      "violation": {
+        "kind": "unknown_program",
+        "action": {
+          "mnemonic": "Action",
+          "target": "//warn/docs:warnings_docs"
+        },
+        "program": {
+          "origin": {
+            "main": {
+              "extension": null
+            }
+          },
+          "path": "warn/docs/go_default_binary_/go_default_binary"
+        },
+        "wrappers": []
+      }
+    }
+  ]
+}

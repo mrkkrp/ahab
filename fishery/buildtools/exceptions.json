@@ -1,0 +1,19 @@
+{
+  "exceptions": [
+    {
+      "reason": "the Go actions link through Bazel's autoconfigured C++ toolchain, which puts whichever compiler the machine has on PATH; the value differs per machine, the mnemonic does not",
+      "kind": "bad_path",
+      "mnemonic": "Go*"
+    },
+    {
+      "reason": "the Go tooling links with Bazel's autoconfigured C++ toolchain",
+      "kind": "absolute_path",
+      "path": "*/bin/gcc"
+    },
+    {
+      "reason": "the Go tooling links with Bazel's autoconfigured C++ toolchain",
+      "kind": "absolute_path",
+      "path": "*/bin/ar"
+    }
+  ]
+}

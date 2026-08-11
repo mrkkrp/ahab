@@ -230,6 +230,20 @@ fn language_agnostic() -> Vec<(ProgramId, Entry)> {
                 "bin/protoc",
             )),
         ),
+        // And a third way: the build protobuf's own BUILD file calls "the
+        // protobuf compiler without code generators", which is what the
+        // proto rules run when all they need is a descriptor set.
+        (
+            ProgramId::module(
+                "protobuf",
+                "src/google/protobuf/compiler/protoc_minimal",
+            ),
+            Entry::SameAs(ProgramId::extension(
+                "protobuf",
+                "protoc",
+                "bin/protoc",
+            )),
+        ),
         // Bazel's own zip tool, which every rule set reaches for when it
         // has to put a tree in an archive. A zip normally records the
         // moment each entry was added, which would make the archive a
