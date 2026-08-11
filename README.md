@@ -236,6 +236,9 @@ how a total check stops being total.
 A specification says what Ahab knows about one program. It can be extended
 by users and this section explains how to do it.
 
+*Heads up: the JSON format described below is subject to change before
+1.0.0.*
+
 ### Naming a program
 
 Programs are named in a Bazel-like label form, which is exactly how they
@@ -456,6 +459,9 @@ underneath. That is how e.g. `process_wrapper` is handled.
 An exception excuses violations you have decided to live with. They are
 applied to the finished report, downstream of every check, so no exception
 can change what a check looks at—only whether you hear about it.
+
+*Heads up: the JSON format described below is subject to change before
+1.0.0.*
 
 ### How they match
 
