@@ -1,0 +1,286 @@
+{
+  "violations": [
+    {
+      "count": 1,
+      "violation": {
+        "kind": "execution_requirement",
+        "action": {
+          "mnemonic": "CopyFile",
+          "target": "//ts/test/ts_project_worker:copy_ts_project_worker"
+        },
+        "requirement": "no-cache"
+      }
+    },
+    {
+      "count": 1,
+      "violation": {
+        "kind": "execution_requirement",
+        "action": {
+          "mnemonic": "CopyFile",
+          "target": "//ts/test/ts_project_worker:copy_ts_project_worker"
+        },
+        "requirement": "no-remote"
+      }
+    },
+    {
+      "count": 3,
+      "violation": {
+        "kind": "execution_requirement",
+        "action": {
+          "mnemonic": "CopyFile",
+          "target": "//ts/test/ts_project_worker:fstree_test"
+        },
+        "requirement": "no-sandbox"
+      }
+    },
+    {
+      "count": 3,
+      "violation": {
+        "kind": "execution_requirement",
+        "action": {
+          "mnemonic": "CopyFile",
+          "target": "//ts/test/ts_project_worker:oom_test"
+        },
+        "requirement": "no-sandbox"
+      }
+    },
+    {
+      "count": 1,
+      "violation": {
+        "kind": "system_program",
+        "action": {
+          "mnemonic": "Action",
+          "target": "//ts/test:rootdir_works_with_repeated_directory_transpile"
+        },
+        "program": {
+          "origin": "system",
+          "path": "/bin/bash"
+        },
+        "wrappers": []
+      }
+    },
+    {
+      "count": 2,
+      "violation": {
+        "kind": "system_program",
+        "action": {
+          "mnemonic": "Action",
+          "target": "//ts/test:transpile_filegroup_transpile"
+        },
+        "program": {
+          "origin": "system",
+          "path": "/bin/bash"
+        },
+        "wrappers": []
+      }
+    },
+    {
+      "count": 1,
+      "violation": {
+        "kind": "system_program",
+        "action": {
+          "mnemonic": "Action",
+          "target": "//ts/test:transpile_transpile"
+        },
+        "program": {
+          "origin": "system",
+          "path": "/bin/bash"
+        },
+        "wrappers": []
+      }
+    },
+    {
+      "count": 1,
+      "violation": {
+        "kind": "system_program",
+        "action": {
+          "mnemonic": "Action",
+          "target": "//ts/test:transpile_with_dts_transpile"
+        },
+        "program": {
+          "origin": "system",
+          "path": "/bin/bash"
+        },
+        "wrappers": []
+      }
+    },
+    {
+      "count": 1,
+      "violation": {
+        "kind": "system_program",
+        "action": {
+          "mnemonic": "Action",
+          "target": "//ts/test:transpile_with_typeerror_transpile"
+        },
+        "program": {
+          "origin": "system",
+          "path": "/bin/bash"
+        },
+        "wrappers": []
+      }
+    },
+    {
+      "count": 1,
+      "violation": {
+        "kind": "system_program",
+        "action": {
+          "mnemonic": "CopyFile",
+          "target": "//ts/test/ts_project_worker:copy_ts_project_worker"
+        },
+        "program": {
+          "origin": "system",
+          "path": "/bin/bash"
+        },
+        "wrappers": []
+      }
+    },
+    {
+      "count": 1,
+      "violation": {
+        "kind": "system_program",
+        "action": {
+          "mnemonic": "Genrule",
+          "target": "//ts/test:dirty_out_dir_test_0__deps"
+        },
+        "program": {
+          "origin": "system",
+          "path": "/bin/bash"
+        },
+        "wrappers": []
+      }
+    },
+    {
+      "count": 1,
+      "violation": {
+        "kind": "system_program",
+        "action": {
+          "mnemonic": "Genrule",
+          "target": "//ts/test:out_refs_test_0__deps"
+        },
+        "program": {
+          "origin": "system",
+          "path": "/bin/bash"
+        },
+        "wrappers": []
+      }
+    },
+    {
+      "count": 1,
+      "violation": {
+        "kind": "system_program",
+        "action": {
+          "mnemonic": "Genrule",
+          "target": "//ts/test:out_refs_test_1__deps"
+        },
+        "program": {
+          "origin": "system",
+          "path": "/bin/bash"
+        },
+        "wrappers": []
+      }
+    },
+    {
+      "count": 1,
+      "violation": {
+        "kind": "system_program",
+        "action": {
+          "mnemonic": "Genrule",
+          "target": "//ts/test:path_norm_both_slash_test_0__deps"
+        },
+        "program": {
+          "origin": "system",
+          "path": "/bin/bash"
+        },
+        "wrappers": []
+      }
+    },
+    {
+      "count": 1,
+      "violation": {
+        "kind": "system_program",
+        "action": {
+          "mnemonic": "Genrule",
+          "target": "//ts/test:path_norm_dotslash_test_0__deps"
+        },
+        "program": {
+          "origin": "system",
+          "path": "/bin/bash"
+        },
+        "wrappers": []
+      }
+    },
+    {
+      "count": 1,
+      "violation": {
+        "kind": "system_program",
+        "action": {
+          "mnemonic": "Genrule",
+          "target": "//ts/test:path_norm_trailing_slash_test_0__deps"
+        },
+        "program": {
+          "origin": "system",
+          "path": "/bin/bash"
+        },
+        "wrappers": []
+      }
+    },
+    {
+      "count": 1,
+      "violation": {
+        "kind": "system_program",
+        "action": {
+          "mnemonic": "Genrule",
+          "target": "//ts/test:smoke_test_0__deps"
+        },
+        "program": {
+          "origin": "system",
+          "path": "/bin/bash"
+        },
+        "wrappers": []
+      }
+    },
+    {
+      "count": 1,
+      "violation": {
+        "kind": "system_program",
+        "action": {
+          "mnemonic": "Genrule",
+          "target": "//ts/test:wrapper_test_0__deps"
+        },
+        "program": {
+          "origin": "system",
+          "path": "/bin/bash"
+        },
+        "wrappers": []
+      }
+    },
+    {
+      "count": 1,
+      "violation": {
+        "kind": "conditional_reproducibility",
+        "action": {
+          "mnemonic": "TsProject",
+          "target": "//ts/test:generate_tsc_trace_true_ts"
+        },
+        "program": {
+          "origin": {
+            "main": {
+              "extension": "typescript"
+            }
+          },
+          "path": "tsc_/tsc"
+        },
+        "wrappers": [],
+        "synonym": null,
+        "unmet": [
+          {
+            "because": "it was given an option that breaks it",
+            "present": [
+              "--generateTrace"
+            ]
+          }
+        ]
+      }
+    }
+  ]
+}
