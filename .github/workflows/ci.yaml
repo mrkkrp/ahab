@@ -14,12 +14,17 @@ permissions:
   contents: read
 jobs:
   build:
-    name: Build and test
-    runs-on: ubuntu-latest
+    name: Build and test (${{ matrix.os }})
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, macos-latest]
     steps:
       - name: Check out the repository
         uses: actions/checkout@v7
       - name: Make room on the runner
+        if: ${{ runner.os == 'Linux' }}
         run: |
           sudo rm -rf /usr/share/dotnet /opt/ghc /usr/local/.ghcup \
             /opt/hostedtoolcache/CodeQL /usr/local/share/powershell \
@@ -35,7 +40,7 @@ jobs:
       - name: Run the tests
         run: bazel test //...
       - name: Run clippy
-        if: ${{ !cancelled() }}
+        if: ${{ !cancelled() && runner.os == 'Linux' }}
         run: bazel build //:clippy
       - name: Check that Ahab can be consumed as a module
         if: ${{ !cancelled() }}

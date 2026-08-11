@@ -4,23 +4,25 @@ load("@ahab//:defs.bzl", "ahab", "ahab_check", "ahab_explain", "ahab_update")
 # these is most of the test: it proves the module resolves, `defs.bzl` loads
 # across the boundary, and each macro produces a launcher that builds.
 
-# Reports what it finds and never fails, so that a CI log shows the analysis
-# actually happening—the hello world is compiled, linked and stripped by
-# whatever compiler the machine has, and Ahab says so.
 ahab(
     name = "ahab.report",
     label = "//...",
     no_fail = True,
 )
 
-# The same findings, excused. A first exceptions file looks exactly like
-# this one, and an empty expectation then means "nothing beyond the host
-# toolchain we already know about".
+alias(
+    name = "host_exceptions",
+    actual = select({
+        "@platforms//os:macos": "//:exceptions_macos.json",
+        "//conditions:default": "//:exceptions_linux.json",
+    }),
+)
+
 ahab_check(
     name = "ahab.check",
     baseline = "//:expectation.json",
     exceptions = [
-        "//:exceptions.json",
+        "//:host_exceptions",
         {
             "reason": "autoconfigured C++ toolchain (inline)",
             "kind": "system_program",
@@ -34,7 +36,7 @@ ahab_update(
     name = "ahab.update",
     baseline = "//:expectation.json",
     exceptions = [
-        "//:exceptions.json",
+        "//:host_exceptions",
         {
             "reason": "autoconfigured C++ toolchain (inline)",
             "kind": "system_program",
@@ -50,6 +52,7 @@ ahab_explain(
 )
 
 exports_files([
-    "exceptions.json",
+    "exceptions_linux.json",
+    "exceptions_macos.json",
     "expectation.json",
 ])

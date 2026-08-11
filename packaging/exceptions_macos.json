@@ -1,0 +1,9 @@
+{
+  "exceptions": [
+    {
+      "reason": "Bazel's autoconfigured C++ toolchain, which on macOS drives Xcode's clang through a wrapper it generates by inspecting the machine",
+      "kind": "host_derived_program",
+      "program": "@rules_cc+cc_configure_extension//cc_wrapper.sh"
+    }
+  ]
+}
