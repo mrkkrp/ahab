@@ -92,7 +92,6 @@ pub(super) fn always() -> ReproducibilitySpec {
 }
 
 /// A spec for a program no set of flags can make reproducible.
-#[cfg(test)]
 pub(super) fn never() -> ReproducibilitySpec {
     ReproducibilitySpec::new(
         Reproducibility::Never,
@@ -117,6 +116,7 @@ fn entries() -> Vec<(ProgramId, Entry)> {
     entries.extend(super::per_lang::container::entries());
     entries.extend(super::per_lang::go::entries());
     entries.extend(super::per_lang::java::entries());
+    entries.extend(super::per_lang::js::entries());
     entries.extend(super::per_lang::kotlin::entries());
     entries.extend(super::per_lang::pkg::entries());
     entries.extend(super::per_lang::python::entries());
@@ -190,6 +190,29 @@ fn language_agnostic() -> Vec<(ProgramId, Entry)> {
         (
             aspect_bazel_lib("coreutils"),
             Entry::SameAs(bazel_lib("coreutils")),
+        ),
+        // The two copiers from the same toolchain, which every rule set
+        // built on bazel_lib uses to assemble a directory. Both walk what
+        // they are given and write the same bytes out, cloning or
+        // hardlinking where the filesystem allows it; neither has a clock
+        // and neither reads anything it was not handed.
+        //
+        // What they leave behind is a tree whose modification times are
+        // not a function of anything—the moment of copying, or with
+        // `--preserve-mtime` the source's own. That is deliberately not
+        // stated as a condition here: Bazel compares a tree by the digests
+        // of the files in it, so those times reach an artifact only if
+        // something downstream turns them into content, and the tool that
+        // would do that answers for it where it happens.
+        (bazel_lib("copy_to_directory"), Entry::Spec(always())),
+        (
+            aspect_bazel_lib("copy_to_directory"),
+            Entry::SameAs(bazel_lib("copy_to_directory")),
+        ),
+        (bazel_lib("copy_directory"), Entry::Spec(always())),
+        (
+            aspect_bazel_lib("copy_directory"),
+            Entry::SameAs(bazel_lib("copy_directory")),
         ),
         // protoc is a pure function of the descriptors it is given, and
         // arrives two ways: prebuilt from the module extension that

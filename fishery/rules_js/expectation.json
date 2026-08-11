@@ -1254,446 +1254,6 @@
       "violation": {
         "kind": "unknown_program",
         "action": {
-          "mnemonic": "CopyDirectory",
-          "target": "//:.aspect_rules_js/node_modules/@subs+b@0.0.0"
-        },
-        "program": {
-          "origin": {
-            "module": {
-              "name": "bazel_lib",
-              "extension": "toolchains"
-            }
-          },
-          "path": "copy_directory"
-        },
-        "wrappers": []
-      }
-    },
-    {
-      "count": 1,
-      "violation": {
-        "kind": "unknown_program",
-        "action": {
-          "mnemonic": "CopyDirectory",
-          "target": "//:.aspect_rules_js/node_modules/is-odd@file+npm+private+test+vendored+is-odd"
-        },
-        "program": {
-          "origin": {
-            "module": {
-              "name": "bazel_lib",
-              "extension": "toolchains"
-            }
-          },
-          "path": "copy_directory"
-        },
-        "wrappers": []
-      }
-    },
-    {
-      "count": 1,
-      "violation": {
-        "kind": "unknown_program",
-        "action": {
-          "mnemonic": "CopyDirectory",
-          "target": "//:.aspect_rules_js/node_modules/pnpm@10.34.5"
-        },
-        "program": {
-          "origin": {
-            "module": {
-              "name": "bazel_lib",
-              "extension": "toolchains"
-            }
-          },
-          "path": "copy_directory"
-        },
-        "wrappers": []
-      }
-    },
-    {
-      "count": 1,
-      "violation": {
-        "kind": "unknown_program",
-        "action": {
-          "mnemonic": "CopyDirectory",
-          "target": "//:.aspect_rules_js/node_modules/semver-max@file+npm+private+test+vendored+semver-max"
-        },
-        "program": {
-          "origin": {
-            "module": {
-              "name": "bazel_lib",
-              "extension": "toolchains"
-            }
-          },
-          "path": "copy_directory"
-        },
-        "wrappers": []
-      }
-    },
-    {
-      "count": 1,
-      "violation": {
-        "kind": "unknown_program",
-        "action": {
-          "mnemonic": "CopyDirectory",
-          "target": "//:.aspect_rules_js/node_modules/test-npm_package@0.0.0"
-        },
-        "program": {
-          "origin": {
-            "module": {
-              "name": "bazel_lib",
-              "extension": "toolchains"
-            }
-          },
-          "path": "copy_directory"
-        },
-        "wrappers": []
-      }
-    },
-    {
-      "count": 1,
-      "violation": {
-        "kind": "unknown_program",
-        "action": {
-          "mnemonic": "CopyToDirectory",
-          "target": "//npm/private/test/npm_package:expected_no-sources_pkg"
-        },
-        "program": {
-          "origin": {
-            "module": {
-              "name": "bazel_lib",
-              "extension": "toolchains"
-            }
-          },
-          "path": "copy_to_directory"
-        },
-        "wrappers": []
-      }
-    },
-    {
-      "count": 1,
-      "violation": {
-        "kind": "unknown_program",
-        "action": {
-          "mnemonic": "CopyToDirectory",
-          "target": "//npm/private/test/npm_package:expected_no-types_pkg"
-        },
-        "program": {
-          "origin": {
-            "module": {
-              "name": "bazel_lib",
-              "extension": "toolchains"
-            }
-          },
-          "path": "copy_to_directory"
-        },
-        "wrappers": []
-      }
-    },
-    {
-      "count": 1,
-      "violation": {
-        "kind": "unknown_program",
-        "action": {
-          "mnemonic": "CopyToDirectory",
-          "target": "//npm/private/test/npm_package:expected_pkg"
-        },
-        "program": {
-          "origin": {
-            "module": {
-              "name": "bazel_lib",
-              "extension": "toolchains"
-            }
-          },
-          "path": "copy_to_directory"
-        },
-        "wrappers": []
-      }
-    },
-    {
-      "count": 1,
-      "violation": {
-        "kind": "unknown_program",
-        "action": {
-          "mnemonic": "CopyToDirectory",
-          "target": "//npm/private/test/npm_package:expected_pkg_with_node_modules"
-        },
-        "program": {
-          "origin": {
-            "module": {
-              "name": "bazel_lib",
-              "extension": "toolchains"
-            }
-          },
-          "path": "copy_to_directory"
-        },
-        "wrappers": []
-      }
-    },
-    {
-      "count": 1,
-      "violation": {
-        "kind": "unknown_program",
-        "action": {
-          "mnemonic": "CopyToDirectory",
-          "target": "//npm/private/test/npm_package:pkg"
-        },
-        "program": {
-          "origin": {
-            "module": {
-              "name": "bazel_lib",
-              "extension": "toolchains"
-            }
-          },
-          "path": "copy_to_directory"
-        },
-        "wrappers": []
-      }
-    },
-    {
-      "count": 1,
-      "violation": {
-        "kind": "unknown_program",
-        "action": {
-          "mnemonic": "CopyToDirectory",
-          "target": "//npm/private/test/npm_package:pkg_2"
-        },
-        "program": {
-          "origin": {
-            "module": {
-              "name": "bazel_lib",
-              "extension": "toolchains"
-            }
-          },
-          "path": "copy_to_directory"
-        },
-        "wrappers": []
-      }
-    },
-    {
-      "count": 1,
-      "violation": {
-        "kind": "unknown_program",
-        "action": {
-          "mnemonic": "CopyToDirectory",
-          "target": "//npm/private/test/npm_package:pkg_3"
-        },
-        "program": {
-          "origin": {
-            "module": {
-              "name": "bazel_lib",
-              "extension": "toolchains"
-            }
-          },
-          "path": "copy_to_directory"
-        },
-        "wrappers": []
-      }
-    },
-    {
-      "count": 1,
-      "violation": {
-        "kind": "unknown_program",
-        "action": {
-          "mnemonic": "CopyToDirectory",
-          "target": "//npm/private/test/npm_package:pkg_4"
-        },
-        "program": {
-          "origin": {
-            "module": {
-              "name": "bazel_lib",
-              "extension": "toolchains"
-            }
-          },
-          "path": "copy_to_directory"
-        },
-        "wrappers": []
-      }
-    },
-    {
-      "count": 1,
-      "violation": {
-        "kind": "unknown_program",
-        "action": {
-          "mnemonic": "CopyToDirectory",
-          "target": "//npm/private/test/npm_package:pkg_5"
-        },
-        "program": {
-          "origin": {
-            "module": {
-              "name": "bazel_lib",
-              "extension": "toolchains"
-            }
-          },
-          "path": "copy_to_directory"
-        },
-        "wrappers": []
-      }
-    },
-    {
-      "count": 1,
-      "violation": {
-        "kind": "unknown_program",
-        "action": {
-          "mnemonic": "CopyToDirectory",
-          "target": "//npm/private/test/npm_package:pkg_6"
-        },
-        "program": {
-          "origin": {
-            "module": {
-              "name": "bazel_lib",
-              "extension": "toolchains"
-            }
-          },
-          "path": "copy_to_directory"
-        },
-        "wrappers": []
-      }
-    },
-    {
-      "count": 1,
-      "violation": {
-        "kind": "unknown_program",
-        "action": {
-          "mnemonic": "CopyToDirectory",
-          "target": "//npm/private/test/npm_package:pkg_with_node_modules"
-        },
-        "program": {
-          "origin": {
-            "module": {
-              "name": "bazel_lib",
-              "extension": "toolchains"
-            }
-          },
-          "path": "copy_to_directory"
-        },
-        "wrappers": []
-      }
-    },
-    {
-      "count": 1,
-      "violation": {
-        "kind": "unknown_program",
-        "action": {
-          "mnemonic": "CopyToDirectory",
-          "target": "//npm/private/test/npm_package_publish:pkg_a"
-        },
-        "program": {
-          "origin": {
-            "module": {
-              "name": "bazel_lib",
-              "extension": "toolchains"
-            }
-          },
-          "path": "copy_to_directory"
-        },
-        "wrappers": []
-      }
-    },
-    {
-      "count": 1,
-      "violation": {
-        "kind": "unknown_program",
-        "action": {
-          "mnemonic": "CopyToDirectory",
-          "target": "//npm/private/test/npm_package_publish:pkg_b"
-        },
-        "program": {
-          "origin": {
-            "module": {
-              "name": "bazel_lib",
-              "extension": "toolchains"
-            }
-          },
-          "path": "copy_to_directory"
-        },
-        "wrappers": []
-      }
-    },
-    {
-      "count": 1,
-      "violation": {
-        "kind": "unknown_program",
-        "action": {
-          "mnemonic": "CopyToDirectory",
-          "target": "//npm/private/test/npm_package_publish:pkg_nested"
-        },
-        "program": {
-          "origin": {
-            "module": {
-              "name": "bazel_lib",
-              "extension": "toolchains"
-            }
-          },
-          "path": "copy_to_directory"
-        },
-        "wrappers": []
-      }
-    },
-    {
-      "count": 1,
-      "violation": {
-        "kind": "unknown_program",
-        "action": {
-          "mnemonic": "CopyToDirectory",
-          "target": "//npm/private/test/subs/b:pkg"
-        },
-        "program": {
-          "origin": {
-            "module": {
-              "name": "bazel_lib",
-              "extension": "toolchains"
-            }
-          },
-          "path": "copy_to_directory"
-        },
-        "wrappers": []
-      }
-    },
-    {
-      "count": 1,
-      "violation": {
-        "kind": "unknown_program",
-        "action": {
-          "mnemonic": "CopyToDirectory",
-          "target": "//npm/private/test/vendored/is-odd:pkg"
-        },
-        "program": {
-          "origin": {
-            "module": {
-              "name": "bazel_lib",
-              "extension": "toolchains"
-            }
-          },
-          "path": "copy_to_directory"
-        },
-        "wrappers": []
-      }
-    },
-    {
-      "count": 1,
-      "violation": {
-        "kind": "unknown_program",
-        "action": {
-          "mnemonic": "CopyToDirectory",
-          "target": "//npm/private/test/vendored/semver-max:pkg"
-        },
-        "program": {
-          "origin": {
-            "module": {
-              "name": "bazel_lib",
-              "extension": "toolchains"
-            }
-          },
-          "path": "copy_to_directory"
-        },
-        "wrappers": []
-      }
-    },
-    {
-      "count": 1,
-      "violation": {
-        "kind": "unknown_program",
-        "action": {
           "mnemonic": "JsRunBinary",
           "target": "//js/private/test/data:run-write-generated"
         },
@@ -2207,139 +1767,6 @@
       "violation": {
         "kind": "unknown_program",
         "action": {
-          "mnemonic": "NpmLifecycleHook",
-          "target": "//:.aspect_rules_js/node_modules/@figma+nodegit@0.28.0-figma.9_encoding@0.1.13/lc"
-        },
-        "program": {
-          "origin": {
-            "main": {
-              "extension": null
-            }
-          },
-          "path": "npm/private/lifecycle/min/bin_/bin"
-        },
-        "wrappers": []
-      }
-    },
-    {
-      "count": 1,
-      "violation": {
-        "kind": "unknown_program",
-        "action": {
-          "mnemonic": "NpmLifecycleHook",
-          "target": "//:.aspect_rules_js/node_modules/@kubernetes+client-node@1838633845_1592917608/lc"
-        },
-        "program": {
-          "origin": {
-            "main": {
-              "extension": null
-            }
-          },
-          "path": "npm/private/lifecycle/min/bin_/bin"
-        },
-        "wrappers": []
-      }
-    },
-    {
-      "count": 1,
-      "violation": {
-        "kind": "unknown_program",
-        "action": {
-          "mnemonic": "NpmLifecycleHook",
-          "target": "//:.aspect_rules_js/node_modules/bufferutil@4.0.8/lc"
-        },
-        "program": {
-          "origin": {
-            "main": {
-              "extension": null
-            }
-          },
-          "path": "npm/private/lifecycle/min/bin_/bin"
-        },
-        "wrappers": []
-      }
-    },
-    {
-      "count": 1,
-      "violation": {
-        "kind": "unknown_program",
-        "action": {
-          "mnemonic": "NpmLifecycleHook",
-          "target": "//:.aspect_rules_js/node_modules/esbuild@0.24.0/lc"
-        },
-        "program": {
-          "origin": {
-            "main": {
-              "extension": null
-            }
-          },
-          "path": "npm/private/lifecycle/min/bin_/bin"
-        },
-        "wrappers": []
-      }
-    },
-    {
-      "count": 1,
-      "violation": {
-        "kind": "unknown_program",
-        "action": {
-          "mnemonic": "NpmLifecycleHook",
-          "target": "//:.aspect_rules_js/node_modules/pngjs@5.0.0/lc"
-        },
-        "program": {
-          "origin": {
-            "main": {
-              "extension": null
-            }
-          },
-          "path": "npm/private/lifecycle/min/bin_/bin"
-        },
-        "wrappers": []
-      }
-    },
-    {
-      "count": 1,
-      "violation": {
-        "kind": "unknown_program",
-        "action": {
-          "mnemonic": "NpmLifecycleHook",
-          "target": "//:.aspect_rules_js/node_modules/puppeteer@19.11.1_230959327/lc"
-        },
-        "program": {
-          "origin": {
-            "main": {
-              "extension": null
-            }
-          },
-          "path": "npm/private/lifecycle/min/bin_/bin"
-        },
-        "wrappers": []
-      }
-    },
-    {
-      "count": 1,
-      "violation": {
-        "kind": "unknown_program",
-        "action": {
-          "mnemonic": "NpmLifecycleHook",
-          "target": "//:.aspect_rules_js/node_modules/segfault-handler@1.3.0/lc"
-        },
-        "program": {
-          "origin": {
-            "main": {
-              "extension": null
-            }
-          },
-          "path": "npm/private/lifecycle/min/bin_/bin"
-        },
-        "wrappers": []
-      }
-    },
-    {
-      "count": 1,
-      "violation": {
-        "kind": "unknown_program",
-        "action": {
           "mnemonic": "Rollup",
           "target": "//js/private/coverage/bundle:bundle"
         },
@@ -2466,6 +1893,202 @@
           "path": "js/private/watch/src/compile__js_binary_/compile__js_binary"
         },
         "wrappers": []
+      }
+    },
+    {
+      "count": 1,
+      "violation": {
+        "kind": "never_reproducible",
+        "action": {
+          "mnemonic": "NpmLifecycleHook",
+          "target": "//:.aspect_rules_js/node_modules/@figma+nodegit@0.28.0-figma.9_encoding@0.1.13/lc"
+        },
+        "program": {
+          "origin": {
+            "main": {
+              "extension": null
+            }
+          },
+          "path": "npm/private/lifecycle/min/bin_/bin"
+        },
+        "wrappers": [],
+        "synonym": {
+          "origin": {
+            "module": {
+              "name": "aspect_rules_js",
+              "extension": null
+            }
+          },
+          "path": "npm/private/lifecycle/min/bin_/bin"
+        }
+      }
+    },
+    {
+      "count": 1,
+      "violation": {
+        "kind": "never_reproducible",
+        "action": {
+          "mnemonic": "NpmLifecycleHook",
+          "target": "//:.aspect_rules_js/node_modules/@kubernetes+client-node@1838633845_1592917608/lc"
+        },
+        "program": {
+          "origin": {
+            "main": {
+              "extension": null
+            }
+          },
+          "path": "npm/private/lifecycle/min/bin_/bin"
+        },
+        "wrappers": [],
+        "synonym": {
+          "origin": {
+            "module": {
+              "name": "aspect_rules_js",
+              "extension": null
+            }
+          },
+          "path": "npm/private/lifecycle/min/bin_/bin"
+        }
+      }
+    },
+    {
+      "count": 1,
+      "violation": {
+        "kind": "never_reproducible",
+        "action": {
+          "mnemonic": "NpmLifecycleHook",
+          "target": "//:.aspect_rules_js/node_modules/bufferutil@4.0.8/lc"
+        },
+        "program": {
+          "origin": {
+            "main": {
+              "extension": null
+            }
+          },
+          "path": "npm/private/lifecycle/min/bin_/bin"
+        },
+        "wrappers": [],
+        "synonym": {
+          "origin": {
+            "module": {
+              "name": "aspect_rules_js",
+              "extension": null
+            }
+          },
+          "path": "npm/private/lifecycle/min/bin_/bin"
+        }
+      }
+    },
+    {
+      "count": 1,
+      "violation": {
+        "kind": "never_reproducible",
+        "action": {
+          "mnemonic": "NpmLifecycleHook",
+          "target": "//:.aspect_rules_js/node_modules/esbuild@0.24.0/lc"
+        },
+        "program": {
+          "origin": {
+            "main": {
+              "extension": null
+            }
+          },
+          "path": "npm/private/lifecycle/min/bin_/bin"
+        },
+        "wrappers": [],
+        "synonym": {
+          "origin": {
+            "module": {
+              "name": "aspect_rules_js",
+              "extension": null
+            }
+          },
+          "path": "npm/private/lifecycle/min/bin_/bin"
+        }
+      }
+    },
+    {
+      "count": 1,
+      "violation": {
+        "kind": "never_reproducible",
+        "action": {
+          "mnemonic": "NpmLifecycleHook",
+          "target": "//:.aspect_rules_js/node_modules/pngjs@5.0.0/lc"
+        },
+        "program": {
+          "origin": {
+            "main": {
+              "extension": null
+            }
+          },
+          "path": "npm/private/lifecycle/min/bin_/bin"
+        },
+        "wrappers": [],
+        "synonym": {
+          "origin": {
+            "module": {
+              "name": "aspect_rules_js",
+              "extension": null
+            }
+          },
+          "path": "npm/private/lifecycle/min/bin_/bin"
+        }
+      }
+    },
+    {
+      "count": 1,
+      "violation": {
+        "kind": "never_reproducible",
+        "action": {
+          "mnemonic": "NpmLifecycleHook",
+          "target": "//:.aspect_rules_js/node_modules/puppeteer@19.11.1_230959327/lc"
+        },
+        "program": {
+          "origin": {
+            "main": {
+              "extension": null
+            }
+          },
+          "path": "npm/private/lifecycle/min/bin_/bin"
+        },
+        "wrappers": [],
+        "synonym": {
+          "origin": {
+            "module": {
+              "name": "aspect_rules_js",
+              "extension": null
+            }
+          },
+          "path": "npm/private/lifecycle/min/bin_/bin"
+        }
+      }
+    },
+    {
+      "count": 1,
+      "violation": {
+        "kind": "never_reproducible",
+        "action": {
+          "mnemonic": "NpmLifecycleHook",
+          "target": "//:.aspect_rules_js/node_modules/segfault-handler@1.3.0/lc"
+        },
+        "program": {
+          "origin": {
+            "main": {
+              "extension": null
+            }
+          },
+          "path": "npm/private/lifecycle/min/bin_/bin"
+        },
+        "wrappers": [],
+        "synonym": {
+          "origin": {
+            "module": {
+              "name": "aspect_rules_js",
+              "extension": null
+            }
+          },
+          "path": "npm/private/lifecycle/min/bin_/bin"
+        }
       }
     }
   ]
