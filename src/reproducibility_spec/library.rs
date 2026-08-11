@@ -124,9 +124,58 @@ fn entries() -> Vec<(ProgramId, Entry)> {
     entries
 }
 
+/// The `coreutils` subcommands that answer with something about the machine
+/// rather than about the inputs, as its own `--help` lists them.
+///
+/// Matched against whole arguments, so a file that happens to be named
+/// `date` is reported too. That is the safe direction, and the alternative
+/// is nothing: the subcommand is the first argument rather than a flag, and
+/// a clause cannot ask about position.
+const HOST_SUBCOMMANDS: [&str; 20] = [
+    "arch", "date", "df", "env", "groups", "hostid", "hostname", "id",
+    "logname", "mktemp", "nproc", "printenv", "pwd", "shuf", "stat",
+    "stty", "touch", "tty", "uname", "whoami",
+];
+
 /// Entries for tools no one language owns.
 fn language_agnostic() -> Vec<(ProgramId, Entry)> {
     vec![
+        // One binary standing in for the whole of coreutils, which the
+        // aspect_bazel_lib rules use wherever they would otherwise need a
+        // shell: copying a file, making a directory, writing a symlink.
+        // Those are functions of their inputs.
+        //
+        // It also carries `date`, `hostname` and `uname`, and a verdict of
+        // `always` would be vouching for those too—so the disposition is
+        // conditional and the clause names them.
+        (
+            ProgramId::extension(
+                "aspect_bazel_lib",
+                "toolchains",
+                "coreutils",
+            ),
+            Entry::Spec(
+                ReproducibilitySpec::new(
+                    Reproducibility::Sometimes,
+                    [] as [&str; 0],
+                    [] as [&str; 0],
+                )
+                .with_clauses(
+                    [] as [Clause; 0],
+                    [Clause {
+                        when: None,
+                        any_of: HOST_SUBCOMMANDS
+                            .into_iter()
+                            .map(Glob::new)
+                            .collect(),
+                        because: "it was asked for something the machine \
+                                  knows rather than something the build \
+                                  gave it"
+                            .to_owned(),
+                    }],
+                ),
+            ),
+        ),
         // protoc is a pure function of the descriptors it is given.
         (
             ProgramId::extension("protobuf", "protoc", "bin/protoc"),

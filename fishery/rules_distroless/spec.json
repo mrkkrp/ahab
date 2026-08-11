@@ -1,0 +1,7 @@
+{
+  "repo": "https://github.com/GoogleContainerTools/rules_distroless",
+  "commit": "4aa14e684b5497f5d468df01ed543515b2bb141a",
+  "label": "//...",
+  "configs": [],
+  "workspace": "examples"
+}

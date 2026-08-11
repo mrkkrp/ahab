@@ -106,6 +106,51 @@ fn img_spec() -> ReproducibilitySpec {
         )
 }
 
+/// One of the scripts rules_distroless runs to assemble a layer.
+///
+/// They share a shape: bsdtar, gawk and coreutils are handed in as
+/// arguments rather than found on the machine, an archive is taken apart
+/// and put back together, and the entry times are either carried over from
+/// the package or written out as a constant. None of them asks what time it
+/// is, and none reads a path it was not given.
+fn distroless_tools() -> Vec<(ProgramId, Entry)> {
+    [
+        // Concatenates the certificates out of a `ca-certificates` package
+        // into one file, in the order the shell glob yields them—which is
+        // a function of the names, since a sandboxed action carries no
+        // locale to collate them differently.
+        "distroless/private/cacerts.sh",
+        // Strips the mtree of its times and writes the one the rule was
+        // given back onto every entry, then compresses with
+        // `gzip:!timestamp`. The declared time is the whole point of it.
+        "distroless/private/locale.sh",
+        // Merges archives, optionally keeping only the last entry for each
+        // path. What comes out is decided by what went in and the order it
+        // was named in.
+        "distroless/private/flatten.sh",
+        // Both write a `/var/lib/dpkg/status.d` entry out of a package's
+        // control file. `dpkg_status.sh` writes a hard-coded
+        // `time=1672560000` into its mtree; `dpkg_statusd.sh` carries the
+        // times over from the control archive.
+        "apt/private/dpkg_status.sh",
+        "apt/private/dpkg_statusd.sh",
+        // A reimplementation of `keytool` written to be reproducible: the
+        // stock one stamps each entry with the moment it was added, and
+        // this one writes the certificate's own `notBefore` instead. The
+        // password and salt it keys the digest with are constants in the
+        // source.
+        "distroless/private/keystore_binary",
+    ]
+    .into_iter()
+    .map(|path| {
+        (
+            ProgramId::module("rules_distroless", path),
+            Entry::Spec(always()),
+        )
+    })
+    .collect()
+}
+
 /// Everything Ahab knows about building container images, in source order.
 pub(in crate::reproducibility_spec) fn entries() -> Vec<(ProgramId, Entry)>
 {
@@ -141,6 +186,18 @@ pub(in crate::reproducibility_spec) fn entries() -> Vec<(ProgramId, Entry)>
             ));
         }
     }
+
+    entries.extend(distroless_tools());
+
+    // rules_oci measures a layer: its digest, its uncompressed digest, its
+    // size and its compression, all read off the archive itself. The one
+    // field that could have come from a clock does not—the script writes
+    // `created: "1970-01-01T00:00:00Z"` literally, and takes `created_by`
+    // from the label it was told to describe.
+    entries.push((
+        ProgramId::module("rules_oci", "oci/private/descriptor.sh"),
+        Entry::Spec(always()),
+    ));
 
     entries
 }
@@ -198,6 +255,47 @@ mod tests {
                  /img_linux_amd64_/img_linux_amd64",
             ),
             img_tool("cmd/img/img_linux_amd64_/img_linux_amd64"),
+        );
+    }
+
+    #[test]
+    fn the_distroless_layer_tools_are_vouched_for() {
+        // Each is handed its bsdtar, gawk and coreutils as arguments, so
+        // what it runs is the build's rather than the machine's.
+        let tools = [
+            ("distroless/private/cacerts.sh", vec!["tar", "pkg.deb"]),
+            (
+                "distroless/private/locale.sh",
+                vec!["tar", "out.tgz", "data.tar.xz", "123"],
+            ),
+            ("distroless/private/flatten.sh", vec!["tar", "False"]),
+            ("apt/private/dpkg_status.sh", vec!["tar", "out.tar"]),
+            (
+                "apt/private/dpkg_statusd.sh",
+                vec!["tar", "out.tar", "control.tar.xz", "ca-certificates"],
+            ),
+            (
+                "distroless/private/keystore_binary",
+                vec!["out.jks", "amazon.crt"],
+            ),
+        ];
+        for (path, args) in tools {
+            assert_eq!(
+                assess(ProgramId::module("rules_distroless", path), args),
+                Conformance::Reproducible,
+                "{path}",
+            );
+        }
+    }
+
+    #[test]
+    fn the_oci_descriptor_is_vouched_for() {
+        assert_eq!(
+            assess(
+                ProgramId::module("rules_oci", "oci/private/descriptor.sh"),
+                vec!["flat.tar", "image.0.descriptor.json", "@base//:flat"],
+            ),
+            Conformance::Reproducible,
         );
     }
 

@@ -1,0 +1,323 @@
+{
+  "violations": [
+    {
+      "count": 1,
+      "violation": {
+        "kind": "execution_requirement",
+        "action": {
+          "mnemonic": "CopyFile",
+          "target": "//debian_snapshot:_image_index_json_cp"
+        },
+        "requirement": "no-sandbox"
+      }
+    },
+    {
+      "count": 1,
+      "violation": {
+        "kind": "absolute_path",
+        "action": {
+          "mnemonic": "Genrule",
+          "target": "//java_keystore:_test_java_keystore_jks_listing"
+        },
+        "path": "/keytool",
+        "site": {
+          "location": "argument",
+          "value": "source external/bazel_tools/tools/genrule/genrule-setup.sh; \n#!/usr/bin/env bash\nset -o pipefail -o errexit -o nounset\n\nBINS=(external/rules_java++toolchains+remotejdk11_linux/bin/jaotc external/rules_java++toolchains+remotejdk11_linux/bin/jar external/rules_java++toolchains+remotejdk11_linux/bin/jarsigner external/rules_java++toolchains+remotejdk11_linux/bin/java external/rules_java++toolchains+remotejdk11_linux/bin/javac external/rules_java++toolchains+remotejdk11_linux/bin/javadoc external/rules_java++toolchains+remotejdk11_linux/bin/javap external/rules_java++toolchains+remotejdk11_linux/bin/jcmd external/rules_java++toolchains+remotejdk11_linux/bin/jconsole external/rules_java++toolchains+remotejdk11_linux/bin/jdb external/rules_java++toolchains+remotejdk11_linux/bin/jdeprscan external/rules_java++toolchains+remotejdk11_linux/bin/jdeps external/rules_java++toolchains+remotejdk11_linux/bin/jfr external/rules_java++toolchains+remotejdk11_linux/bin/jhsdb external/rules_java++toolchains+remotejdk11_linux/bin/jimage external/rules_java++toolchains+remotejdk11_linux/bin/jinfo external/rules_java++toolchains+remotejdk11_linux/bin/jjs external/rules_java++toolchains+remotejdk11_linux/bin/jlink external/rules_java++toolchains+remotejdk11_linux/bin/jmap external/rules_java++toolchains+remotejdk11_linux/bin/jmod external/rules_java++toolchains+remotejdk11_linux/bin/jps external/rules_java++toolchains+remotejdk11_linux/bin/jrunscript external/rules_java++toolchains+remotejdk11_linux/bin/jshell external/rules_java++toolchains+remotejdk11_linux/bin/jstack external/rules_java++toolchains+remotejdk11_linux/bin/jstat external/rules_java++toolchains+remotejdk11_linux/bin/jstatd external/rules_java++toolchains+remotejdk11_linux/bin/keytool external/rules_java++toolchains+remotejdk11_linux/bin/pack200 external/rules_java++toolchains+remotejdk11_linux/bin/rmic external/rules_java++toolchains+remotejdk11_linux/bin/rmid external/rules_java++toolchains+remotejdk11_linux/bin/rmiregistry external/rules_java++toolchains+remotejdk11_linux/bin/serialver external/rules_java++toolchains+remotejdk11_linux/bin/unpack200 external/rules_java++toolchains+remotejdk11_linux/conf/logging.properties external/rules_java++toolchains+remotejdk11_linux/conf/management/jmxremote.access external/rules_java++toolchains+remotejdk11_linux/conf/management/jmxremote.password.template external/rules_java++toolchains+remotejdk11_linux/conf/management/management.properties external/rules_java++toolchains+remotejdk11_linux/conf/net.properties external/rules_java++toolchains+remotejdk11_linux/conf/security/java.policy external/rules_java++toolchains+remotejdk11_linux/conf/security/java.security external/rules_java++toolchains+remotejdk11_linux/conf/security/policy/README.txt external/rules_java++toolchains+remotejdk11_linux/conf/security/policy/limited/default_US_export.policy external/rules_java++toolchains+remotejdk11_linux/conf/security/policy/limited/default_local.policy external/rules_java++toolchains+remotejdk11_linux/conf/security/policy/limited/exempt_local.policy external/rules_java++toolchains+remotejdk11_linux/conf/security/policy/unlimited/default_US_export.policy external/rules_java++toolchains+remotejdk11_linux/conf/security/policy/unlimited/default_local.policy external/rules_java++toolchains+remotejdk11_linux/conf/sound.properties external/rules_java++toolchains+remotejdk11_linux/include/classfile_constants.h external/rules_java++toolchains+remotejdk11_linux/include/jawt.h external/rules_java++toolchains+remotejdk11_linux/include/jdwpTransport.h external/rules_java++toolchains+remotejdk11_linux/include/jni.h external/rules_java++toolchains+remotejdk11_linux/include/jvmti.h external/rules_java++toolchains+remotejdk11_linux/include/jvmticmlr.h external/rules_java++toolchains+remotejdk11_linux/include/linux/jawt_md.h external/rules_java++toolchains+remotejdk11_linux/include/linux/jni_md.h external/rules_java++toolchains+remotejdk11_linux/lib/classlist external/rules_java++toolchains+remotejdk11_linux/lib/ct.sym external/rules_java++toolchains+remotejdk11_linux/lib/jexec external/rules_java++toolchains+remotejdk11_linux/lib/jfr/default.jfc external/rules_java++toolchains+remotejdk11_linux/lib/jfr/profile.jfc external/rules_java++toolchains+remotejdk11_linux/lib/jli/libjli.so external/rules_java++toolchains+remotejdk11_linux/lib/jrt-fs.jar external/rules_java++toolchains+remotejdk11_linux/lib/jspawnhelper external/rules_java++toolchains+remotejdk11_linux/lib/jvm.cfg external/rules_java++toolchains+remotejdk11_linux/lib/libattach.so external/rules_java++toolchains+remotejdk11_linux/lib/libawt.so external/rules_java++toolchains+remotejdk11_linux/lib/libawt_headless.so external/rules_java++toolchains+remotejdk11_linux/lib/libawt_xawt.so external/rules_java++toolchains+remotejdk11_linux/lib/libdt_socket.so external/rules_java++toolchains+remotejdk11_linux/lib/libextnet.so external/rules_java++toolchains+remotejdk11_linux/lib/libfontmanager.so external/rules_java++toolchains+remotejdk11_linux/lib/libfreetype.so external/rules_java++toolchains+remotejdk11_linux/lib/libinstrument.so external/rules_java++toolchains+remotejdk11_linux/lib/libj2gss.so external/rules_java++toolchains+remotejdk11_linux/lib/libj2pcsc.so external/rules_java++toolchains+remotejdk11_linux/lib/libj2pkcs11.so external/rules_java++toolchains+remotejdk11_linux/lib/libjaas.so external/rules_java++toolchains+remotejdk11_linux/lib/libjava.so external/rules_java++toolchains+remotejdk11_linux/lib/libjavajpeg.so external/rules_java++toolchains+remotejdk11_linux/lib/libjawt.so external/rules_java++toolchains+remotejdk11_linux/lib/libjdwp.so external/rules_java++toolchains+remotejdk11_linux/lib/libjimage.so external/rules_java++toolchains+remotejdk11_linux/lib/libjsig.so external/rules_java++toolchains+remotejdk11_linux/lib/libjsound.so external/rules_java++toolchains+remotejdk11_linux/lib/liblcms.so external/rules_java++toolchains+remotejdk11_linux/lib/libmanagement.so external/rules_java++toolchains+remotejdk11_linux/lib/libmanagement_agent.so external/rules_java++toolchains+remotejdk11_linux/lib/libmanagement_ext.so external/rules_java++toolchains+remotejdk11_linux/lib/libmlib_image.so external/rules_java++toolchains+remotejdk11_linux/lib/libnet.so external/rules_java++toolchains+remotejdk11_linux/lib/libnio.so external/rules_java++toolchains+remotejdk11_linux/lib/libprefs.so external/rules_java++toolchains+remotejdk11_linux/lib/librmi.so external/rules_java++toolchains+remotejdk11_linux/lib/libsaproc.so external/rules_java++toolchains+remotejdk11_linux/lib/libsctp.so external/rules_java++toolchains+remotejdk11_linux/lib/libsplashscreen.so external/rules_java++toolchains+remotejdk11_linux/lib/libsunec.so external/rules_java++toolchains+remotejdk11_linux/lib/libunpack.so external/rules_java++toolchains+remotejdk11_linux/lib/libverify.so external/rules_java++toolchains+remotejdk11_linux/lib/libzip.so external/rules_java++toolchains+remotejdk11_linux/lib/modules external/rules_java++toolchains+remotejdk11_linux/lib/psfont.properties.ja external/rules_java++toolchains+remotejdk11_linux/lib/psfontj2d.properties external/rules_java++toolchains+remotejdk11_linux/lib/security/blocked.certs external/rules_java++toolchains+remotejdk11_linux/lib/security/cacerts external/rules_java++toolchains+remotejdk11_linux/lib/security/default.policy external/rules_java++toolchains+remotejdk11_linux/lib/security/public_suffix_list.dat external/rules_java++toolchains+remotejdk11_linux/lib/server/Xusage.txt external/rules_java++toolchains+remotejdk11_linux/lib/server/libjsig.so external/rules_java++toolchains+remotejdk11_linux/lib/server/libjvm.so external/rules_java++toolchains+remotejdk11_linux/lib/src.zip external/rules_java++toolchains+remotejdk11_linux/lib/tzdb.dat external/rules_java++toolchains+remotejdk11_linux/release)\nKEYTOOL=$(dirname ${BINS[1]})/keytool\n\n$KEYTOOL -J-Duser.language=en -J-Duser.country=US -J-Duser.timezone=UTC \\\n-list -rfc -keystore bazel-out/k8-fastbuild/bin/java_keystore/java_keystore.jks -storepass changeit > bazel-out/k8-fastbuild/bin/java_keystore/_test_java_keystore_jks.listing\n"
+        }
+      }
+    },
+    {
+      "count": 1,
+      "violation": {
+        "kind": "absolute_path",
+        "action": {
+          "mnemonic": "Genrule",
+          "target": "//java_keystore:_test_java_keystore_jks_listing"
+        },
+        "path": "/usr/bin/env",
+        "site": {
+          "location": "argument",
+          "value": "source external/bazel_tools/tools/genrule/genrule-setup.sh; \n#!/usr/bin/env bash\nset -o pipefail -o errexit -o nounset\n\nBINS=(external/rules_java++toolchains+remotejdk11_linux/bin/jaotc external/rules_java++toolchains+remotejdk11_linux/bin/jar external/rules_java++toolchains+remotejdk11_linux/bin/jarsigner external/rules_java++toolchains+remotejdk11_linux/bin/java external/rules_java++toolchains+remotejdk11_linux/bin/javac external/rules_java++toolchains+remotejdk11_linux/bin/javadoc external/rules_java++toolchains+remotejdk11_linux/bin/javap external/rules_java++toolchains+remotejdk11_linux/bin/jcmd external/rules_java++toolchains+remotejdk11_linux/bin/jconsole external/rules_java++toolchains+remotejdk11_linux/bin/jdb external/rules_java++toolchains+remotejdk11_linux/bin/jdeprscan external/rules_java++toolchains+remotejdk11_linux/bin/jdeps external/rules_java++toolchains+remotejdk11_linux/bin/jfr external/rules_java++toolchains+remotejdk11_linux/bin/jhsdb external/rules_java++toolchains+remotejdk11_linux/bin/jimage external/rules_java++toolchains+remotejdk11_linux/bin/jinfo external/rules_java++toolchains+remotejdk11_linux/bin/jjs external/rules_java++toolchains+remotejdk11_linux/bin/jlink external/rules_java++toolchains+remotejdk11_linux/bin/jmap external/rules_java++toolchains+remotejdk11_linux/bin/jmod external/rules_java++toolchains+remotejdk11_linux/bin/jps external/rules_java++toolchains+remotejdk11_linux/bin/jrunscript external/rules_java++toolchains+remotejdk11_linux/bin/jshell external/rules_java++toolchains+remotejdk11_linux/bin/jstack external/rules_java++toolchains+remotejdk11_linux/bin/jstat external/rules_java++toolchains+remotejdk11_linux/bin/jstatd external/rules_java++toolchains+remotejdk11_linux/bin/keytool external/rules_java++toolchains+remotejdk11_linux/bin/pack200 external/rules_java++toolchains+remotejdk11_linux/bin/rmic external/rules_java++toolchains+remotejdk11_linux/bin/rmid external/rules_java++toolchains+remotejdk11_linux/bin/rmiregistry external/rules_java++toolchains+remotejdk11_linux/bin/serialver external/rules_java++toolchains+remotejdk11_linux/bin/unpack200 external/rules_java++toolchains+remotejdk11_linux/conf/logging.properties external/rules_java++toolchains+remotejdk11_linux/conf/management/jmxremote.access external/rules_java++toolchains+remotejdk11_linux/conf/management/jmxremote.password.template external/rules_java++toolchains+remotejdk11_linux/conf/management/management.properties external/rules_java++toolchains+remotejdk11_linux/conf/net.properties external/rules_java++toolchains+remotejdk11_linux/conf/security/java.policy external/rules_java++toolchains+remotejdk11_linux/conf/security/java.security external/rules_java++toolchains+remotejdk11_linux/conf/security/policy/README.txt external/rules_java++toolchains+remotejdk11_linux/conf/security/policy/limited/default_US_export.policy external/rules_java++toolchains+remotejdk11_linux/conf/security/policy/limited/default_local.policy external/rules_java++toolchains+remotejdk11_linux/conf/security/policy/limited/exempt_local.policy external/rules_java++toolchains+remotejdk11_linux/conf/security/policy/unlimited/default_US_export.policy external/rules_java++toolchains+remotejdk11_linux/conf/security/policy/unlimited/default_local.policy external/rules_java++toolchains+remotejdk11_linux/conf/sound.properties external/rules_java++toolchains+remotejdk11_linux/include/classfile_constants.h external/rules_java++toolchains+remotejdk11_linux/include/jawt.h external/rules_java++toolchains+remotejdk11_linux/include/jdwpTransport.h external/rules_java++toolchains+remotejdk11_linux/include/jni.h external/rules_java++toolchains+remotejdk11_linux/include/jvmti.h external/rules_java++toolchains+remotejdk11_linux/include/jvmticmlr.h external/rules_java++toolchains+remotejdk11_linux/include/linux/jawt_md.h external/rules_java++toolchains+remotejdk11_linux/include/linux/jni_md.h external/rules_java++toolchains+remotejdk11_linux/lib/classlist external/rules_java++toolchains+remotejdk11_linux/lib/ct.sym external/rules_java++toolchains+remotejdk11_linux/lib/jexec external/rules_java++toolchains+remotejdk11_linux/lib/jfr/default.jfc external/rules_java++toolchains+remotejdk11_linux/lib/jfr/profile.jfc external/rules_java++toolchains+remotejdk11_linux/lib/jli/libjli.so external/rules_java++toolchains+remotejdk11_linux/lib/jrt-fs.jar external/rules_java++toolchains+remotejdk11_linux/lib/jspawnhelper external/rules_java++toolchains+remotejdk11_linux/lib/jvm.cfg external/rules_java++toolchains+remotejdk11_linux/lib/libattach.so external/rules_java++toolchains+remotejdk11_linux/lib/libawt.so external/rules_java++toolchains+remotejdk11_linux/lib/libawt_headless.so external/rules_java++toolchains+remotejdk11_linux/lib/libawt_xawt.so external/rules_java++toolchains+remotejdk11_linux/lib/libdt_socket.so external/rules_java++toolchains+remotejdk11_linux/lib/libextnet.so external/rules_java++toolchains+remotejdk11_linux/lib/libfontmanager.so external/rules_java++toolchains+remotejdk11_linux/lib/libfreetype.so external/rules_java++toolchains+remotejdk11_linux/lib/libinstrument.so external/rules_java++toolchains+remotejdk11_linux/lib/libj2gss.so external/rules_java++toolchains+remotejdk11_linux/lib/libj2pcsc.so external/rules_java++toolchains+remotejdk11_linux/lib/libj2pkcs11.so external/rules_java++toolchains+remotejdk11_linux/lib/libjaas.so external/rules_java++toolchains+remotejdk11_linux/lib/libjava.so external/rules_java++toolchains+remotejdk11_linux/lib/libjavajpeg.so external/rules_java++toolchains+remotejdk11_linux/lib/libjawt.so external/rules_java++toolchains+remotejdk11_linux/lib/libjdwp.so external/rules_java++toolchains+remotejdk11_linux/lib/libjimage.so external/rules_java++toolchains+remotejdk11_linux/lib/libjsig.so external/rules_java++toolchains+remotejdk11_linux/lib/libjsound.so external/rules_java++toolchains+remotejdk11_linux/lib/liblcms.so external/rules_java++toolchains+remotejdk11_linux/lib/libmanagement.so external/rules_java++toolchains+remotejdk11_linux/lib/libmanagement_agent.so external/rules_java++toolchains+remotejdk11_linux/lib/libmanagement_ext.so external/rules_java++toolchains+remotejdk11_linux/lib/libmlib_image.so external/rules_java++toolchains+remotejdk11_linux/lib/libnet.so external/rules_java++toolchains+remotejdk11_linux/lib/libnio.so external/rules_java++toolchains+remotejdk11_linux/lib/libprefs.so external/rules_java++toolchains+remotejdk11_linux/lib/librmi.so external/rules_java++toolchains+remotejdk11_linux/lib/libsaproc.so external/rules_java++toolchains+remotejdk11_linux/lib/libsctp.so external/rules_java++toolchains+remotejdk11_linux/lib/libsplashscreen.so external/rules_java++toolchains+remotejdk11_linux/lib/libsunec.so external/rules_java++toolchains+remotejdk11_linux/lib/libunpack.so external/rules_java++toolchains+remotejdk11_linux/lib/libverify.so external/rules_java++toolchains+remotejdk11_linux/lib/libzip.so external/rules_java++toolchains+remotejdk11_linux/lib/modules external/rules_java++toolchains+remotejdk11_linux/lib/psfont.properties.ja external/rules_java++toolchains+remotejdk11_linux/lib/psfontj2d.properties external/rules_java++toolchains+remotejdk11_linux/lib/security/blocked.certs external/rules_java++toolchains+remotejdk11_linux/lib/security/cacerts external/rules_java++toolchains+remotejdk11_linux/lib/security/default.policy external/rules_java++toolchains+remotejdk11_linux/lib/security/public_suffix_list.dat external/rules_java++toolchains+remotejdk11_linux/lib/server/Xusage.txt external/rules_java++toolchains+remotejdk11_linux/lib/server/libjsig.so external/rules_java++toolchains+remotejdk11_linux/lib/server/libjvm.so external/rules_java++toolchains+remotejdk11_linux/lib/src.zip external/rules_java++toolchains+remotejdk11_linux/lib/tzdb.dat external/rules_java++toolchains+remotejdk11_linux/release)\nKEYTOOL=$(dirname ${BINS[1]})/keytool\n\n$KEYTOOL -J-Duser.language=en -J-Duser.country=US -J-Duser.timezone=UTC \\\n-list -rfc -keystore bazel-out/k8-fastbuild/bin/java_keystore/java_keystore.jks -storepass changeit > bazel-out/k8-fastbuild/bin/java_keystore/_test_java_keystore_jks.listing\n"
+        }
+      }
+    },
+    {
+      "count": 1,
+      "violation": {
+        "kind": "system_program",
+        "action": {
+          "mnemonic": "Genrule",
+          "target": "//cacerts:_test_cacerts_mtree"
+        },
+        "program": {
+          "origin": "system",
+          "path": "/bin/bash"
+        },
+        "wrappers": []
+      }
+    },
+    {
+      "count": 1,
+      "violation": {
+        "kind": "system_program",
+        "action": {
+          "mnemonic": "Genrule",
+          "target": "//flatten:_test_flatten_dedup_listing_expected"
+        },
+        "program": {
+          "origin": "system",
+          "path": "/bin/bash"
+        },
+        "wrappers": []
+      }
+    },
+    {
+      "count": 1,
+      "violation": {
+        "kind": "system_program",
+        "action": {
+          "mnemonic": "Genrule",
+          "target": "//flatten:_test_flatten_dedup_listing_listing"
+        },
+        "program": {
+          "origin": "system",
+          "path": "/bin/bash"
+        },
+        "wrappers": []
+      }
+    },
+    {
+      "count": 1,
+      "violation": {
+        "kind": "system_program",
+        "action": {
+          "mnemonic": "Genrule",
+          "target": "//flatten:_test_flatten_dedup_mtree_mtree"
+        },
+        "program": {
+          "origin": "system",
+          "path": "/bin/bash"
+        },
+        "wrappers": []
+      }
+    },
+    {
+      "count": 1,
+      "violation": {
+        "kind": "system_program",
+        "action": {
+          "mnemonic": "Genrule",
+          "target": "//flatten:_test_flatten_mtree"
+        },
+        "program": {
+          "origin": "system",
+          "path": "/bin/bash"
+        },
+        "wrappers": []
+      }
+    },
+    {
+      "count": 1,
+      "violation": {
+        "kind": "system_program",
+        "action": {
+          "mnemonic": "Genrule",
+          "target": "//group:_test_group_mtree"
+        },
+        "program": {
+          "origin": "system",
+          "path": "/bin/bash"
+        },
+        "wrappers": []
+      }
+    },
+    {
+      "count": 1,
+      "violation": {
+        "kind": "system_program",
+        "action": {
+          "mnemonic": "Genrule",
+          "target": "//home:_test_home_mtree"
+        },
+        "program": {
+          "origin": "system",
+          "path": "/bin/bash"
+        },
+        "wrappers": []
+      }
+    },
+    {
+      "count": 1,
+      "violation": {
+        "kind": "system_program",
+        "action": {
+          "mnemonic": "Genrule",
+          "target": "//java_keystore:_test_java_keystore_jks_listing"
+        },
+        "program": {
+          "origin": "system",
+          "path": "/bin/bash"
+        },
+        "wrappers": []
+      }
+    },
+    {
+      "count": 1,
+      "violation": {
+        "kind": "system_program",
+        "action": {
+          "mnemonic": "Genrule",
+          "target": "//java_keystore:_test_java_keystore_mtree"
+        },
+        "program": {
+          "origin": "system",
+          "path": "/bin/bash"
+        },
+        "wrappers": []
+      }
+    },
+    {
+      "count": 1,
+      "violation": {
+        "kind": "system_program",
+        "action": {
+          "mnemonic": "Genrule",
+          "target": "//locale:_test_bookworm_mtree"
+        },
+        "program": {
+          "origin": "system",
+          "path": "/bin/bash"
+        },
+        "wrappers": []
+      }
+    },
+    {
+      "count": 1,
+      "violation": {
+        "kind": "system_program",
+        "action": {
+          "mnemonic": "Genrule",
+          "target": "//locale:_test_bullseye_mtree"
+        },
+        "program": {
+          "origin": "system",
+          "path": "/bin/bash"
+        },
+        "wrappers": []
+      }
+    },
+    {
+      "count": 1,
+      "violation": {
+        "kind": "system_program",
+        "action": {
+          "mnemonic": "Genrule",
+          "target": "//os_release:_test_os_release_alternative_path_mtree"
+        },
+        "program": {
+          "origin": "system",
+          "path": "/bin/bash"
+        },
+        "wrappers": []
+      }
+    },
+    {
+      "count": 1,
+      "violation": {
+        "kind": "system_program",
+        "action": {
+          "mnemonic": "Genrule",
+          "target": "//os_release:_test_os_release_mtree"
+        },
+        "program": {
+          "origin": "system",
+          "path": "/bin/bash"
+        },
+        "wrappers": []
+      }
+    },
+    {
+      "count": 1,
+      "violation": {
+        "kind": "system_program",
+        "action": {
+          "mnemonic": "Genrule",
+          "target": "//passwd:_test_passwd_mtree"
+        },
+        "program": {
+          "origin": "system",
+          "path": "/bin/bash"
+        },
+        "wrappers": []
+      }
+    },
+    {
+      "count": 1,
+      "violation": {
+        "kind": "system_program",
+        "action": {
+          "mnemonic": "Genrule",
+          "target": "//statusd:_test_statusd_mtree"
+        },
+        "program": {
+          "origin": "system",
+          "path": "/bin/bash"
+        },
+        "wrappers": []
+      }
+    },
+    {
+      "count": 1,
+      "violation": {
+        "kind": "system_program",
+        "action": {
+          "mnemonic": "Jq",
+          "target": "//debian_snapshot:image.digest"
+        },
+        "program": {
+          "origin": "system",
+          "path": "/bin/bash"
+        },
+        "wrappers": []
+      }
+    },
+    {
+      "count": 2,
+      "violation": {
+        "kind": "unknown_program",
+        "action": {
+          "mnemonic": "OCIImage",
+          "target": "//debian_snapshot:image"
+        },
+        "program": {
+          "origin": {
+            "main": {
+              "extension": null
+            }
+          },
+          "path": "debian_snapshot/image_image.sh"
+        },
+        "wrappers": []
+      }
+    },
+    {
+      "count": 1,
+      "violation": {
+        "kind": "unknown_program",
+        "action": {
+          "mnemonic": "OCITarballManifest",
+          "target": "//debian_snapshot:tarball"
+        },
+        "program": {
+          "origin": {
+            "main": {
+              "extension": null
+            }
+          },
+          "path": "debian_snapshot/tarball/load.sh"
+        },
+        "wrappers": []
+      }
+    }
+  ]
+}
