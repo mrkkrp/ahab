@@ -2,5 +2,6 @@
   "repo": "https://github.com/bazel-contrib/rules_img",
   "commit": "c93884af99707664f2ab0c1828a0083df17f544b",
   "label": "//...",
-  "configs": []
+  "configs": [],
+  "weight": 2
 }

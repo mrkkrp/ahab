@@ -283,12 +283,54 @@ def print_summary(label, distinct, occurrences, kinds):
             flush=True,
         )
 
-def cmd_ci():
+def shard_of(names, index, count):
+    """The `index`th of `count` roughly equal shares of `names`.
+
+    Greedy longest-first bin packing over each target's `weight`, so the
+    shares come out balanced rather than merely equal in length: one project
+    can cost five times another, and a shard that draws two of the slow ones
+    decides how long CI takes.
+
+    Assignment is computed here rather than written into the workflow so
+    that adding a target cannot silently drop it from CI. The price is that
+    a target's shard changes when its neighbours do, which nothing depends
+    on—each shard is set up and expunged from scratch.
+    """
+    if not 1 <= index <= count:
+        fail(f"shard {index}/{count} is out of range")
+
+    shards = [[] for _ in range(count)]
+    load = [0] * count
+    for name in sorted(names, key=lambda n: (-weight(n), n)):
+        lightest = load.index(min(load))
+        shards[lightest].append(name)
+        load[lightest] += weight(name)
+    return sorted(shards[index - 1])
+
+def weight(name):
+    """How expensive a target is to analyze, relative to a typical one.
+
+    A scheduling hint and nothing else: it decides which shard a project
+    lands in, never what Ahab reports. Left out of a `spec.json` it is 1,
+    which is right for most projects, so only the outliers say anything.
+    """
+    return read_spec(name).get("weight", 1)
+
+def cmd_ci(shard=None):
     """Set up and check every target, reporting all of them.
+
+    With a shard, only that share of them—see [`shard_of`].
     """
     names = targets()
     if not names:
         fail("no targets found under fishery/")
+    if shard:
+        index, count = shard
+        names = shard_of(names, index, count)
+        print(f"=== fishery: shard {index}/{count}: "
+              f"{', '.join(names) or 'nothing'}", flush=True)
+        if not names:
+            return 0
 
     failed = []
     totals = {}
@@ -341,6 +383,18 @@ def cmd_ci():
         return 1
     return 0
 
+def parse_shard(text):
+    """Read an `I/N` shard argument, or `None` when there was none."""
+    if text is None:
+        return None
+    parts = text.split("/")
+    if len(parts) != 2 or not all(part.isdigit() for part in parts):
+        fail(f"--shard wants I/N, e.g. 2/4, not {text!r}")
+    index, count = (int(part) for part in parts)
+    if count < 1:
+        fail("--shard needs at least one shard")
+    return index, count
+
 COMMANDS = {
     "setup": cmd_setup,
     "check": cmd_check,
@@ -361,13 +415,20 @@ def main():
         nargs="?",
         help="a directory under fishery/; every one of them for `ci`",
     )
+    parser.add_argument(
+        "--shard",
+        metavar="I/N",
+        help="for `ci`: run only the Ith of N shares of the targets",
+    )
     args = parser.parse_args()
 
     try:
         if args.command == "ci":
             if args.target:
                 fail("`ci` runs every target and takes no target argument")
-            return cmd_ci()
+            return cmd_ci(parse_shard(args.shard))
+        if args.shard:
+            fail("`--shard` only makes sense for `ci`")
         if not args.target:
             fail(
                 f"`{args.command}` needs a target; "

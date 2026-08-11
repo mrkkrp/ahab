@@ -43,7 +43,8 @@ $ ./fishery.py <command> <target>
 * `explain` prints the recorded report without analyzing anything.
 * `clean` expunges the project's Bazel state and removes `work/`.
 * `ci` runs `setup`, `check` and `clean` on every target, summarizing
-  each expectation as it goes.
+  each expectation as it goes. `--shard=I/N` runs only the `I`th of `N`
+  shares of them, which is how CI splits the work across parallel jobs.
 
 `setup` does one thing: a depth-1 fetch of exactly the pinned commit. It
 refuses to run over an existing `work/`; run `clean` first.
@@ -74,7 +75,8 @@ here; only the first two are required:
   "label": "//...",
   "configs": [],
   "compilation_mode": "opt",
-  "workspace": "e2e"
+  "workspace": "e2e",
+  "weight": 4
 }
 ```
 
@@ -86,6 +88,14 @@ here; only the first two are required:
 | `configs`          | `[]`                | `--config` values to forward   |
 | `compilation_mode` | the project's own   | `fastbuild`, `dbg` or `opt`    |
 | `workspace`        | the root workspace  | a workspace nested inside it   |
+| `weight`           | `1`                 | how costly this one is to run  |
+
+`weight` is a scheduling hint and nothing else: it decides which CI shard a
+project lands in, never what Ahab reports. Most targets cost about the same
+and leave it out; set it only for one that is several times slower than the
+rest, so that two of those cannot land in the same shard. Shards are worked
+out from it at run time rather than written into the workflow, so adding a
+target cannot silently drop it from CI.
 
 Pin a full SHA rather than a branch—a fishery whose input moves cannot tell
 you what your own change did. `repo` need not be GitHub; it is handed
