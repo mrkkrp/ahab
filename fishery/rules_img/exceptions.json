@@ -1,0 +1,33 @@
+{
+  "exceptions": [
+    {
+      "reason": "the Go tooling links with Bazel's autoconfigured C++ toolchain",
+      "kind": "bad_path"
+    },
+    {
+      "reason": "the Go tooling links with Bazel's autoconfigured C++ toolchain",
+      "kind": "absolute_path",
+      "path": "*/bin/gcc"
+    },
+    {
+      "reason": "the Go tooling links with Bazel's autoconfigured C++ toolchain",
+      "kind": "absolute_path",
+      "path": "*/bin/ar"
+    },
+    {
+      "reason": "a path inside the image being built, not one the build reads: these rules declare where a file will live in the container, and that it does not exist on the build machine is the point",
+      "kind": "absolute_path",
+      "mnemonic": "BaseImageContent"
+    },
+    {
+      "reason": "a path inside the image being built, not one the build reads: these rules declare where a file will live in the container, and that it does not exist on the build machine is the point",
+      "kind": "absolute_path",
+      "mnemonic": "LayerTar"
+    },
+    {
+      "reason": "a path inside the image being built, not one the build reads: these rules declare where a file will live in the container, and that it does not exist on the build machine is the point",
+      "kind": "absolute_path",
+      "mnemonic": "ImageManifest"
+    }
+  ]
+}

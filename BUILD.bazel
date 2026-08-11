@@ -29,6 +29,7 @@ rust_library(
         "src/reproducibility_spec/library.rs",
         "src/reproducibility_spec/mod.rs",
         "src/reproducibility_spec/per_lang/cc.rs",
+        "src/reproducibility_spec/per_lang/container.rs",
         "src/reproducibility_spec/per_lang/go.rs",
         "src/reproducibility_spec/per_lang/java.rs",
         "src/reproducibility_spec/per_lang/kotlin.rs",

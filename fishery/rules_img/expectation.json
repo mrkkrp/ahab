@@ -1,0 +1,923 @@
+{
+  "violations": [
+    {
+      "count": 2,
+      "violation": {
+        "kind": "execution_requirement",
+        "action": {
+          "mnemonic": "CopyDirectory",
+          "target": "//tests/layering/testcases:tree_artifact"
+        },
+        "requirement": "no-cache"
+      }
+    },
+    {
+      "count": 2,
+      "violation": {
+        "kind": "execution_requirement",
+        "action": {
+          "mnemonic": "CopyDirectory",
+          "target": "//tests/layering/testcases:tree_artifact"
+        },
+        "requirement": "no-remote"
+      }
+    },
+    {
+      "count": 1,
+      "violation": {
+        "kind": "execution_requirement",
+        "action": {
+          "mnemonic": "TestRunner",
+          "target": "//img/private/release/gazelle_plugin:release_files_test"
+        },
+        "requirement": "local"
+      }
+    },
+    {
+      "count": 1,
+      "violation": {
+        "kind": "execution_requirement",
+        "action": {
+          "mnemonic": "TestRunner",
+          "target": "//img/private/release/gazelle_plugin:release_files_test"
+        },
+        "requirement": "no-cache"
+      }
+    },
+    {
+      "count": 1,
+      "violation": {
+        "kind": "execution_requirement",
+        "action": {
+          "mnemonic": "TestRunner",
+          "target": "//img/private/release/gazelle_plugin:release_files_test"
+        },
+        "requirement": "no-remote"
+      }
+    },
+    {
+      "count": 1,
+      "violation": {
+        "kind": "execution_requirement",
+        "action": {
+          "mnemonic": "TestRunner",
+          "target": "//img/private/release/gazelle_plugin:release_files_test"
+        },
+        "requirement": "no-sandbox"
+      }
+    },
+    {
+      "count": 1,
+      "violation": {
+        "kind": "execution_requirement",
+        "action": {
+          "mnemonic": "TestRunner",
+          "target": "//util:buildifier.check"
+        },
+        "requirement": "no-cache"
+      }
+    },
+    {
+      "count": 1,
+      "violation": {
+        "kind": "execution_requirement",
+        "action": {
+          "mnemonic": "TestRunner",
+          "target": "//util:buildifier.check"
+        },
+        "requirement": "no-remote-exec"
+      }
+    },
+    {
+      "count": 1,
+      "violation": {
+        "kind": "execution_requirement",
+        "action": {
+          "mnemonic": "TestRunner",
+          "target": "//util:buildifier.check"
+        },
+        "requirement": "no-sandbox"
+      }
+    },
+    {
+      "count": 2,
+      "violation": {
+        "kind": "system_program",
+        "action": {
+          "mnemonic": "CopyDirectory",
+          "target": "//tests/layering/testcases:tree_artifact"
+        },
+        "program": {
+          "origin": "system",
+          "path": "/bin/bash"
+        },
+        "wrappers": []
+      }
+    },
+    {
+      "count": 1,
+      "violation": {
+        "kind": "system_program",
+        "action": {
+          "mnemonic": "Genrule",
+          "target": "//img/private/release/module_bazel_release_prep:cleaned_cosign_module"
+        },
+        "program": {
+          "origin": "system",
+          "path": "/bin/bash"
+        },
+        "wrappers": []
+      }
+    },
+    {
+      "count": 1,
+      "violation": {
+        "kind": "system_program",
+        "action": {
+          "mnemonic": "Genrule",
+          "target": "//img/private/release/module_bazel_release_prep:cleaned_module"
+        },
+        "program": {
+          "origin": "system",
+          "path": "/bin/bash"
+        },
+        "wrappers": []
+      }
+    },
+    {
+      "count": 1,
+      "violation": {
+        "kind": "system_program",
+        "action": {
+          "mnemonic": "Genrule",
+          "target": "//img/private/release/module_bazel_release_prep:cleaned_notation_module"
+        },
+        "program": {
+          "origin": "system",
+          "path": "/bin/bash"
+        },
+        "wrappers": []
+      }
+    },
+    {
+      "count": 1,
+      "violation": {
+        "kind": "unknown_program",
+        "action": {
+          "mnemonic": "Action",
+          "target": "//img/private/release:airgapped"
+        },
+        "program": {
+          "origin": {
+            "module": {
+              "name": "rules_img_internal_tools",
+              "extension": null
+            }
+          },
+          "path": "release/distdir/distdir_/distdir"
+        },
+        "wrappers": []
+      }
+    },
+    {
+      "count": 1,
+      "violation": {
+        "kind": "unknown_program",
+        "action": {
+          "mnemonic": "Action",
+          "target": "//img/private/release:bcr"
+        },
+        "program": {
+          "origin": {
+            "module": {
+              "name": "rules_img_internal_tools",
+              "extension": null
+            }
+          },
+          "path": "release/bcr/bcr_/bcr"
+        },
+        "wrappers": []
+      }
+    },
+    {
+      "count": 1,
+      "violation": {
+        "kind": "unknown_program",
+        "action": {
+          "mnemonic": "Action",
+          "target": "//img/private/release:prebuilt_toolchain"
+        },
+        "program": {
+          "origin": {
+            "module": {
+              "name": "rules_img_internal_tools",
+              "extension": null
+            }
+          },
+          "path": "release/lockfile/lockfile_/lockfile"
+        },
+        "wrappers": []
+      }
+    },
+    {
+      "count": 1,
+      "violation": {
+        "kind": "unknown_program",
+        "action": {
+          "mnemonic": "Action",
+          "target": "//tests/image_structure_test:hello_from_layout_test"
+        },
+        "program": {
+          "origin": {
+            "module": {
+              "name": "hermetic_launcher",
+              "extension": "non_module_dependencies"
+            }
+          },
+          "path": "file/finalize-stub-x86_64-linux"
+        },
+        "wrappers": []
+      }
+    },
+    {
+      "count": 1,
+      "violation": {
+        "kind": "unknown_program",
+        "action": {
+          "mnemonic": "Action",
+          "target": "//tests/image_structure_test:hello_index_from_layout_test"
+        },
+        "program": {
+          "origin": {
+            "module": {
+              "name": "hermetic_launcher",
+              "extension": "non_module_dependencies"
+            }
+          },
+          "path": "file/finalize-stub-x86_64-linux"
+        },
+        "wrappers": []
+      }
+    },
+    {
+      "count": 1,
+      "violation": {
+        "kind": "unknown_program",
+        "action": {
+          "mnemonic": "Action",
+          "target": "//tests/image_structure_test:hello_index_oci_test"
+        },
+        "program": {
+          "origin": {
+            "module": {
+              "name": "hermetic_launcher",
+              "extension": "non_module_dependencies"
+            }
+          },
+          "path": "file/finalize-stub-x86_64-linux"
+        },
+        "wrappers": []
+      }
+    },
+    {
+      "count": 1,
+      "violation": {
+        "kind": "unknown_program",
+        "action": {
+          "mnemonic": "Action",
+          "target": "//tests/image_structure_test:hello_index_test"
+        },
+        "program": {
+          "origin": {
+            "module": {
+              "name": "hermetic_launcher",
+              "extension": "non_module_dependencies"
+            }
+          },
+          "path": "file/finalize-stub-x86_64-linux"
+        },
+        "wrappers": []
+      }
+    },
+    {
+      "count": 1,
+      "violation": {
+        "kind": "unknown_program",
+        "action": {
+          "mnemonic": "Action",
+          "target": "//tests/image_structure_test:hello_oci_test"
+        },
+        "program": {
+          "origin": {
+            "module": {
+              "name": "hermetic_launcher",
+              "extension": "non_module_dependencies"
+            }
+          },
+          "path": "file/finalize-stub-x86_64-linux"
+        },
+        "wrappers": []
+      }
+    },
+    {
+      "count": 1,
+      "violation": {
+        "kind": "unknown_program",
+        "action": {
+          "mnemonic": "Action",
+          "target": "//tests/image_structure_test:hello_optimized_test"
+        },
+        "program": {
+          "origin": {
+            "module": {
+              "name": "hermetic_launcher",
+              "extension": "non_module_dependencies"
+            }
+          },
+          "path": "file/finalize-stub-x86_64-linux"
+        },
+        "wrappers": []
+      }
+    },
+    {
+      "count": 1,
+      "violation": {
+        "kind": "unknown_program",
+        "action": {
+          "mnemonic": "Action",
+          "target": "//tests/image_structure_test:hello_output_groups_test"
+        },
+        "program": {
+          "origin": {
+            "module": {
+              "name": "hermetic_launcher",
+              "extension": "non_module_dependencies"
+            }
+          },
+          "path": "file/finalize-stub-x86_64-linux"
+        },
+        "wrappers": []
+      }
+    },
+    {
+      "count": 1,
+      "violation": {
+        "kind": "unknown_program",
+        "action": {
+          "mnemonic": "Action",
+          "target": "//tests/image_structure_test:hello_test"
+        },
+        "program": {
+          "origin": {
+            "module": {
+              "name": "hermetic_launcher",
+              "extension": "non_module_dependencies"
+            }
+          },
+          "path": "file/finalize-stub-x86_64-linux"
+        },
+        "wrappers": []
+      }
+    },
+    {
+      "count": 1,
+      "violation": {
+        "kind": "unknown_program",
+        "action": {
+          "mnemonic": "Action",
+          "target": "//tests/layering/testcases/binary_norunfiles:test"
+        },
+        "program": {
+          "origin": {
+            "module": {
+              "name": "hermetic_launcher",
+              "extension": "non_module_dependencies"
+            }
+          },
+          "path": "file/finalize-stub-x86_64-linux"
+        },
+        "wrappers": []
+      }
+    },
+    {
+      "count": 1,
+      "violation": {
+        "kind": "unknown_program",
+        "action": {
+          "mnemonic": "Action",
+          "target": "//tests/layering/testcases/binary_runfiles:test"
+        },
+        "program": {
+          "origin": {
+            "module": {
+              "name": "hermetic_launcher",
+              "extension": "non_module_dependencies"
+            }
+          },
+          "path": "file/finalize-stub-x86_64-linux"
+        },
+        "wrappers": []
+      }
+    },
+    {
+      "count": 1,
+      "violation": {
+        "kind": "unknown_program",
+        "action": {
+          "mnemonic": "Action",
+          "target": "//tests/layering/testcases/combined:test"
+        },
+        "program": {
+          "origin": {
+            "module": {
+              "name": "hermetic_launcher",
+              "extension": "non_module_dependencies"
+            }
+          },
+          "path": "file/finalize-stub-x86_64-linux"
+        },
+        "wrappers": []
+      }
+    },
+    {
+      "count": 1,
+      "violation": {
+        "kind": "unknown_program",
+        "action": {
+          "mnemonic": "Action",
+          "target": "//tests/layering/testcases/empty_runfiles:from_binary_test"
+        },
+        "program": {
+          "origin": {
+            "module": {
+              "name": "hermetic_launcher",
+              "extension": "non_module_dependencies"
+            }
+          },
+          "path": "file/finalize-stub-x86_64-linux"
+        },
+        "wrappers": []
+      }
+    },
+    {
+      "count": 1,
+      "violation": {
+        "kind": "unknown_program",
+        "action": {
+          "mnemonic": "Action",
+          "target": "//tests/layering/testcases/empty_runfiles:image_layer_test"
+        },
+        "program": {
+          "origin": {
+            "module": {
+              "name": "hermetic_launcher",
+              "extension": "non_module_dependencies"
+            }
+          },
+          "path": "file/finalize-stub-x86_64-linux"
+        },
+        "wrappers": []
+      }
+    },
+    {
+      "count": 1,
+      "violation": {
+        "kind": "unknown_program",
+        "action": {
+          "mnemonic": "Action",
+          "target": "//tests/layering/testcases/file_metadata:test"
+        },
+        "program": {
+          "origin": {
+            "module": {
+              "name": "hermetic_launcher",
+              "extension": "non_module_dependencies"
+            }
+          },
+          "path": "file/finalize-stub-x86_64-linux"
+        },
+        "wrappers": []
+      }
+    },
+    {
+      "count": 1,
+      "violation": {
+        "kind": "unknown_program",
+        "action": {
+          "mnemonic": "Action",
+          "target": "//tests/layering/testcases/files:test"
+        },
+        "program": {
+          "origin": {
+            "module": {
+              "name": "hermetic_launcher",
+              "extension": "non_module_dependencies"
+            }
+          },
+          "path": "file/finalize-stub-x86_64-linux"
+        },
+        "wrappers": []
+      }
+    },
+    {
+      "count": 1,
+      "violation": {
+        "kind": "unknown_program",
+        "action": {
+          "mnemonic": "Action",
+          "target": "//tests/layering/testcases/files_zstd:test"
+        },
+        "program": {
+          "origin": {
+            "module": {
+              "name": "hermetic_launcher",
+              "extension": "non_module_dependencies"
+            }
+          },
+          "path": "file/finalize-stub-x86_64-linux"
+        },
+        "wrappers": []
+      }
+    },
+    {
+      "count": 1,
+      "violation": {
+        "kind": "unknown_program",
+        "action": {
+          "mnemonic": "Action",
+          "target": "//tests/layering/testcases/from_tar:test"
+        },
+        "program": {
+          "origin": {
+            "module": {
+              "name": "hermetic_launcher",
+              "extension": "non_module_dependencies"
+            }
+          },
+          "path": "file/finalize-stub-x86_64-linux"
+        },
+        "wrappers": []
+      }
+    },
+    {
+      "count": 1,
+      "violation": {
+        "kind": "unknown_program",
+        "action": {
+          "mnemonic": "Action",
+          "target": "//tests/layering/testcases/from_tar_optimize:test"
+        },
+        "program": {
+          "origin": {
+            "module": {
+              "name": "hermetic_launcher",
+              "extension": "non_module_dependencies"
+            }
+          },
+          "path": "file/finalize-stub-x86_64-linux"
+        },
+        "wrappers": []
+      }
+    },
+    {
+      "count": 1,
+      "violation": {
+        "kind": "unknown_program",
+        "action": {
+          "mnemonic": "Action",
+          "target": "//tests/layering/testcases/large_files:test"
+        },
+        "program": {
+          "origin": {
+            "module": {
+              "name": "hermetic_launcher",
+              "extension": "non_module_dependencies"
+            }
+          },
+          "path": "file/finalize-stub-x86_64-linux"
+        },
+        "wrappers": []
+      }
+    },
+    {
+      "count": 1,
+      "violation": {
+        "kind": "unknown_program",
+        "action": {
+          "mnemonic": "Action",
+          "target": "//tests/layering/testcases/multi_flatten:test"
+        },
+        "program": {
+          "origin": {
+            "module": {
+              "name": "hermetic_launcher",
+              "extension": "non_module_dependencies"
+            }
+          },
+          "path": "file/finalize-stub-x86_64-linux"
+        },
+        "wrappers": []
+      }
+    },
+    {
+      "count": 1,
+      "violation": {
+        "kind": "unknown_program",
+        "action": {
+          "mnemonic": "Action",
+          "target": "//tests/layering/testcases/parent_dirs_binary:test"
+        },
+        "program": {
+          "origin": {
+            "module": {
+              "name": "hermetic_launcher",
+              "extension": "non_module_dependencies"
+            }
+          },
+          "path": "file/finalize-stub-x86_64-linux"
+        },
+        "wrappers": []
+      }
+    },
+    {
+      "count": 1,
+      "violation": {
+        "kind": "unknown_program",
+        "action": {
+          "mnemonic": "Action",
+          "target": "//tests/layering/testcases/parent_dirs_image:test"
+        },
+        "program": {
+          "origin": {
+            "module": {
+              "name": "hermetic_launcher",
+              "extension": "non_module_dependencies"
+            }
+          },
+          "path": "file/finalize-stub-x86_64-linux"
+        },
+        "wrappers": []
+      }
+    },
+    {
+      "count": 1,
+      "violation": {
+        "kind": "unknown_program",
+        "action": {
+          "mnemonic": "Action",
+          "target": "//tests/layering/testcases/runfiles_groups:test"
+        },
+        "program": {
+          "origin": {
+            "module": {
+              "name": "hermetic_launcher",
+              "extension": "non_module_dependencies"
+            }
+          },
+          "path": "file/finalize-stub-x86_64-linux"
+        },
+        "wrappers": []
+      }
+    },
+    {
+      "count": 1,
+      "violation": {
+        "kind": "unknown_program",
+        "action": {
+          "mnemonic": "Action",
+          "target": "//tests/layering/testcases/runfiles_groups_budget:test"
+        },
+        "program": {
+          "origin": {
+            "module": {
+              "name": "hermetic_launcher",
+              "extension": "non_module_dependencies"
+            }
+          },
+          "path": "file/finalize-stub-x86_64-linux"
+        },
+        "wrappers": []
+      }
+    },
+    {
+      "count": 1,
+      "violation": {
+        "kind": "unknown_program",
+        "action": {
+          "mnemonic": "Action",
+          "target": "//tests/layering/testcases/runfiles_groups_exec_group:test"
+        },
+        "program": {
+          "origin": {
+            "module": {
+              "name": "hermetic_launcher",
+              "extension": "non_module_dependencies"
+            }
+          },
+          "path": "file/finalize-stub-x86_64-linux"
+        },
+        "wrappers": []
+      }
+    },
+    {
+      "count": 1,
+      "violation": {
+        "kind": "unknown_program",
+        "action": {
+          "mnemonic": "Action",
+          "target": "//tests/layering/testcases/runfiles_groups_private:test"
+        },
+        "program": {
+          "origin": {
+            "module": {
+              "name": "hermetic_launcher",
+              "extension": "non_module_dependencies"
+            }
+          },
+          "path": "file/finalize-stub-x86_64-linux"
+        },
+        "wrappers": []
+      }
+    },
+    {
+      "count": 1,
+      "violation": {
+        "kind": "unknown_program",
+        "action": {
+          "mnemonic": "Action",
+          "target": "//tests/layering/testcases/runfiles_symlink:test"
+        },
+        "program": {
+          "origin": {
+            "module": {
+              "name": "hermetic_launcher",
+              "extension": "non_module_dependencies"
+            }
+          },
+          "path": "file/finalize-stub-x86_64-linux"
+        },
+        "wrappers": []
+      }
+    },
+    {
+      "count": 1,
+      "violation": {
+        "kind": "unknown_program",
+        "action": {
+          "mnemonic": "Action",
+          "target": "//tests/layering/testcases/symlink_files:test"
+        },
+        "program": {
+          "origin": {
+            "module": {
+              "name": "hermetic_launcher",
+              "extension": "non_module_dependencies"
+            }
+          },
+          "path": "file/finalize-stub-x86_64-linux"
+        },
+        "wrappers": []
+      }
+    },
+    {
+      "count": 1,
+      "violation": {
+        "kind": "unknown_program",
+        "action": {
+          "mnemonic": "Action",
+          "target": "//tests/layering/testcases/trailing_slash:test"
+        },
+        "program": {
+          "origin": {
+            "module": {
+              "name": "hermetic_launcher",
+              "extension": "non_module_dependencies"
+            }
+          },
+          "path": "file/finalize-stub-x86_64-linux"
+        },
+        "wrappers": []
+      }
+    },
+    {
+      "count": 1,
+      "violation": {
+        "kind": "unknown_program",
+        "action": {
+          "mnemonic": "Action",
+          "target": "//tests/layering/testcases/tree:test"
+        },
+        "program": {
+          "origin": {
+            "module": {
+              "name": "hermetic_launcher",
+              "extension": "non_module_dependencies"
+            }
+          },
+          "path": "file/finalize-stub-x86_64-linux"
+        },
+        "wrappers": []
+      }
+    },
+    {
+      "count": 1,
+      "violation": {
+        "kind": "unknown_program",
+        "action": {
+          "mnemonic": "Action",
+          "target": "//tests/layering/testcases/tree_dedup:test"
+        },
+        "program": {
+          "origin": {
+            "module": {
+              "name": "hermetic_launcher",
+              "extension": "non_module_dependencies"
+            }
+          },
+          "path": "file/finalize-stub-x86_64-linux"
+        },
+        "wrappers": []
+      }
+    },
+    {
+      "count": 1,
+      "violation": {
+        "kind": "unknown_program",
+        "action": {
+          "mnemonic": "Action",
+          "target": "//tests/signing:deploy_all"
+        },
+        "program": {
+          "origin": {
+            "module": {
+              "name": "hermetic_launcher",
+              "extension": "non_module_dependencies"
+            }
+          },
+          "path": "file/finalize-stub-x86_64-linux"
+        },
+        "wrappers": []
+      }
+    },
+    {
+      "count": 1,
+      "violation": {
+        "kind": "unknown_program",
+        "action": {
+          "mnemonic": "Action",
+          "target": "//tests/signing:push_best_effort"
+        },
+        "program": {
+          "origin": {
+            "module": {
+              "name": "hermetic_launcher",
+              "extension": "non_module_dependencies"
+            }
+          },
+          "path": "file/finalize-stub-x86_64-linux"
+        },
+        "wrappers": []
+      }
+    },
+    {
+      "count": 1,
+      "violation": {
+        "kind": "unknown_program",
+        "action": {
+          "mnemonic": "Action",
+          "target": "//tests/signing:push_enabled"
+        },
+        "program": {
+          "origin": {
+            "module": {
+              "name": "hermetic_launcher",
+              "extension": "non_module_dependencies"
+            }
+          },
+          "path": "file/finalize-stub-x86_64-linux"
+        },
+        "wrappers": []
+      }
+    },
+    {
+      "count": 1,
+      "violation": {
+        "kind": "unknown_program",
+        "action": {
+          "mnemonic": "GenerateReleaseNotes",
+          "target": "//img/private/release:versioned_src_tar"
+        },
+        "program": {
+          "origin": {
+            "module": {
+              "name": "rules_img_internal_tools",
+              "extension": null
+            }
+          },
+          "path": "release/release_notes/release_notes_/release_notes"
+        },
+        "wrappers": []
+      }
+    }
+  ]
+}
