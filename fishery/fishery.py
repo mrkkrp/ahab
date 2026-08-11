@@ -109,6 +109,17 @@ def ensure_expectation(name):
         )
     return recorded
 
+def analysis_dir(name):
+    """Where the analysis runs.
+
+    `work/` itself, unless the target names a workspace nested inside it.
+    Some projects keep their own tooling at the root and the builds that
+    exercise it in a second workspace—`e2e/`, `examples/`—with its own
+    `MODULE.bazel`. Analyzing the root then reports on the tool rather than
+    on what the tool does, which is rarely the interesting half.
+    """
+    return require_work(name) / read_spec(name).get("workspace", ".")
+
 def output_base(name):
     """Where a target's Bazel state goes, chosen rather than discovered.
 
@@ -173,7 +184,7 @@ def ahab_run(name, args):
     if exceptions.is_file():
         command.append(f"--exceptions-json={exceptions}")
     command += args + [spec.get("label", "//...")]
-    completed = run(command, cwd=require_work(name), check=False)
+    completed = run(command, cwd=analysis_dir(name), check=False)
     return completed.returncode
 
 def cmd_setup(name):
@@ -221,7 +232,7 @@ def cmd_clean(name):
         return 0
     run(
         ["bazel", f"--output_base={output_base(name)}", "clean", "--expunge"],
-        cwd=work,
+        cwd=analysis_dir(name),
         check=False,
     )
     shutil.rmtree(work, ignore_errors=True)

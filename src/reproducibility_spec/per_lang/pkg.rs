@@ -63,6 +63,21 @@ pub(in crate::reproducibility_spec) fn entries() -> Vec<(ProgramId, Entry)>
     // the manifest it is given.
     entries.extend(pkg_tool("pkg/filter_directory", Entry::Spec(always())));
 
+    // rules_tar's one tool, which every one of its rules dispatches to by
+    // flag rather than by subcommand: `--filter` selects, `--duplicate`
+    // says what to do about a collision, and the archives to work on are
+    // named after them.
+    //
+    // Unlike the tools above it never builds an archive out of loose
+    // files, only out of other archives—so there is no moment at which it
+    // could ask what time it is, and its source never does. Every entry it
+    // writes carries the metadata the entry already had, which came from
+    // whichever action produced the input.
+    entries.push((
+        ProgramId::module("rules_tar", "tar/tool/tool_/tool"),
+        Entry::Spec(always()),
+    ));
+
     entries
 }
 
@@ -137,6 +152,33 @@ mod tests {
             ),
             Conformance::Reproducible,
         );
+    }
+
+    #[test]
+    fn the_tar_tool_is_reproducible_whichever_rule_dispatched_to_it() {
+        // Concatenating and filtering are the same program told different
+        // things, and neither is told a time.
+        let tool = ProgramId::module("rules_tar", "tar/tool/tool_/tool");
+        for args in [
+            vec![
+                "--output",
+                "bazel-out/k8-fastbuild/bin/concatenate/out.tar.xz",
+                "--duplicate",
+                "error",
+                "fixture/txt.tar.xz",
+            ],
+            vec![
+                "--output",
+                "bazel-out/k8-fastbuild/bin/filter/out.tar.xz",
+                "--filter=fixture/nested/*.txt",
+                "fixture/fixture.tar.xz",
+            ],
+        ] {
+            assert_eq!(
+                assess(tool.clone(), args),
+                Conformance::Reproducible,
+            );
+        }
     }
 
     #[test]

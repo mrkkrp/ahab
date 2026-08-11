@@ -1,0 +1,7 @@
+{
+  "repo": "https://gitlab.arm.com/bazel/rules_tar",
+  "commit": "c7da674bdea961c1f8f955a3cad5837251e0cc38",
+  "label": "//...",
+  "configs": [],
+  "workspace": "e2e"
+}

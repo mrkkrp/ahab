@@ -1,0 +1,627 @@
+{
+  "violations": [
+    {
+      "count": 1,
+      "violation": {
+        "kind": "system_program",
+        "action": {
+          "mnemonic": "Genrule",
+          "target": "//toolchain/tar:resolved_0__deps"
+        },
+        "program": {
+          "origin": "system",
+          "path": "/bin/bash"
+        },
+        "wrappers": []
+      }
+    },
+    {
+      "count": 1,
+      "violation": {
+        "kind": "unknown_program",
+        "action": {
+          "mnemonic": "FixtureDirectory",
+          "target": "//fixture/directory:all"
+        },
+        "program": {
+          "origin": {
+            "main": {
+              "extension": null
+            }
+          },
+          "path": "fixture/directory/all.rendered.sh"
+        },
+        "wrappers": []
+      }
+    },
+    {
+      "count": 1,
+      "violation": {
+        "kind": "unknown_program",
+        "action": {
+          "mnemonic": "FixtureDirectory",
+          "target": "//fixture/directory:txt"
+        },
+        "program": {
+          "origin": {
+            "main": {
+              "extension": null
+            }
+          },
+          "path": "fixture/directory/txt.rendered.sh"
+        },
+        "wrappers": []
+      }
+    },
+    {
+      "count": 1,
+      "violation": {
+        "kind": "unknown_program",
+        "action": {
+          "mnemonic": "TarExtract",
+          "target": "//extract/bzip2:goodbye-world"
+        },
+        "program": {
+          "origin": {
+            "main": {
+              "extension": null
+            }
+          },
+          "path": "extract/bzip2/goodbye-world.tar.pipe/tar.sh"
+        },
+        "wrappers": []
+      }
+    },
+    {
+      "count": 1,
+      "violation": {
+        "kind": "unknown_program",
+        "action": {
+          "mnemonic": "TarExtract",
+          "target": "//extract/bzip2:multiple"
+        },
+        "program": {
+          "origin": {
+            "main": {
+              "extension": null
+            }
+          },
+          "path": "extract/bzip2/multiple.tar.pipe/tar.sh"
+        },
+        "wrappers": []
+      }
+    },
+    {
+      "count": 1,
+      "violation": {
+        "kind": "unknown_program",
+        "action": {
+          "mnemonic": "TarExtract",
+          "target": "//extract/gzip:goodbye-world"
+        },
+        "program": {
+          "origin": {
+            "main": {
+              "extension": null
+            }
+          },
+          "path": "extract/gzip/goodbye-world.tar.pipe/tar.sh"
+        },
+        "wrappers": []
+      }
+    },
+    {
+      "count": 1,
+      "violation": {
+        "kind": "unknown_program",
+        "action": {
+          "mnemonic": "TarExtract",
+          "target": "//extract/gzip:multiple"
+        },
+        "program": {
+          "origin": {
+            "main": {
+              "extension": null
+            }
+          },
+          "path": "extract/gzip/multiple.tar.pipe/tar.sh"
+        },
+        "wrappers": []
+      }
+    },
+    {
+      "count": 1,
+      "violation": {
+        "kind": "unknown_program",
+        "action": {
+          "mnemonic": "TarExtract",
+          "target": "//extract/xz:goodbye-world"
+        },
+        "program": {
+          "origin": {
+            "main": {
+              "extension": null
+            }
+          },
+          "path": "extract/xz/goodbye-world.tar.pipe/tar.sh"
+        },
+        "wrappers": []
+      }
+    },
+    {
+      "count": 1,
+      "violation": {
+        "kind": "unknown_program",
+        "action": {
+          "mnemonic": "TarExtract",
+          "target": "//extract/xz:multiple"
+        },
+        "program": {
+          "origin": {
+            "main": {
+              "extension": null
+            }
+          },
+          "path": "extract/xz/multiple.tar.pipe/tar.sh"
+        },
+        "wrappers": []
+      }
+    },
+    {
+      "count": 1,
+      "violation": {
+        "kind": "unknown_program",
+        "action": {
+          "mnemonic": "TarExtract",
+          "target": "//extract/zstd:goodbye-world"
+        },
+        "program": {
+          "origin": {
+            "main": {
+              "extension": null
+            }
+          },
+          "path": "extract/zstd/goodbye-world.tar.pipe/tar.sh"
+        },
+        "wrappers": []
+      }
+    },
+    {
+      "count": 1,
+      "violation": {
+        "kind": "unknown_program",
+        "action": {
+          "mnemonic": "TarExtract",
+          "target": "//extract/zstd:multiple"
+        },
+        "program": {
+          "origin": {
+            "main": {
+              "extension": null
+            }
+          },
+          "path": "extract/zstd/multiple.tar.pipe/tar.sh"
+        },
+        "wrappers": []
+      }
+    },
+    {
+      "count": 1,
+      "violation": {
+        "kind": "unknown_program",
+        "action": {
+          "mnemonic": "TarExtract",
+          "target": "//extract:goodbye-world"
+        },
+        "program": {
+          "origin": {
+            "main": {
+              "extension": null
+            }
+          },
+          "path": "extract/goodbye-world.tar.pipe/tar.sh"
+        },
+        "wrappers": []
+      }
+    },
+    {
+      "count": 1,
+      "violation": {
+        "kind": "unknown_program",
+        "action": {
+          "mnemonic": "TarExtract",
+          "target": "//extract:multiple"
+        },
+        "program": {
+          "origin": {
+            "main": {
+              "extension": null
+            }
+          },
+          "path": "extract/multiple.tar.pipe/tar.sh"
+        },
+        "wrappers": []
+      }
+    },
+    {
+      "count": 1,
+      "violation": {
+        "kind": "unknown_program",
+        "action": {
+          "mnemonic": "TarUnpack",
+          "target": "//concatenate/bzip2:unpack"
+        },
+        "program": {
+          "origin": {
+            "main": {
+              "extension": null
+            }
+          },
+          "path": "concatenate/bzip2/unpack.tar.pipe/tar.sh"
+        },
+        "wrappers": []
+      }
+    },
+    {
+      "count": 1,
+      "violation": {
+        "kind": "unknown_program",
+        "action": {
+          "mnemonic": "TarUnpack",
+          "target": "//concatenate/compress/bzip2:unpack"
+        },
+        "program": {
+          "origin": {
+            "main": {
+              "extension": null
+            }
+          },
+          "path": "concatenate/compress/bzip2/unpack.tar.pipe/tar.sh"
+        },
+        "wrappers": []
+      }
+    },
+    {
+      "count": 1,
+      "violation": {
+        "kind": "unknown_program",
+        "action": {
+          "mnemonic": "TarUnpack",
+          "target": "//concatenate/compress/gzip:unpack"
+        },
+        "program": {
+          "origin": {
+            "main": {
+              "extension": null
+            }
+          },
+          "path": "concatenate/compress/gzip/unpack.tar.pipe/tar.sh"
+        },
+        "wrappers": []
+      }
+    },
+    {
+      "count": 1,
+      "violation": {
+        "kind": "unknown_program",
+        "action": {
+          "mnemonic": "TarUnpack",
+          "target": "//concatenate/compress/xz:unpack"
+        },
+        "program": {
+          "origin": {
+            "main": {
+              "extension": null
+            }
+          },
+          "path": "concatenate/compress/xz/unpack.tar.pipe/tar.sh"
+        },
+        "wrappers": []
+      }
+    },
+    {
+      "count": 1,
+      "violation": {
+        "kind": "unknown_program",
+        "action": {
+          "mnemonic": "TarUnpack",
+          "target": "//concatenate/compress/zstd:unpack"
+        },
+        "program": {
+          "origin": {
+            "main": {
+              "extension": null
+            }
+          },
+          "path": "concatenate/compress/zstd/unpack.tar.pipe/tar.sh"
+        },
+        "wrappers": []
+      }
+    },
+    {
+      "count": 1,
+      "violation": {
+        "kind": "unknown_program",
+        "action": {
+          "mnemonic": "TarUnpack",
+          "target": "//concatenate/gzip:unpack"
+        },
+        "program": {
+          "origin": {
+            "main": {
+              "extension": null
+            }
+          },
+          "path": "concatenate/gzip/unpack.tar.pipe/tar.sh"
+        },
+        "wrappers": []
+      }
+    },
+    {
+      "count": 1,
+      "violation": {
+        "kind": "unknown_program",
+        "action": {
+          "mnemonic": "TarUnpack",
+          "target": "//concatenate/xz:unpack"
+        },
+        "program": {
+          "origin": {
+            "main": {
+              "extension": null
+            }
+          },
+          "path": "concatenate/xz/unpack.tar.pipe/tar.sh"
+        },
+        "wrappers": []
+      }
+    },
+    {
+      "count": 1,
+      "violation": {
+        "kind": "unknown_program",
+        "action": {
+          "mnemonic": "TarUnpack",
+          "target": "//concatenate/zstd:unpack"
+        },
+        "program": {
+          "origin": {
+            "main": {
+              "extension": null
+            }
+          },
+          "path": "concatenate/zstd/unpack.tar.pipe/tar.sh"
+        },
+        "wrappers": []
+      }
+    },
+    {
+      "count": 1,
+      "violation": {
+        "kind": "unknown_program",
+        "action": {
+          "mnemonic": "TarUnpack",
+          "target": "//concatenate:unpack"
+        },
+        "program": {
+          "origin": {
+            "main": {
+              "extension": null
+            }
+          },
+          "path": "concatenate/unpack.tar.pipe/tar.sh"
+        },
+        "wrappers": []
+      }
+    },
+    {
+      "count": 1,
+      "violation": {
+        "kind": "unknown_program",
+        "action": {
+          "mnemonic": "TarUnpack",
+          "target": "//filter/bzip2:unpack"
+        },
+        "program": {
+          "origin": {
+            "main": {
+              "extension": null
+            }
+          },
+          "path": "filter/bzip2/unpack.tar.pipe/tar.sh"
+        },
+        "wrappers": []
+      }
+    },
+    {
+      "count": 1,
+      "violation": {
+        "kind": "unknown_program",
+        "action": {
+          "mnemonic": "TarUnpack",
+          "target": "//filter/gzip:unpack"
+        },
+        "program": {
+          "origin": {
+            "main": {
+              "extension": null
+            }
+          },
+          "path": "filter/gzip/unpack.tar.pipe/tar.sh"
+        },
+        "wrappers": []
+      }
+    },
+    {
+      "count": 1,
+      "violation": {
+        "kind": "unknown_program",
+        "action": {
+          "mnemonic": "TarUnpack",
+          "target": "//filter/negated:unpack"
+        },
+        "program": {
+          "origin": {
+            "main": {
+              "extension": null
+            }
+          },
+          "path": "filter/negated/unpack.tar.pipe/tar.sh"
+        },
+        "wrappers": []
+      }
+    },
+    {
+      "count": 1,
+      "violation": {
+        "kind": "unknown_program",
+        "action": {
+          "mnemonic": "TarUnpack",
+          "target": "//filter/xz:unpack"
+        },
+        "program": {
+          "origin": {
+            "main": {
+              "extension": null
+            }
+          },
+          "path": "filter/xz/unpack.tar.pipe/tar.sh"
+        },
+        "wrappers": []
+      }
+    },
+    {
+      "count": 1,
+      "violation": {
+        "kind": "unknown_program",
+        "action": {
+          "mnemonic": "TarUnpack",
+          "target": "//filter/zstd:unpack"
+        },
+        "program": {
+          "origin": {
+            "main": {
+              "extension": null
+            }
+          },
+          "path": "filter/zstd/unpack.tar.pipe/tar.sh"
+        },
+        "wrappers": []
+      }
+    },
+    {
+      "count": 1,
+      "violation": {
+        "kind": "unknown_program",
+        "action": {
+          "mnemonic": "TarUnpack",
+          "target": "//filter:unpack"
+        },
+        "program": {
+          "origin": {
+            "main": {
+              "extension": null
+            }
+          },
+          "path": "filter/unpack.tar.pipe/tar.sh"
+        },
+        "wrappers": []
+      }
+    },
+    {
+      "count": 1,
+      "violation": {
+        "kind": "unknown_program",
+        "action": {
+          "mnemonic": "TarUnpack",
+          "target": "//unpack/bzip2:unpack"
+        },
+        "program": {
+          "origin": {
+            "main": {
+              "extension": null
+            }
+          },
+          "path": "unpack/bzip2/unpack.tar.pipe/tar.sh"
+        },
+        "wrappers": []
+      }
+    },
+    {
+      "count": 1,
+      "violation": {
+        "kind": "unknown_program",
+        "action": {
+          "mnemonic": "TarUnpack",
+          "target": "//unpack/gzip:unpack"
+        },
+        "program": {
+          "origin": {
+            "main": {
+              "extension": null
+            }
+          },
+          "path": "unpack/gzip/unpack.tar.pipe/tar.sh"
+        },
+        "wrappers": []
+      }
+    },
+    {
+      "count": 1,
+      "violation": {
+        "kind": "unknown_program",
+        "action": {
+          "mnemonic": "TarUnpack",
+          "target": "//unpack/xz:unpack"
+        },
+        "program": {
+          "origin": {
+            "main": {
+              "extension": null
+            }
+          },
+          "path": "unpack/xz/unpack.tar.pipe/tar.sh"
+        },
+        "wrappers": []
+      }
+    },
+    {
+      "count": 1,
+      "violation": {
+        "kind": "unknown_program",
+        "action": {
+          "mnemonic": "TarUnpack",
+          "target": "//unpack/zstd:unpack"
+        },
+        "program": {
+          "origin": {
+            "main": {
+              "extension": null
+            }
+          },
+          "path": "unpack/zstd/unpack.tar.pipe/tar.sh"
+        },
+        "wrappers": []
+      }
+    },
+    {
+      "count": 1,
+      "violation": {
+        "kind": "unknown_program",
+        "action": {
+          "mnemonic": "TarUnpack",
+          "target": "//unpack:unpack"
+        },
+        "program": {
+          "origin": {
+            "main": {
+              "extension": null
+            }
+          },
+          "path": "unpack/unpack.tar.pipe/tar.sh"
+        },
+        "wrappers": []
+      }
+    }
+  ]
+}

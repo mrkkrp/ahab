@@ -64,21 +64,32 @@ a complaint about a missing file.
 
 ## Adding a target
 
-Make a directory and write a `spec.json`:
+Make a directory and write a `spec.json`. Every field it accepts is shown
+here; only the first two are required:
 
 ```json
 {
-  "repo": "https://github.com/abseil/abseil-cpp",
-  "commit": "5650e9cf76d3be4318d5fa3af38ee483ddfd5e4a",
-  "label": "//absl/strings/...",
-  "configs": []
+  "repo": "https://gitlab.arm.com/bazel/rules_tar",
+  "commit": "c7da674bdea961c1f8f955a3cad5837251e0cc38",
+  "label": "//...",
+  "configs": [],
+  "compilation_mode": "opt",
+  "workspace": "e2e"
 }
 ```
 
-`repo` and `commit` are required; `label` defaults to `//...`, and `configs`
-and `compilation_mode` to none, which leaves the project's own configuration
-to choose. Pin a full 40-character SHA rather than a branch—a fishery whose
-input moves cannot tell you what your own change did.
+| field              | required/default    | meaning                        |
+| ------------------ | ------------------- | ------------------------------ |
+| `repo`             | required            | anything `git fetch` accepts   |
+| `commit`           | required            | a full 40-character SHA        |
+| `label`            | `//...`             | what to analyze                |
+| `configs`          | `[]`                | `--config` values to forward   |
+| `compilation_mode` | the project's own   | `fastbuild`, `dbg` or `opt`    |
+| `workspace`        | the root workspace  | a workspace nested inside it   |
+
+Pin a full SHA rather than a branch—a fishery whose input moves cannot tell
+you what your own change did. `repo` need not be GitHub; it is handed
+straight to `git`.
 
 Then:
 
