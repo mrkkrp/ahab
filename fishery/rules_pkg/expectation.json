@@ -1,28 +1,6 @@
 {
   "violations": [
     {
-      "count": 1,
-      "violation": {
-        "kind": "execution_requirement",
-        "action": {
-          "mnemonic": "CopyFile",
-          "target": "//tests/zip:zipcontent_loremipsum"
-        },
-        "requirement": "no-cache"
-      }
-    },
-    {
-      "count": 1,
-      "violation": {
-        "kind": "execution_requirement",
-        "action": {
-          "mnemonic": "CopyFile",
-          "target": "//tests/zip:zipcontent_loremipsum"
-        },
-        "requirement": "no-remote"
-      }
-    },
-    {
       "count": 2,
       "violation": {
         "kind": "execution_requirement",

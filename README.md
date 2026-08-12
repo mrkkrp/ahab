@@ -169,9 +169,7 @@ declarations—are read straight out of the graph, and these are reported:
 | requirement                   | reading                                     |
 | ----------------------------- | ------------------------------------------- |
 | `requires-network`            | the output can depend on anything out there |
-| `no-cache`                    | refusing to cache is saying the output is not a function of the inputs |
 | `no-sandbox`, `local`         | the action sees the whole filesystem, so it can read inputs it never declared |
-| `no-remote`, `no-remote-exec` | an action that must run *here* is likely to depend on here |
 
 Everything else—`supports-workers`, `cpu:4`, `resources:…`,
 `supports-path-mapping`—is scheduling advice and is ignored.

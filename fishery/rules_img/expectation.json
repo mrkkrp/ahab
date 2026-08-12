@@ -1,28 +1,6 @@
 {
   "violations": [
     {
-      "count": 2,
-      "violation": {
-        "kind": "execution_requirement",
-        "action": {
-          "mnemonic": "CopyDirectory",
-          "target": "//tests/layering/testcases:tree_artifact"
-        },
-        "requirement": "no-cache"
-      }
-    },
-    {
-      "count": 2,
-      "violation": {
-        "kind": "execution_requirement",
-        "action": {
-          "mnemonic": "CopyDirectory",
-          "target": "//tests/layering/testcases:tree_artifact"
-        },
-        "requirement": "no-remote"
-      }
-    },
-    {
       "count": 1,
       "violation": {
         "kind": "execution_requirement",
@@ -41,51 +19,7 @@
           "mnemonic": "TestRunner",
           "target": "//img/private/release/gazelle_plugin:release_files_test"
         },
-        "requirement": "no-cache"
-      }
-    },
-    {
-      "count": 1,
-      "violation": {
-        "kind": "execution_requirement",
-        "action": {
-          "mnemonic": "TestRunner",
-          "target": "//img/private/release/gazelle_plugin:release_files_test"
-        },
-        "requirement": "no-remote"
-      }
-    },
-    {
-      "count": 1,
-      "violation": {
-        "kind": "execution_requirement",
-        "action": {
-          "mnemonic": "TestRunner",
-          "target": "//img/private/release/gazelle_plugin:release_files_test"
-        },
         "requirement": "no-sandbox"
-      }
-    },
-    {
-      "count": 1,
-      "violation": {
-        "kind": "execution_requirement",
-        "action": {
-          "mnemonic": "TestRunner",
-          "target": "//util:buildifier.check"
-        },
-        "requirement": "no-cache"
-      }
-    },
-    {
-      "count": 1,
-      "violation": {
-        "kind": "execution_requirement",
-        "action": {
-          "mnemonic": "TestRunner",
-          "target": "//util:buildifier.check"
-        },
-        "requirement": "no-remote-exec"
       }
     },
     {

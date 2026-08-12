@@ -781,11 +781,6 @@ const NON_HERMETIC_REQUIREMENTS: &[(&str, &str)] = &[
          anything out there",
     ),
     (
-        "no-cache",
-        "refusing to cache an action is saying its output is not a \
-         function of its inputs",
-    ),
-    (
         "no-sandbox",
         "the action sees the whole filesystem, so it can read inputs it \
          never declared",
@@ -794,14 +789,6 @@ const NON_HERMETIC_REQUIREMENTS: &[(&str, &str)] = &[
         "local",
         "the action sees the whole filesystem, so it can read inputs it \
          never declared",
-    ),
-    (
-        "no-remote",
-        "an action that must run here is likely to depend on here",
-    ),
-    (
-        "no-remote-exec",
-        "an action that must run here is likely to depend on here",
     ),
 ];
 
@@ -1861,11 +1848,11 @@ pub(crate) mod tests {
         let c = container(vec![action_with_requirements(
             "Genrule",
             1,
-            &["no-cache"],
+            &["requires-network"],
         )]);
         let rendered =
             check_execution_requirements(&c)[0].render(Palette::plain());
-        assert!(rendered.contains("\"no-cache\""), "{rendered}");
+        assert!(rendered.contains("\"requires-network\""), "{rendered}");
         assert!(rendered.contains("the build itself says"), "{rendered}");
     }
 

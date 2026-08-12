@@ -8,17 +8,6 @@
           "mnemonic": "CopyFile",
           "target": "//js/private/test/js_run_devserver:node_modules_symlink_to_execroot_test"
         },
-        "requirement": "no-remote-exec"
-      }
-    },
-    {
-      "count": 1,
-      "violation": {
-        "kind": "execution_requirement",
-        "action": {
-          "mnemonic": "CopyFile",
-          "target": "//js/private/test/js_run_devserver:node_modules_symlink_to_execroot_test"
-        },
         "requirement": "no-sandbox"
       }
     },
@@ -85,17 +74,6 @@
           "mnemonic": "NpmLifecycleHook",
           "target": "//:.aspect_rules_js/node_modules/puppeteer@19.11.1_230959327/lc"
         },
-        "requirement": "no-remote"
-      }
-    },
-    {
-      "count": 1,
-      "violation": {
-        "kind": "execution_requirement",
-        "action": {
-          "mnemonic": "NpmLifecycleHook",
-          "target": "//:.aspect_rules_js/node_modules/puppeteer@19.11.1_230959327/lc"
-        },
         "requirement": "no-sandbox"
       }
     },
@@ -130,17 +108,6 @@
           "target": "//:.aspect_rules_js/node_modules/segfault-handler@1.3.0/lc"
         },
         "requirement": "requires-network"
-      }
-    },
-    {
-      "count": 1,
-      "violation": {
-        "kind": "execution_requirement",
-        "action": {
-          "mnemonic": "TestRunner",
-          "target": "//js/private/test/js_run_devserver:node_modules_symlink_to_execroot_test"
-        },
-        "requirement": "no-remote-exec"
       }
     },
     {
@@ -636,17 +603,6 @@
           "target": "//js/private/test/node-patches:realpath_nodejs_test"
         },
         "requirement": "no-sandbox"
-      }
-    },
-    {
-      "count": 1,
-      "violation": {
-        "kind": "execution_requirement",
-        "action": {
-          "mnemonic": "TestRunner",
-          "target": "//npm/private/test/npm_package_publish:test"
-        },
-        "requirement": "no-remote-exec"
       }
     },
     {
