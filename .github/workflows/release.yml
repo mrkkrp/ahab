@@ -1,0 +1,36 @@
+name: Release
+on:
+  push:
+    tags:
+      - "v*.*.*"
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: "Tag to release (e.g. v1.2.3). Must already exist."
+        type: string
+        required: true
+permissions:
+  attestations: write
+  contents: write
+  id-token: write
+jobs:
+  release:
+    uses: bazel-contrib/.github/.github/workflows/release_ruleset.yaml@v7.7.0
+    with:
+      release_files: ahab-*.tar.gz
+      prerelease: ${{ contains(inputs.tag || github.ref_name, '-') }}
+      tag_name: ${{ inputs.tag || github.ref_name }}
+      bazel_test_command: "true"
+  publish-to-bcr:
+    needs: [release]
+    uses: bazel-contrib/publish-to-bcr/.github/workflows/publish.yaml@v1.4.2
+    with:
+      tag_name: ${{ inputs.tag || github.ref_name }}
+      registry_fork: mrkkrp/bazel-central-registry
+      attest: true
+    permissions:
+      attestations: write
+      contents: write
+      id-token: write
+    secrets:
+      publish_token: ${{ secrets.BCR_PUBLISH_TOKEN }}
