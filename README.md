@@ -39,7 +39,7 @@ actions declaring that they need the network or must not be sandboxed,
 actions reading build metadata rather than their own inputs, and programs
 whose reproducibility nobody has vouched for.
 
-The two answer different questions, and Ahab does not replace log
+The two answer different questions, and Ahab does not replace execution log
 comparison. Comparing logs is empirical—it catches a compiler embedding a
 timestamp even though nobody knew it did. Ahab is analytical: it finds the
 causes that make a build depend on the machine it runs on, before the build
@@ -73,12 +73,9 @@ ahab(
 bazel run //:hermeticity
 ```
 
-That prints every violation found and exits non-zero if there were any.
-Nothing is built: Ahab asks Bazel for the action graph with `aquery` and
-reads it, so the cost is one analysis phase rather than one build.
-
-One has to use `bazel run` and not `bazel test` with Ahab targets in order
-to avoid nested Bazel invocations.
+That prints every violation found and exits non-zero if there were any. One
+has to use `bazel run` and not `bazel test` with Ahab, since invoking Bazel
+commands inside a Bazel build is not permitted.
 
 ### Recording what you find
 
@@ -142,7 +139,7 @@ the flags the macros set for you.
 Ahab reports two kinds of finding. A **hermeticity violation** says the
 action's behaviour can depend on the machine it runs on. A **reproducibility
 violation** says the action runs a program that will not produce the same
-output twice, or that Ahab cannot vouch for.
+output twice.
 
 ### Environment leaks
 
@@ -154,8 +151,8 @@ of the invoking environment.
 
 The sentinels are fixed rather than random, because a different `USER` on
 every run changes every action key and makes Bazel redo its analysis every
-time—and because the sentinel is recorded in the violation, so a moving one
-could never be compared against a saved report.
+time—and because the sentinel is recorded in the violation, so a changing
+one could never be compared against a saved report.
 
 ### `PATH`
 
@@ -166,8 +163,7 @@ chooses its own `PATH` is choosing the machine's tools.
 
 ### Execution requirements
 
-The only finding Ahab does not have to infer. An action's
-`execution_requirements`—`tags` on the target, or the rule's own
+An action's `execution_requirements`—`tags` on the target, or the rule's own
 declarations—are read straight out of the graph, and these are reported:
 
 | requirement                   | reading                                     |
@@ -178,9 +174,7 @@ declarations—are read straight out of the graph, and these are reported:
 | `no-remote`, `no-remote-exec` | an action that must run *here* is likely to depend on here |
 
 Everything else—`supports-workers`, `cpu:4`, `resources:…`,
-`supports-path-mapping`—is scheduling advice and is ignored. The list is a
-deny-list rather than an allow-list so that a tag nobody has classified is
-silence rather than noise.
+`supports-path-mapping`—is scheduling advice and is ignored.
 
 ### Absolute paths
 
@@ -363,7 +357,7 @@ unlisted stands for itself, so a table only has to name the exceptions.
 
 ### When a rule only sometimes applies
 
-`required_flags` says *always*, and a program that does more than one job
+`required_flags` is unconditional and a program that does more than one job
 cannot be described that way. Clang compiles, links, and preprocesses; a
 rule about compiling, stated over every invocation, is a rule stated about
 the wrong ones. `requirements` and `prohibitions` are the same idea with a
@@ -408,11 +402,7 @@ of them. There is more than one way to keep the execution root out of the
 DWARF—`-ffile-prefix-map` covers it, and naming the compilation directory
 outright addresses the same field from the other end—and a specification
 that demanded a particular one would report a build that had done the job
-differently.
-
-For the conjunction, write more clauses: three macros that each need
-defining away are three requirements sharing one condition, and every one of
-them has to be met.
+differently. For the conjunction, write more clauses.
 
 `because` is not decoration. It is what the report says when the clause goes
 unmet, so it should finish the sentence "this is not reproducible because…":

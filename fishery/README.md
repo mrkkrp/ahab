@@ -1,20 +1,19 @@
 # The fishery
 
 The fishery keeps a set of real open-source Bazel projects, fetches each at
-a pinned commit, wires this working copy of Ahab into it, and records what
-Ahab has to say.
+a pinned commit, runs this working copy of Ahab on it, and records what Ahab
+has to say.
 
 The recorded report is the point. A change to a check can then be judged by
 what it does to somebody else's build—the diff of `expectation.json` is what
 review looks at, and a check that quietly starts flagging four hundred more
 things says so in the diff rather than in production.
 
-Ahab runs as a prebuilt binary, built once from this working copy and then
-pointed at each project in turn. The project is fetched and analyzed, never
-modified: it gains no dependency on Ahab, so its own dependency versions,
-toolchains and build graph are exactly what its authors pinned. What Ahab
-reports is therefore about that project rather than about what depending on
-Ahab did to it.
+Ahab is built once and then pointed at each project in turn. The project is
+fetched and analyzed, never modified: it gains no dependency on Ahab, so its
+own dependency versions, toolchains and build graph are exactly what its
+authors pinned. What Ahab reports is therefore about that project rather
+than about what depending on Ahab did to it.
 
 ## Layout
 
@@ -42,9 +41,9 @@ $ ./fishery.py <command> <target>
 * `update` rewrites `expectation.json` with what Ahab reports now.
 * `explain` prints the recorded report without analyzing anything.
 * `clean` expunges the project's Bazel state and removes `work/`.
-* `ci` runs `setup`, `check` and `clean` on every target, summarizing
-  each expectation as it goes. `--shard=I/N` runs only the `I`th of `N`
-  shares of them, which is how CI splits the work across parallel jobs.
+* `ci` runs `setup`, `check` and `clean` on every target, summarizing each
+  expectation as it goes. `--shard=I/N` runs only the `I`th of `N` shares of
+  them, which is how CI splits the work across parallel jobs.
 
 `setup` does one thing: a depth-1 fetch of exactly the pinned commit. It
 refuses to run over an existing `work/`; run `clean` first.
