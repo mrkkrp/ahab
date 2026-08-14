@@ -36,8 +36,8 @@ Bazel's aquery instead describes what *would* run, which costs an analysis
 phase and no build at all. Ahab reads that description and reports what it
 finds there: values that leaked in from the environment, absolute paths,
 actions declaring that they need the network or must not be sandboxed,
-actions reading build metadata rather than their own inputs, and programs
-whose reproducibility nobody has vouched for.
+actions reading workspace status, and programs whose reproducibility nobody
+has vouched for.
 
 The two answer different questions, and Ahab does not replace execution log
 comparison. Comparing logs is empirical—it catches a compiler embedding a
