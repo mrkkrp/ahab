@@ -44,8 +44,7 @@ comparison. Comparing logs is empirical—it catches a compiler embedding a
 timestamp even though nobody knew it did. Ahab is analytical: it finds the
 causes that make a build depend on the machine it runs on, before the build
 runs, and it is only ever as good as what it has been told about the tools
-involved. That is why a program nobody has described is reported rather than
-passed over. What it buys is a check that covers everything and finishes in
+involved. What it buys is a check that covers everything and finishes in
 seconds.
 
 [comparing-execlogs]: https://bazel.build/versions/8.6.0/remote/cache-remote#comparing-the-execution-logs
