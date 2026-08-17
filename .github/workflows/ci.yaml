@@ -19,7 +19,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        os: [ubuntu-latest, macos-latest]
+        os: [ubuntu-24.04, ubuntu-24.04-arm, macos-15, macos-15-intel]
     steps:
       - name: Check out the repository
         uses: actions/checkout@v7
@@ -40,8 +40,16 @@ jobs:
       - name: Run the tests
         run: bazel test //...
       - name: Run clippy
-        if: ${{ !cancelled() && runner.os == 'Linux' }}
-        run: bazel build //:clippy
+        if: ${{ !cancelled() && matrix.os == 'ubuntu-24.04' }}
+        run: bazel build //rust:clippy
+      - name: Prepare the binary for the module test
+        if: ${{ !cancelled() }}
+        run: |
+          bazel build //rust:ahab
+          built="$(bazel cquery --output=files //rust:ahab | grep -v -- '-exec/' | head -1)"
+          mkdir -p "$RUNNER_TEMP/ahab-prebuilt"
+          cp "$(bazel info execution_root)/$built" "$RUNNER_TEMP/ahab-prebuilt/ahab"
+          echo "AHAB_PREBUILT_LOCAL=$RUNNER_TEMP/ahab-prebuilt" >> "$GITHUB_ENV"
       - name: Check that Ahab can be consumed as a module (Bazel 9)
         if: ${{ !cancelled() }}
         working-directory: packaging

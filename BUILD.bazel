@@ -1,11 +1,4 @@
-load(
-    "@rules_rust//rust:defs.bzl",
-    "rust_binary",
-    "rust_clippy",
-    "rust_library",
-    "rust_test",
-    "rustfmt_test",
-)
+load("@bazel_skylib//rules:common_settings.bzl", "bool_flag")
 load("//:defs.bzl", "ahab")
 
 package(default_visibility = ["//visibility:public"])
@@ -15,90 +8,22 @@ exports_files([
     "MODULE.bazel",
 ])
 
-rust_library(
-    name = "ahab_lib",
-    srcs = [
-        "src/aquery.rs",
-        "src/checks.rs",
-        "src/cli.rs",
-        "src/exceptions.rs",
-        "src/glob.rs",
-        "src/lib.rs",
-        "src/melville.rs",
-        "src/param_files.rs",
-        "src/reproducibility_spec/library.rs",
-        "src/reproducibility_spec/mod.rs",
-        "src/reproducibility_spec/per_lang/cc.rs",
-        "src/reproducibility_spec/per_lang/container.rs",
-        "src/reproducibility_spec/per_lang/go.rs",
-        "src/reproducibility_spec/per_lang/java.rs",
-        "src/reproducibility_spec/per_lang/js.rs",
-        "src/reproducibility_spec/per_lang/kotlin.rs",
-        "src/reproducibility_spec/per_lang/mod.rs",
-        "src/reproducibility_spec/per_lang/pkg.rs",
-        "src/reproducibility_spec/per_lang/python.rs",
-        "src/reproducibility_spec/per_lang/rust.rs",
-        "src/reproducibility_spec/program_id.rs",
-        "src/terminal_color.rs",
-    ],
-    crate_name = "ahab",
-    deps = [
-        "//proto:analysis_v2_rs_proto",
-        "@ahab_crates//:anyhow",
-        "@ahab_crates//:clap",
-        "@ahab_crates//:prost",
-        "@ahab_crates//:serde",
-        "@ahab_crates//:serde_json",
-        "@ahab_crates//:similar",
-    ],
+bool_flag(
+    name = "from_source",
+    build_setting_default = False,
 )
 
-rust_binary(
-    name = "ahab",
-    srcs = ["src/main.rs"],
-    deps = [
-        ":ahab_lib",
-        "@ahab_crates//:anyhow",
-        "@ahab_crates//:clap",
-    ],
-)
-
-rust_test(
-    name = "ahab_lib_test",
-    crate = ":ahab_lib",
-    deps = [
-        "//proto:analysis_v2_rs_proto",
-        "@ahab_crates//:anyhow",
-        "@ahab_crates//:clap",
-        "@ahab_crates//:prost",
-        "@ahab_crates//:serde",
-        "@ahab_crates//:serde_json",
-        "@ahab_crates//:similar",
-    ],
-)
-
-rust_clippy(
-    name = "clippy",
-    testonly = True,
-    deps = [
-        ":ahab",
-        ":ahab_lib",
-        ":ahab_lib_test",
-    ],
-)
-
-rustfmt_test(
-    name = "rustfmt_test",
-    targets = [
-        ":ahab",
-        ":ahab_lib",
-        ":ahab_lib_test",
-    ],
+config_setting(
+    name = "source_build",
+    flag_values = {":from_source": "True"},
 )
 
 alias(
-    name = "format",
-    actual = "@rules_rust//tools/rustfmt",
+    name = "ahab_bin",
+    actual = select({
+        ":source_build": "//rust:ahab",
+        "//conditions:default": "@ahab_prebuilt//:ahab",
+    }),
 )
 
 ahab(

@@ -3,9 +3,13 @@ name = "ahab"
 version = "0.1.0"
 edition = "2024"
 
+[lib]
+name = "ahab"
+path = "rust/src/lib.rs"
+
 [[bin]]
 name = "ahab"
-path = "src/main.rs"
+path = "rust/src/main.rs"
 
 [dependencies]
 anyhow = "1"

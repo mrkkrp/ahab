@@ -132,9 +132,9 @@ _ahab = rule(
             doc = "Exception files, whose contents are unioned.",
         ),
         "_ahab": attr.label(
-            default = Label("//:ahab"),
+            default = Label("//:ahab_bin"),
             executable = True,
-            cfg = "target",
+            cfg = "exec",
         ),
     },
     executable = True,

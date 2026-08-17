@@ -76,6 +76,26 @@ That prints every violation found and exits non-zero if there were any. One
 has to use `bazel run` and not `bazel test` with Ahab, since invoking Bazel
 commands inside a Bazel build is not permitted.
 
+Ahab is not built from source when you use it. Ahab is written in Rust and
+its build needs a Rust toolchain, a set of crates and a protobuf compiler; a
+module that made you build it would put all of that in your graph, where it
+can collide with whatever else you build Rust with. So the release publishes
+a binary per platform, the module declares its build-time dependencies as
+development ones, and what a consumer's graph gains is Ahab, `platforms` and
+`bazel_skylib`. The binary is downloaded on first use and checked against a
+digest recorded in the module.
+
+Binaries are published for Linux and macOS, on x86-64 and arm64. The Linux
+ones are static, so they do not care what libc the machine has. Windows is
+not supported. A platform without a binary is an error that says so, and
+asking for one is a reasonable thing to open an issue about.
+
+One consequence is worth knowing: this works when Ahab comes from a
+registry, which is what `bazel_dep` does. Pointing a `git_override` at the
+repository gets you a module whose release never happened and which
+therefore lists no binaries. `AHAB_PREBUILT_LOCAL`, naming a directory that
+holds one, is the way through that if you need it.
+
 ### Recording what you find
 
 A real codebase will not reach zero violations on the first day. The way to
@@ -130,7 +150,7 @@ which matters when the thing worth analyzing is a particular configuration.
 `compilation_mode` sets the compilation mode to `fastbuild`, `dbg` or `opt`
 rather than the default.
 
-The binary is also usable directly—`bazel run @ahab//:ahab -- --help` lists
+The binary is also usable directly—`bazel run @ahab//:ahab_bin -- --help` lists
 the flags the macros set for you.
 
 ## Checks
@@ -515,12 +535,27 @@ failed build teaches people to stop fixing things.
 
 ## Development
 
+Ahab builds itself from source, which is what the rest of this section
+assumes: `.bazelrc` sets `--//:from_source=True`, and the dependencies that
+a consumer never sees—`rules_rs`, the Rust toolchain, the crates, protobuf—
+are active because Ahab is the root module. `//:ahab_bin` is the binary the
+macros run, and it is `//rust:ahab` here and the downloaded one elsewhere.
+
+The Linux release binaries are static, built against musl by asking for one
+of the platforms rules_rs publishes:
+
+```
+bazel build --platforms=@rules_rs//rs/platforms:x86_64-unknown-linux-musl //rust:ahab
+```
+
 Some useful commands while developing:
 
-* `bazel build //:clippy` lints every crate in this repository.
-* `bazel test //:rustfmt_test` can be used to check if all Rust source code
+* `bazel run //:hermeticity` runs Ahab over its own build, which is also
+  what CI does.
+* `bazel build //rust:clippy` lints every crate in this repository.
+* `bazel test //rust:rustfmt_test` can be used to check if all Rust source code
   is formatted.
-* `bazel run //:format` formats the Rust source code.
+* `bazel run //rust:format` formats the Rust source code.
 * `bazel test //tools:buildifier_test` can be used to check if all Starlark
   source code is formatted.
 * `bazel run //tools:buildifier` formats the Starlark source code.

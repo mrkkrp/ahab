@@ -153,17 +153,17 @@ def ahab_binary():
     """
     global _ahab_binary
     if _ahab_binary is None:
-        run(["bazel", "build", "//:ahab"], cwd=AHAB)
-        paths = bazel_stdout(["cquery", "//:ahab", "--output=files"]).split()
+        run(["bazel", "build", "//rust:ahab"], cwd=AHAB)
+        paths = bazel_stdout(["cquery", "//rust:ahab", "--output=files"]).split()
         if len(paths) != 1:
-            fail(f"expected one file for //:ahab, got {paths}")
+            fail(f"expected one file for //rust:ahab, got {paths}")
         # Against the execution root rather than the workspace: Ahab builds
         # with convenience symlinks turned off, so there is no `bazel-out`
         # next to the sources for that relative path to hang from.
         execroot = bazel_stdout(["info", "execution_root"]).strip()
         _ahab_binary = Path(execroot) / paths[0]
         if not _ahab_binary.is_file():
-            fail(f"built //:ahab but {_ahab_binary} is not there")
+            fail(f"built //rust:ahab but {_ahab_binary} is not there")
     return _ahab_binary
 
 def ahab_run(name, args):
