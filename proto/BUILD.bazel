@@ -1,6 +1,6 @@
 load("@rules_proto//proto:defs.bzl", "proto_library")
+load("@rules_rust//extensions/prost:defs.bzl", "rust_prost_library", "rust_prost_toolchain")
 load("@rules_rust//rust:defs.bzl", "rust_library_group")
-load("@rules_rust_prost//:defs.bzl", "rust_prost_library", "rust_prost_toolchain")
 
 # Vendored Bazel protos. analysis_v2.proto is copied verbatim from
 # src/main/protobuf/analysis_v2.proto in the Bazel source tree; build.proto is a
@@ -43,5 +43,5 @@ rust_prost_toolchain(
 toolchain(
     name = "prost_toolchain",
     toolchain = ":prost_toolchain_impl",
-    toolchain_type = "@rules_rust_prost//:toolchain_type",
+    toolchain_type = "@rules_rust//extensions/prost:toolchain_type",
 )

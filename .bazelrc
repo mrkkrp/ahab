@@ -1,3 +1,5 @@
+build --//:from_source=True
+
 build --experimental_convenience_symlinks=ignore
 build --@protobuf//bazel/toolchains:prefer_prebuilt_protoc
 
