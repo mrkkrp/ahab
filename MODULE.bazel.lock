@@ -290,6 +290,23 @@
   },
   "selectedYankedVersions": {},
   "moduleExtensions": {
+    "//private:extensions.bzl%version": {
+      "general": {
+        "bzlTransitiveDigest": "0ENTGUFWBYwhLdmvN1x+55XYxiQjTbyzoDMYXWFhn9E=",
+        "usagesDigest": "YQFMOsRL7a6n61BdO9g4rQDOLLIQh/V/z6CutZBWBt0=",
+        "recordedInputs": [
+          "REPO_MAPPING:,bazel_tools bazel_tools"
+        ],
+        "generatedRepoSpecs": {
+          "ahab_version": {
+            "repoRuleId": "@@//private:extensions.bzl%_version_repo",
+            "attributes": {
+              "version": "0.1.0"
+            }
+          }
+        }
+      }
+    },
     "@@protobuf+//python/dist:system_python.bzl%system_python_extension": {
       "general": {
         "bzlTransitiveDigest": "qh0n9IrXU/xS94wxKQrG1J63zrLkA1Wy2Y3BQxptPcI=",

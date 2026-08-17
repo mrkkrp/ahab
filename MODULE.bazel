@@ -18,6 +18,13 @@ bazel_dep(name = "platforms", version = "1.1.0")
 prebuilt = use_extension("//private:extensions.bzl", "prebuilt")
 use_repo(prebuilt, "ahab_prebuilt")
 
+version = use_extension(
+    "//private:extensions.bzl",
+    "version",
+    dev_dependency = True,
+)
+use_repo(version, "ahab_version")
+
 ###############################################################################
 # Building Ahab itself
 ###############################################################################
