@@ -1,3 +1,4 @@
+load("@ahab_version//:defs.bzl", "AHAB_VERSION")
 load(
     "@rules_rust//rust:defs.bzl",
     "rust_binary",
@@ -40,6 +41,7 @@ rust_library(
         "src/terminal_color.rs",
     ],
     crate_name = "ahab",
+    version = AHAB_VERSION,
     deps = [
         "//proto:analysis_v2_rs_proto",
         "@ahab_crates//:anyhow",
@@ -63,6 +65,7 @@ rust_binary(
         "@platforms//os:macos": ["-Clink-arg=-mmacosx-version-min=11.0"],
         "//conditions:default": [],
     }),
+    version = AHAB_VERSION,
     deps = [
         ":ahab_lib",
         "@ahab_crates//:anyhow",

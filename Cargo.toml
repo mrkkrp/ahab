@@ -1,6 +1,6 @@
 [package]
 name = "ahab"
-version = "0.1.0"
+version = "0.0.0" # bump the version in MODULE.bazel only
 edition = "2024"
 
 [lib]

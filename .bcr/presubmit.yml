@@ -7,7 +7,7 @@ tasks:
     platform: ${{ platform }}
     bazel: ${{ bazel }}
     build_targets:
-      - "@ahab//:ahab"
+      - "@ahab//:ahab_bin"
 bcr_test_module:
   module_path: "packaging"
   matrix:

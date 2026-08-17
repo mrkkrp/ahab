@@ -14,15 +14,133 @@ permissions:
   contents: write
   id-token: write
 jobs:
+  binaries:
+    name: Binary (${{ matrix.platform }})
+    runs-on: ${{ matrix.runner }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - platform: linux_x86_64
+            runner: ubuntu-24.04
+            bazel_platform: "@rules_rs//rs/platforms:x86_64-unknown-linux-musl"
+          - platform: linux_arm64
+            runner: ubuntu-24.04-arm
+            bazel_platform: "@rules_rs//rs/platforms:aarch64-unknown-linux-musl"
+          - platform: darwin_arm64
+            runner: macos-15
+            bazel_platform: ""
+          - platform: darwin_x86_64
+            runner: macos-15-intel
+            bazel_platform: ""
+    steps:
+      - name: Check out the repository
+        uses: actions/checkout@v7
+        with:
+          ref: ${{ inputs.tag || github.ref_name }}
+      - name: Set up Bazel
+        uses: bazel-contrib/setup-bazel@0.19.0
+        with:
+          bazelisk-cache: true
+          disk-cache: ${{ github.workflow }}-${{ matrix.platform }}
+          repository-cache: true
+      - name: Build the binary
+        env:
+          TAG: ${{ inputs.tag || github.ref_name }}
+          BAZEL_PLATFORM: ${{ matrix.bazel_platform }}
+          PLATFORM: ${{ matrix.platform }}
+        run: |
+          set -o errexit -o nounset -o pipefail
+          flags=(--compilation_mode=opt)
+          if [ -n "$BAZEL_PLATFORM" ]; then
+            flags+=("--platforms=$BAZEL_PLATFORM")
+          fi
+          bazel build "${flags[@]}" //rust:ahab
+          built="$(bazel cquery "${flags[@]}" --output=files //rust:ahab |
+            grep -v -- '-exec/' | head -1)"
+          mkdir -p dist
+          cp "$(bazel info execution_root)/$built" dist/ahab
+          chmod +x dist/ahab
+          reported="$(./dist/ahab --version)"
+          if [ "$reported" != "ahab ${TAG#v}" ]; then
+            echo "binary reports \"$reported\", expected \"ahab ${TAG#v}\"" >&2
+            exit 1
+          fi
+          COPYFILE_DISABLE=1 tar -czf "ahab-${TAG#v}-$PLATFORM.tar.gz" -C dist ahab
+      - name: Upload the binary
+        uses: actions/upload-artifact@v7
+        with:
+          name: ahab-${{ matrix.platform }}
+          path: ahab-*.tar.gz
+          if-no-files-found: error
   release:
+    needs: binaries
     uses: bazel-contrib/.github/.github/workflows/release_ruleset.yaml@v7.7.0
     with:
       release_files: ahab-*.tar.gz
       prerelease: ${{ contains(inputs.tag || github.ref_name, '-') }}
       tag_name: ${{ inputs.tag || github.ref_name }}
       bazel_test_command: "true"
-  publish-to-bcr:
+  smoke:
+    name: Smoke (${{ matrix.platform }})
     needs: [release]
+    runs-on: ${{ matrix.runner }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - platform: linux_x86_64
+            runner: ubuntu-24.04
+          - platform: linux_arm64
+            runner: ubuntu-24.04-arm
+          - platform: darwin_arm64
+            runner: macos-15
+          - platform: darwin_x86_64
+            runner: macos-15-intel
+    steps:
+      - name: Set up Bazel
+        uses: bazel-contrib/setup-bazel@0.19.0
+        with:
+          bazelisk-cache: true
+      - name: Consume the release the way a consumer would
+        env:
+          TAG: ${{ inputs.tag || github.ref_name }}
+        run: |
+          set -o errexit -o nounset -o pipefail
+          version="${TAG#v}"
+          mkdir -p smoke
+          cd smoke
+          cat > MODULE.bazel <<EOF
+          module(name = "ahab_smoke", version = "0.0.0")
+
+          bazel_dep(name = "ahab", version = "$version")
+
+          archive_override(
+              module_name = "ahab",
+              strip_prefix = "ahab-$version",
+              urls = ["https://github.com/mrkkrp/ahab/releases/download/$TAG/ahab-$version.tar.gz"],
+          )
+          EOF
+          cat > BUILD.bazel <<'EOF'
+          load("@ahab//:defs.bzl", "ahab")
+
+          ahab(
+              name = "hermeticity",
+              label = "//...",
+              no_fail = True,
+          )
+          EOF
+          for attempt in 1 2 3; do
+            if bazel run //:hermeticity; then
+              exit 0
+            fi
+            echo "attempt $attempt failed, the release assets may still be settling" >&2
+            bazel clean --expunge
+            sleep 20
+          done
+          exit 1
+  publish-to-bcr:
+    needs: [release, smoke]
     uses: bazel-contrib/publish-to-bcr/.github/workflows/publish.yaml@v1.4.2
     with:
       tag_name: ${{ inputs.tag || github.ref_name }}

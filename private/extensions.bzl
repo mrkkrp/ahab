@@ -129,6 +129,35 @@ def _ahab_version(module_ctx):
             return mod.version
     fail("the prebuilt extension was evaluated without the ahab module")
 
+_VERSION_BUILD = """\
+exports_files(["defs.bzl"])
+"""
+
+def _version_impl(repository_ctx):
+    repository_ctx.file("BUILD.bazel", _VERSION_BUILD)
+    repository_ctx.file("defs.bzl", 'AHAB_VERSION = "{version}"\n'.format(
+        version = repository_ctx.attr.version,
+    ))
+
+_version_repo = repository_rule(
+    implementation = _version_impl,
+    attrs = {
+        "version": attr.string(mandatory = True),
+    },
+    doc = "Hands `module()`'s version to the BUILD files that need it.",
+)
+
+def _version_extension_impl(module_ctx):
+    _version_repo(
+        name = "ahab_version",
+        version = _ahab_version(module_ctx),
+    )
+
+version = module_extension(
+    implementation = _version_extension_impl,
+    doc = "Makes the module's own version available to `//rust`.",
+)
+
 def _prebuilt_impl(module_ctx):
     version = _ahab_version(module_ctx)
     for platform, sha256 in AHAB_PREBUILT.items():
