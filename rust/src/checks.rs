@@ -897,6 +897,13 @@ fn check_path(container: &ActionGraphContainer) -> Vec<Violation> {
 /// Characters *not* in this set—whitespace, `=`, `:`, `,`, quotes,
 /// etc.—terminate a run, which is how paths "glued" to other text via those
 /// separators get split out.
+///
+/// Brackets are not here, and are not an omission. They are legal in a
+/// filename, so they cannot simply terminate a run; but `[` also opens a
+/// list, so a `/` after one does begin a fresh value. The two readings are
+/// told apart by whether the group is balanced, which is a question about
+/// a span rather than about one character—see [`boundary_at`] and the run
+/// in [`absolute_paths`].
 fn is_path_char(c: char) -> bool {
     c.is_ascii_alphanumeric()
         || matches!(c, '/' | '.' | '-' | '_' | '+' | '~' | '@' | '%')
@@ -981,6 +988,31 @@ fn closes_build_placeholder(bytes: &[u8], slash: usize) -> bool {
         .any(|known| known.as_bytes() == name)
 }
 
+/// Where to ask the boundary question, given a candidate `/` at `slash`.
+///
+/// Normally that is `slash` itself. When the preceding character closes a
+/// balanced `[…]` group the question moves to where the group opened: a
+/// bracket is an ordinary filename character, so `axes/[...id]/page` is one
+/// relative path and the `/` after the group continues it, exactly as it
+/// would after any other directory name.
+fn boundary_at(bytes: &[u8], slash: usize) -> usize {
+    if bytes.get(slash.wrapping_sub(1)) != Some(&b']') {
+        return slash;
+    }
+    let mut depth = 0usize;
+    for at in (0..slash - 1).rev() {
+        match bytes[at] {
+            b']' => depth += 1,
+            b'[' if depth == 0 => return at,
+            b'[' => depth -= 1,
+            b'/' => break,
+            byte if byte.is_ascii_whitespace() => break,
+            _ => {}
+        }
+    }
+    slash
+}
+
 /// Extract every absolute path embedded in `text`. A run begins at a `/` that
 ///
 /// * is followed by at least one path character,
@@ -1012,19 +1044,37 @@ fn absolute_paths(text: &str) -> Vec<String> {
             // glued onto a flag prefix—unless what precedes it is a
             // build-internal placeholder, which makes the path relative to
             // that placeholder however separator-like the `}` looks.
+            //
+            // The boundary is not always at the `/` itself: a `[…]` group
+            // is a filename character like any other, so the question is
+            // asked where the group began. See [`boundary_at`].
             let boundary = if i == 0 {
                 true
             } else if closes_build_placeholder(bytes, i) {
                 false
             } else {
-                !is_path_char(bytes[i - 1] as char)
+                let at = boundary_at(bytes, i);
+                at == 0
+                    || !is_path_char(bytes[at - 1] as char)
                     || glued_onto_flag(bytes, i)
             };
 
             if followed_by_path_char && not_double_slash && boundary {
                 let start = i;
                 i += 1;
-                while i < bytes.len() && is_path_char(bytes[i] as char) {
+                // A `[…]` group belongs to the path—`/usr/lib/[abi]/x`
+                // is one path—but a `]` with nothing open is the close of
+                // something the path sits inside, as in `[/usr/lib]`, and
+                // ends the run.
+                let mut depth = 0usize;
+                while i < bytes.len() {
+                    match bytes[i] {
+                        b'[' => depth += 1,
+                        b']' if depth > 0 => depth -= 1,
+                        b']' => break,
+                        byte if is_path_char(byte as char) => {}
+                        _ => break,
+                    }
                     i += 1;
                 }
                 paths.push(text[start..i].to_owned());
@@ -1960,6 +2010,39 @@ pub(crate) mod tests {
         // -Irelative/include: the `/` does not sit right after the flag, so the
         // value is relative and must not be flagged.
         assert!(absolute_paths("-Irelative/include").is_empty());
+    }
+
+    #[test]
+    fn a_bracketed_segment_does_not_start_an_absolute_path() {
+        // A SvelteKit rest-parameter route puts `[...id]` in a directory
+        // name. The whole path is relative, so nothing absolute is in it.
+        assert!(
+            absolute_paths("src/routes/axes/[...id]/+page.svelte")
+                .is_empty()
+        );
+    }
+
+    #[test]
+    fn a_bracketed_segment_is_part_of_the_path_it_sits_in() {
+        // The group is a directory name, so the path runs through it
+        // rather than stopping at the bracket—a truncated path would be
+        // reported as a path that does not exist.
+        assert_eq!(
+            absolute_paths("/usr/lib/[abi]/libfoo.so"),
+            vec!["/usr/lib/[abi]/libfoo.so"],
+        );
+    }
+
+    #[test]
+    fn a_bracket_opening_a_list_still_starts_a_path() {
+        // The other reading of a bracket: not part of a name, but the
+        // start of a list of them. Both paths are absolute and both are
+        // reported, neither carrying the bracket that wraps them.
+        assert_eq!(
+            absolute_paths("--paths=[/usr/lib,/opt/lib]"),
+            vec!["/usr/lib", "/opt/lib"],
+        );
+        assert_eq!(absolute_paths("[/usr/lib]"), vec!["/usr/lib"]);
     }
 
     #[test]
