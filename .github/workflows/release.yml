@@ -141,6 +141,11 @@ jobs:
           exit 1
   publish-to-bcr:
     needs: [release, smoke]
+    # A prerelease is for exercising this pipeline, not for publishing: the
+    # registry has no notion of one, and an entry there cannot be taken
+    # back, only yanked. The tag carrying a `-` is what marks it, the same
+    # test the release itself uses.
+    if: ${{ !contains(inputs.tag || github.ref_name, '-') }}
     uses: bazel-contrib/publish-to-bcr/.github/workflows/publish.yaml@v1.4.2
     with:
       tag_name: ${{ inputs.tag || github.ref_name }}
