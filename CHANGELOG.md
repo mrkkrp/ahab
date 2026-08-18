@@ -27,6 +27,15 @@
   either. Naming a program outright beats a pattern that covers it, and
   between two patterns the one written later wins.
 
+* A `[…]` group in a path is read as part of the path around it, so a
+  directory whose name contains brackets no longer looks like the end of
+  one value and the start of another. `src/routes/axes/[...id]/+page.svelte`
+  reported the phantom absolute path `/+page.svelte`, and
+  `/usr/lib/[abi]/libfoo.so` was reported as `/usr/lib/`. A bracket that
+  opens a list still starts a path, so `--paths=[/usr/lib,/opt/lib]` yields
+  both. Thanks to Aidan Grant for reporting the phantom path and for the
+  first fix.
+
 ## Ahab 0.1.0
 
 * Initial release.
