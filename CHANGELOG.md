@@ -1,5 +1,7 @@
 ## Unreleased
 
+## Ahab 0.2.0
+
 * Ahab is no longer built from source by the projects that use it. Each
   release publishes a binary for Linux and macOS on x86-64 and arm64, and
   the module downloads the one for the platform being built on and checks

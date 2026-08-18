@@ -293,7 +293,7 @@
     "//private:extensions.bzl%version": {
       "general": {
         "bzlTransitiveDigest": "0ENTGUFWBYwhLdmvN1x+55XYxiQjTbyzoDMYXWFhn9E=",
-        "usagesDigest": "YQFMOsRL7a6n61BdO9g4rQDOLLIQh/V/z6CutZBWBt0=",
+        "usagesDigest": "VcQfB1HjD0WZggcuDw8QKtC07tKQhxRvkHLIHoAo/a0=",
         "recordedInputs": [
           "REPO_MAPPING:,bazel_tools bazel_tools"
         ],
@@ -301,7 +301,7 @@
           "ahab_version": {
             "repoRuleId": "@@//private:extensions.bzl%_version_repo",
             "attributes": {
-              "version": "0.1.0"
+              "version": "0.2.0-rc1"
             }
           }
         }
