@@ -154,7 +154,10 @@ def ahab_binary():
     global _ahab_binary
     if _ahab_binary is None:
         run(["bazel", "build", "//rust:ahab"], cwd=AHAB)
-        paths = bazel_stdout(["cquery", "//rust:ahab", "--output=files"]).split()
+        paths = bazel_stdout(
+            ["cquery", "//rust:ahab", "--output=files"]
+        ).split()
+        paths = [path for path in paths if "-exec/" not in path]
         if len(paths) != 1:
             fail(f"expected one file for //rust:ahab, got {paths}")
         # Against the execution root rather than the workspace: Ahab builds
