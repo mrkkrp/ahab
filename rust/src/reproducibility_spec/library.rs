@@ -81,6 +81,15 @@ impl Transition {
 /// wrapper transitions alike. Bounds a library that accidentally loops.
 const MAX_RESOLUTION_STEPS: usize = 16;
 
+/// Whether a path names one program or a set of them.
+///
+/// The same test the exception files use, and safe for the same reason:
+/// [`Glob`] has no escape syntax, and neither character occurs in a path
+/// we have seen an action run.
+fn is_pattern(path: &str) -> bool {
+    path.contains(['*', '?'])
+}
+
 /// A spec for a program whose output is a function of its inputs however it
 /// is invoked.
 pub(super) fn always() -> ReproducibilitySpec {
@@ -288,8 +297,10 @@ pub struct Resolution<'a> {
 
 impl Resolution<'_> {
     /// The program whose spec judged [`program`](Self::program), when that
-    /// is a different one—i.e. when a synonym was followed. `None` when the
-    /// program answered for itself, or when there is no spec at all.
+    /// is a different one—i.e. when a synonym was followed, or when a
+    /// pattern entry answered and so names a set the program falls in.
+    /// `None` when the program answered for itself, or when there is no
+    /// spec at all.
     pub fn synonym(&self) -> Option<&ProgramId> {
         self.spec
             .as_ref()
@@ -298,31 +309,81 @@ impl Resolution<'_> {
     }
 }
 
+/// An entry whose key names a set of programs rather than one.
+#[derive(Debug, Clone)]
+struct PatternEntry {
+    /// The key as written, which is what gets reported when it answers.
+    key: ProgramId,
+    /// Its path, compiled.
+    path: Glob,
+    /// What it says.
+    entry: Entry,
+}
+
 /// What Ahab knows about programs: the built-in entries, plus whatever a
 /// project has added.
+///
+/// A key's path may be a glob, for the rule sets that put something
+/// unstable in the path itself.
 #[derive(Debug, Clone, Default)]
 pub struct Library {
-    entries: HashMap<ProgramId, Entry>,
+    /// Entries whose path is literal, which is nearly all of them.
+    exact: HashMap<ProgramId, Entry>,
+    /// Entries whose path is a glob, oldest first.
+    patterns: Vec<PatternEntry>,
 }
 
 impl Library {
     /// The library Ahab ships with.
     pub fn builtin() -> Library {
-        Library {
-            entries: entries().into_iter().collect(),
-        }
+        let mut library = Library::default();
+        library.extend(entries());
+        library
     }
 
     /// Add entries, replacing any already present for the same program.
     ///
     /// Later entries win, so a project can override what Ahab believes
     /// about a program, and a file given later on the command line
-    /// overrides one given earlier.
+    /// overrides one given earlier. A pattern added again moves to the end,
+    /// so that "later wins" holds for patterns the same way it does for
+    /// exact keys.
     pub fn extend(
         &mut self,
         entries: impl IntoIterator<Item = (ProgramId, Entry)>,
     ) {
-        self.entries.extend(entries);
+        for (key, entry) in entries {
+            if is_pattern(&key.path) {
+                self.patterns.retain(|held| held.key != key);
+                self.patterns.push(PatternEntry {
+                    path: Glob::new(&key.path),
+                    key,
+                    entry,
+                });
+            } else {
+                self.exact.insert(key, entry);
+            }
+        }
+    }
+
+    /// The entry answering for `key`, with the key that carried it.
+    ///
+    /// An exact key wins over any pattern, so naming a program outright is
+    /// always how to say something about that program in particular.
+    /// Between patterns the last one added wins, which is what makes a
+    /// pattern overridable by another pattern.
+    fn lookup(&self, key: &ProgramId) -> Option<(&ProgramId, &Entry)> {
+        if let Some((found, entry)) = self.exact.get_key_value(key) {
+            return Some((found, entry));
+        }
+        self.patterns
+            .iter()
+            .rev()
+            .find(|held| {
+                held.key.origin == key.origin
+                    && held.path.matches(&key.path)
+            })
+            .map(|held| (&held.key, &held.entry))
     }
 
     /// Resolve what an action really runs, from its program and `argv[1..]`.
@@ -350,8 +411,7 @@ impl Library {
                 break;
             }
 
-            let Some((found, entry)) = self.entries.get_key_value(&key)
-            else {
+            let Some((found, entry)) = self.lookup(&key) else {
                 break;
             };
 
@@ -643,27 +703,153 @@ mod tests {
         // Only synonyms can be checked this way. Where a wrapper resolves to
         // depends on the arguments it was handed, so a `Wraps` entry has no
         // static destination to validate.
-        let library: HashMap<_, _> = entries().into_iter().collect();
+        let library = Library::builtin();
         for (program, _) in entries() {
             let mut seen = vec![program.clone()];
-            let mut at = &program;
+            let mut at = program.clone();
             for _ in 0..MAX_RESOLUTION_STEPS {
-                let Some(Entry::SameAs(target)) = library.get(at) else {
+                let Some((_, Entry::SameAs(target))) = library.lookup(&at)
+                else {
                     break;
                 };
+                let target = target.clone();
                 assert!(
-                    library.contains_key(target),
+                    !is_pattern(&target.path),
+                    "{program}: synonym points at {target}, which is a \
+                     pattern—a synonym has to name one program",
+                );
+                assert!(
+                    library.lookup(&target).is_some(),
                     "{program}: synonym points at {target}, \
                      which is not in the library",
                 );
                 assert!(
-                    !seen.contains(target),
+                    !seen.contains(&target),
                     "{program}: synonym chain cycles at {target}",
                 );
                 seen.push(target.clone());
                 at = target;
             }
         }
+    }
+
+    /// A library holding just the entries given, as a project's own file
+    /// would produce.
+    fn library_of(
+        entries: impl IntoIterator<Item = (ProgramId, Entry)>,
+    ) -> Library {
+        let mut library = Library::default();
+        library.extend(entries);
+        library
+    }
+
+    #[test]
+    fn a_pattern_answers_for_every_program_whose_path_it_matches() {
+        let library = library_of([(
+            ProgramId::extension("r", "toolchains", "*/bin/rustc"),
+            Entry::Spec(always()),
+        )]);
+        for path in [
+            "external/r++toolchains+tc/linux_x86_64_1_86_0/bin/rustc",
+            "external/r++toolchains+tc/macos_arm64_1_99_0/bin/rustc",
+        ] {
+            let resolved = library.resolve(ProgramId::of(path), vec![]);
+            assert!(
+                resolved.spec.is_some(),
+                "{path} was not matched by the pattern",
+            );
+        }
+    }
+
+    #[test]
+    fn a_pattern_does_not_reach_across_repositories() {
+        // Only the path is a pattern. The origin is the part normalization
+        // already made stable, and letting it wildcard would make a spec
+        // about one rule set answer for another's program of the same name.
+        let library = library_of([(
+            ProgramId::extension("r", "toolchains", "*/bin/rustc"),
+            Entry::Spec(always()),
+        )]);
+        let elsewhere =
+            ProgramId::of("external/other++toolchains+tc/x/bin/rustc");
+        assert!(library.resolve(elsewhere, vec![]).spec.is_none());
+    }
+
+    #[test]
+    fn naming_a_program_outright_beats_a_pattern_that_covers_it() {
+        // The pattern is added second, so this is not first-wins by
+        // accident: an exact key is what one writes to say something about
+        // one program in particular, and it has to hold.
+        let exact = ProgramId::extension("r", "toolchains", "x/bin/rustc");
+        let library = library_of([
+            (exact.clone(), Entry::Spec(never())),
+            (
+                ProgramId::extension("r", "toolchains", "*/bin/rustc"),
+                Entry::Spec(always()),
+            ),
+        ]);
+        let resolved = library.resolve(exact.clone(), vec![]);
+        let (carrier, spec) = resolved.spec.expect("no spec");
+        assert_eq!(carrier, exact);
+        assert_eq!(spec, never());
+    }
+
+    #[test]
+    fn a_later_pattern_wins_over_an_earlier_one() {
+        // What lets a project correct a built-in pattern, the way a later
+        // exact entry corrects a built-in exact one.
+        let library = library_of([
+            (
+                ProgramId::extension("r", "toolchains", "*/bin/rustc"),
+                Entry::Spec(always()),
+            ),
+            (
+                ProgramId::extension("r", "toolchains", "*/rustc"),
+                Entry::Spec(never()),
+            ),
+        ]);
+        let resolved = library.resolve(
+            ProgramId::of("external/r++toolchains+tc/x/bin/rustc"),
+            vec![],
+        );
+        assert_eq!(resolved.spec.expect("no spec").1, never());
+    }
+
+    #[test]
+    fn a_pattern_reports_the_key_that_answered() {
+        // The program is still what the action ran; the pattern is how the
+        // library found something to say about it, which is what a reader
+        // needs in order to go and check the claim.
+        let pattern =
+            ProgramId::extension("r", "toolchains", "*/bin/rustc");
+        let library =
+            library_of([(pattern.clone(), Entry::Spec(always()))]);
+        let resolved = library.resolve(
+            ProgramId::of("external/r++toolchains+tc/x/bin/rustc"),
+            vec![],
+        );
+        assert_eq!(resolved.synonym(), Some(&pattern));
+    }
+
+    #[test]
+    fn a_pattern_can_stand_in_for_a_synonym() {
+        // The shape the built-in library uses for rules_rs: a set of
+        // programs judged by the one program another rule set ships.
+        let target = ProgramId::module("rules_rust", "bin/rustc");
+        let library = library_of([
+            (target.clone(), Entry::Spec(always())),
+            (
+                ProgramId::extension("r", "toolchains", "*/bin/rustc"),
+                Entry::SameAs(target.clone()),
+            ),
+        ]);
+        let resolved = library.resolve(
+            ProgramId::of("external/r++toolchains+tc/x/bin/rustc"),
+            vec![],
+        );
+        // Reported as judged by the concrete program, not by the pattern:
+        // resolution followed the synonym through to what carries the spec.
+        assert_eq!(resolved.synonym(), Some(&target));
     }
 
     #[test]
