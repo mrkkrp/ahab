@@ -19,6 +19,14 @@
   `@ahab//:ahab`, which is the Rust target and has moved to
   `@ahab//rust:ahab`. The macros are unaffected.
 
+* The path in a program's name may now be a pattern, with the same `*` and
+  `?` that exceptions use, as in `@rules_rs+toolchains//*/bin/rustc`. This
+  is for rule sets that put the platform or the toolchain version in the
+  path rather than in the repository name, where an exact name would have
+  had to state both and would have stopped matching at the next bump of
+  either. Naming a program outright beats a pattern that covers it, and
+  between two patterns the one written later wins.
+
 ## Ahab 0.1.0
 
 * Initial release.

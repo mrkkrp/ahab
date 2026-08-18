@@ -48,6 +48,36 @@ pub(in crate::reproducibility_spec) fn entries() -> Vec<(ProgramId, Entry)>
                 separator: "--".to_owned(),
             }),
         ),
+        // The same two programs again, reached the other way. rules_rs
+        // does not depend on the rules_rust module: it fetches a patched
+        // copy through an extension of its own, which lands under a
+        // repository named for rules_rs and leaves the tools where
+        // rules_rust puts them. The patches are to Windows linking and
+        // rust-analyzer integration, so what the wrapper does with its
+        // arguments is unchanged—and `SameAs` is a claim about behavior,
+        // which is the claim being made.
+        (
+            ProgramId::extension(
+                "rules_rs",
+                "rules_rust",
+                "util/process_wrapper/process_wrapper",
+            ),
+            Entry::SameAs(ProgramId::module(
+                "rules_rust",
+                "util/process_wrapper/process_wrapper",
+            )),
+        ),
+        (
+            ProgramId::extension(
+                "rules_rs",
+                "rules_rust",
+                "util/process_wrapper/bootstrap_process_wrapper.sh",
+            ),
+            Entry::SameAs(ProgramId::module(
+                "rules_rust",
+                "util/process_wrapper/bootstrap_process_wrapper.sh",
+            )),
+        ),
         // rustc compiles deterministically from the same sources and flags,
         // with one standing exception: it bakes the paths it was given into
         // debug info and panic messages, and those paths are absolute at
@@ -86,6 +116,53 @@ pub(in crate::reproducibility_spec) fn entries() -> Vec<(ProgramId, Entry)>
         (
             ProgramId::module("rules_rust_prost", "private/protoc_wrapper"),
             Entry::Spec(always()),
+        ),
+        // The Rust toolchain as rules_rs registers it. Where rules_rust
+        // puts the version and the platform in the repository name—which
+        // normalization drops, leaving `rust_toolchain/bin/rustc`—rules_rs
+        // puts them in the path: `rustc/default_linux_x86_64_1_86_0_rust_
+        // toolchain/bin/rustc`. So the path is written as a pattern, and
+        // what it deliberately does not name is exactly what an exact key
+        // would have got wrong: which machine, and which release of Rust.
+        //
+        // These are the same compilers the entries above answer for. rustc
+        // is the one that has to be told to remap its paths, and that is
+        // as true of the copy rules_rs downloads as of any other.
+        (
+            ProgramId::extension("rules_rs", "toolchains", "*/bin/rustc"),
+            Entry::SameAs(rust_tool("rustc")),
+        ),
+        (
+            ProgramId::extension(
+                "rules_rs",
+                "toolchains",
+                "*/bin/clippy-driver",
+            ),
+            Entry::SameAs(rust_tool("clippy-driver")),
+        ),
+        // rustfmt needs no pattern: rules_rs keeps it outside the
+        // toolchain directory, as rules_rust does and for the same reason.
+        (
+            ProgramId::extension("rules_rs", "toolchains", "bin/rustfmt"),
+            Entry::SameAs(ProgramId::extension(
+                "rules_rust",
+                "rust",
+                "bin/rustfmt",
+            )),
+        ),
+        // rules_rs builds its prost wrapper from rules_rust's source file
+        // —`srcs = ["@rules_rust//extensions/prost/private:protoc_wrapper.rs"]`
+        // in `rs/private/prost/BUILD.bazel`—compiled in a package of its
+        // own against its own crates. Same program, different address.
+        (
+            ProgramId::module(
+                "rules_rs",
+                "rs/private/prost/protoc_wrapper",
+            ),
+            Entry::SameAs(ProgramId::module(
+                "rules_rust_prost",
+                "private/protoc_wrapper",
+            )),
         ),
         // rustdoc, which takes rustc's flags and is emphatically *not*
         // declared its synonym. rustc needs `--remap-path-prefix` because
