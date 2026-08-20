@@ -3,6 +3,14 @@
 * Add reproducibility specs for Closure and J2CL build tools, the metadata
   merger shipped by `rules_webtesting`, and Brotli compression.
 
+* Ahab now asks for the host platform when it runs `bazel info` to find the
+  output base. `bazel info` resolves `--platforms` without the main
+  repository's mapping, so a project whose rc files point it at a platform
+  in an external module—`--platforms=@myrepo//foo`—made the command fail
+  even though the same flag builds fine. None of the keys Ahab reads depend
+  on the target platform, and the aquery still runs under whatever platform
+  the project configured. Thanks to Kaylie for reporting and for the fix.
+
 ## Ahab 0.2.0
 
 * Ahab is no longer built from source by the projects that use it. Each

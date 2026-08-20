@@ -40,6 +40,14 @@ fn workspace_dir() -> Option<std::ffi::OsString> {
 fn bazel_info() -> Result<std::collections::HashMap<String, String>> {
     let mut command = Command::new("bazel");
     command.arg("info");
+
+    // `bazel info` resolves `--platforms` without the main repository's
+    // mapping, so a project whose rc files point it at a platform in an
+    // external module (`--platforms=@myrepo//foo`) makes the command fail
+    // even though the same flag builds fine. None of the keys below depend
+    // on the target platform, so pin the host platform and be done with it.
+    command.arg("--platforms=@platforms//host");
+
     if let Some(dir) = workspace_dir() {
         command.current_dir(dir);
     }
