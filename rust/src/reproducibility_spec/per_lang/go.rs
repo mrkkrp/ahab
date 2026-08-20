@@ -12,6 +12,19 @@ fn gazelle(path: &str) -> ProgramId {
     ProgramId::module("gazelle", path)
 }
 
+/// The metadata merger shipped by rules_webtesting.
+fn metadata_merger(platform: &str) -> ProgramId {
+    let extension = if platform == "windows_x64" {
+        ".exe"
+    } else {
+        ""
+    };
+    ProgramId::module(
+        "rules_webtesting",
+        &format!("go/metadata/main/main_{platform}{extension}"),
+    )
+}
+
 /// One of Gazelle's own generators, under both names it answers to.
 ///
 /// Depend on Gazelle and its programs arrive from the module; analyze
@@ -73,6 +86,16 @@ pub(in crate::reproducibility_spec) fn entries() -> Vec<(ProgramId, Entry)>
         ),
     ]
     .into_iter()
+    // rules_webtesting's metadata merger reads the JSON files named on its
+    // command line, merges them in order, and writes indented JSON. It does
+    // not consult the clock, environment or host. The executable name varies
+    // by platform because rules_webtesting packages all four binaries in a
+    // release, but the source and behavior are the same.
+    .chain(
+        ["linux_x64", "darwin_x64", "darwin_arm64", "windows_x64"].map(
+            |platform| (metadata_merger(platform), Entry::Spec(always())),
+        ),
+    )
     // Gazelle generates the BUILD files of a large share of the Go projects
     // built with Bazel, and building Gazelle runs three generators of its
     // own. They are not part of rules_go and Ahab has no special claim on
@@ -180,6 +203,27 @@ mod tests {
             assess(vec!["gentestmain", "-pkgname", "language/go"]),
             Conformance::Reproducible,
         );
+    }
+
+    #[test]
+    fn web_test_metadata_merging_is_reproducible_on_every_platform() {
+        for platform in
+            ["linux_x64", "darwin_x64", "darwin_arm64", "windows_x64"]
+        {
+            assert_eq!(
+                testing::assess(
+                    metadata_merger(platform),
+                    vec![
+                        "--output",
+                        "bazel-out/k8-fastbuild/bin/test.gen.json",
+                        "browser.gen.json",
+                        "test.tmp.json",
+                    ],
+                ),
+                Conformance::Reproducible,
+                "{platform}",
+            );
+        }
     }
 
     #[test]
