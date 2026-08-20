@@ -1,5 +1,8 @@
 ## Unreleased
 
+* Add reproducibility specs for Closure and J2CL build tools, the metadata
+  merger shipped by `rules_webtesting`, and Brotli compression.
+
 ## Ahab 0.2.0
 
 * Ahab is no longer built from source by the projects that use it. Each
