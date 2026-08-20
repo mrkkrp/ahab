@@ -20,6 +20,11 @@ fn pkg_tool(path: &str, spec: Entry) -> Vec<(ProgramId, Entry)> {
     ]
 }
 
+/// The command-line compressor shipped by the Brotli module.
+fn brotli() -> ProgramId {
+    ProgramId::module("brotli", "brotli")
+}
+
 /// The `bsdtar` a toolchain hands the build, named by the module that
 /// registered the toolchain rather than by the platform-specific repository
 /// it was unpacked into—so one entry answers on every platform.
@@ -131,6 +136,11 @@ pub(in crate::reproducibility_spec) fn entries() -> Vec<(ProgramId, Entry)>
         Entry::Spec(always()),
     ));
 
+    // A Brotli stream carries no filename, timestamp or ownership metadata.
+    // The encoder and decoder are functions of their input and options; the
+    // clock used for verbose progress is written only to stderr.
+    entries.push((brotli(), Entry::Spec(always())));
+
     // A Debian package is an `ar` archive of two tarballs, and make_deb
     // writes zero into every field that would otherwise carry a clock—the
     // member timestamps, the gzip header, and the `Date` of the control
@@ -240,6 +250,24 @@ mod tests {
             assess(
                 ProgramId::module("rules_pkg", "pkg/private/zip/build_zip"),
                 vec!["-o", "out.zip", "--manifest", "m"],
+            ),
+            Conformance::Reproducible,
+        );
+    }
+
+    #[test]
+    fn brotli_compression_is_reproducible() {
+        assert_eq!(
+            assess(
+                brotli(),
+                vec![
+                    "-q",
+                    "11",
+                    "-f",
+                    "-o",
+                    "bazel-out/k8-fastbuild/bin/index.html.br",
+                    "server/src/main/webapp/index.html",
+                ],
             ),
             Conformance::Reproducible,
         );
