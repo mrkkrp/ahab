@@ -39,6 +39,19 @@ fn npm_typescript(path: &str) -> ProgramId {
     ProgramId::main_extension("typescript", path)
 }
 
+/// A program shipped by J2CL.
+fn j2cl(path: &str) -> ProgramId {
+    ProgramId::module("j2cl", path)
+}
+
+/// The worker shared by rules_closure's compiler and validators.
+fn closure_worker() -> ProgramId {
+    ProgramId::module(
+        "rules_closure",
+        "java/io/bazel/rules/closure/ClosureWorker",
+    )
+}
+
 /// Everything Ahab knows about JavaScript builds, in source order.
 pub(in crate::reproducibility_spec) fn entries() -> Vec<(ProgramId, Entry)>
 {
@@ -55,6 +68,33 @@ pub(in crate::reproducibility_spec) fn entries() -> Vec<(ProgramId, Entry)>
     // itself: of the seven such actions in its own tree, four declare
     // `requires-network` and five `no-sandbox`.
     let mut entries = rules_js_tool("npm/private/lifecycle/min/bin_/bin");
+
+    // ClosureWorker dispatches the Closure compiler, its library checker,
+    // and the webfiles validator. Each reads the sources, manifests and
+    // options named by the action. The validator has no clock or host input,
+    // and the webfiles archive writer fixes every ZIP timestamp.
+    entries.push((closure_worker(), Entry::Spec(always())));
+
+    // The stripper writes its source jar through J2CL's Bazel output helper,
+    // which resets every file and directory timestamp to the epoch. Its
+    // contents depend only on the sources and annotation names it receives.
+    entries.push((
+        j2cl(
+            "tools/java/com/google/j2cl/tools/gwtincompatible\
+             /GwtIncompatibleStripper_worker",
+        ),
+        Entry::Spec(always()),
+    ));
+
+    // The transpiler uses the same output helper for archives, and clears
+    // its predictable per-target temporary directory before each worker
+    // request. Source maps, JavaScript and library metadata therefore come
+    // from the declared sources and compiler options rather than worker or
+    // machine state.
+    entries.push((
+        j2cl("transpiler/java/com/google/j2cl/transpiler/BazelJ2clBuilder"),
+        Entry::Spec(always()),
+    ));
 
     // The TypeScript compiler. What it emits is decided by the sources and
     // the `tsconfig.json` it is pointed at—there is no clock on the path
@@ -206,6 +246,65 @@ mod tests {
             ),
             Conformance::Reproducible,
         );
+    }
+
+    #[test]
+    fn closure_compilation_and_validation_are_reproducible() {
+        for args in [
+            vec!["JsChecker", "--src", "lib.js", "--output", "lib.pbtxt"],
+            vec![
+                "JsCompiler",
+                "--js",
+                "lib.js",
+                "--js_output_file",
+                "app.js",
+            ],
+            vec![
+                "WebfilesValidator",
+                "--target",
+                "app.pb",
+                "--output",
+                "validated",
+            ],
+        ] {
+            assert_eq!(
+                assess(closure_worker(), args.clone()),
+                Conformance::Reproducible,
+                "{args:?}",
+            );
+        }
+    }
+
+    #[test]
+    fn j2cl_tools_are_reproducible() {
+        for (program, args) in [
+            (
+                j2cl(
+                    "tools/java/com/google/j2cl/tools/gwtincompatible\
+                     /GwtIncompatibleStripper_worker",
+                ),
+                vec!["-d", "stripped-src.jar", "Example.java"],
+            ),
+            (
+                j2cl(
+                    "transpiler/java/com/google/j2cl/transpiler\
+                     /BazelJ2clBuilder",
+                ),
+                vec![
+                    "-classpath",
+                    "deps.jar",
+                    "-output",
+                    "example.js",
+                    "Example.java",
+                ],
+            ),
+        ] {
+            assert_eq!(
+                assess(program, args.clone()),
+                Conformance::Reproducible,
+                "{args:?}",
+            );
+        }
     }
 
     #[test]
