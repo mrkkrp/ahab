@@ -3,6 +3,21 @@
 * Add reproducibility specs for Closure and J2CL build tools, the metadata
   merger shipped by `rules_webtesting`, and Brotli compression.
 
+* Ahab now knows the Zig compiler as `rules_zig` registers it. A
+  compilation that emits machine code is reported unless it asked for one
+  of the three release optimization modes or for LLVM. Zig's language
+  reference promises a reproducible build in `ReleaseFast`, `ReleaseSafe`
+  and `ReleaseSmall` and disclaims one in `Debug`, which is the default and
+  which is also the mode that reaches for Zig's own code generator—it emits
+  from every core at once and writes out whichever thread finished first.
+  A compilation is reported again unless it strips, because debugging
+  information records the directory the compilation ran in and Zig has no
+  `--remap-path-prefix` to rewrite it; a release mode is no help there. A
+  static archive is reported whatever else was asked for: it stores the
+  name of a temporary directory drawn afresh for every invocation.
+  Documentation builds and `translate-c` are held to none of this, having
+  no code generator to answer for.
+
 * Ahab now asks for the host platform when it runs `bazel info` to find the
   output base. `bazel info` resolves `--platforms` without the main
   repository's mapping, so a project whose rc files point it at a platform

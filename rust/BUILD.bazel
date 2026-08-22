@@ -37,6 +37,7 @@ rust_library(
         "src/reproducibility_spec/per_lang/pkg.rs",
         "src/reproducibility_spec/per_lang/python.rs",
         "src/reproducibility_spec/per_lang/rust.rs",
+        "src/reproducibility_spec/per_lang/zig.rs",
         "src/reproducibility_spec/program_id.rs",
         "src/terminal_color.rs",
     ],
