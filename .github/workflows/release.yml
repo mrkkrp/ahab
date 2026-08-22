@@ -146,7 +146,7 @@ jobs:
     # back, only yanked. The tag carrying a `-` is what marks it, the same
     # test the release itself uses.
     if: ${{ !contains(inputs.tag || github.ref_name, '-') }}
-    uses: bazel-contrib/publish-to-bcr/.github/workflows/publish.yaml@v1.4.2
+    uses: bazel-contrib/publish-to-bcr/.github/workflows/publish.yaml@v1.5.0
     with:
       tag_name: ${{ inputs.tag || github.ref_name }}
       registry_fork: mrkkrp/bazel-central-registry
