@@ -1,0 +1,7 @@
+{
+  "repo": "https://github.com/hermeticbuild/rules_zig",
+  "commit": "3de4c6b127f79a1e4b6d5cb98805dffa00a44e26",
+  "label": "//...",
+  "configs": [],
+  "workspace": "e2e/workspace"
+}

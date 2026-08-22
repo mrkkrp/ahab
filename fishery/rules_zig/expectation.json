@@ -1,0 +1,3365 @@
+{
+  "violations": [
+    {
+      "count": 2,
+      "violation": {
+        "kind": "execution_requirement",
+        "action": {
+          "mnemonic": "CopyFile",
+          "target": "//zig-docs:binary-docs-index-copy"
+        },
+        "requirement": "no-sandbox"
+      }
+    },
+    {
+      "count": 2,
+      "violation": {
+        "kind": "execution_requirement",
+        "action": {
+          "mnemonic": "CopyFile",
+          "target": "//zig-docs:library-docs-index-copy"
+        },
+        "requirement": "no-sandbox"
+      }
+    },
+    {
+      "count": 2,
+      "violation": {
+        "kind": "execution_requirement",
+        "action": {
+          "mnemonic": "CopyFile",
+          "target": "//zig-docs:shared-library-docs-index-copy"
+        },
+        "requirement": "no-sandbox"
+      }
+    },
+    {
+      "count": 2,
+      "violation": {
+        "kind": "execution_requirement",
+        "action": {
+          "mnemonic": "CopyFile",
+          "target": "//zig-docs:test-docs-index-copy"
+        },
+        "requirement": "no-sandbox"
+      }
+    },
+    {
+      "count": 2,
+      "violation": {
+        "kind": "unknown_program",
+        "action": {
+          "mnemonic": "ZigTranslateC",
+          "target": "//translate-c/transitive-cc-library-zig-binary:global_binary"
+        },
+        "program": {
+          "origin": {
+            "main": {
+              "extension": "http_archive"
+            }
+          },
+          "path": "translate-c"
+        },
+        "wrappers": []
+      }
+    },
+    {
+      "count": 1,
+      "violation": {
+        "kind": "conditional_reproducibility",
+        "action": {
+          "mnemonic": "ZigBuildExe",
+          "target": "//c-sources:binary"
+        },
+        "program": {
+          "origin": {
+            "module": {
+              "name": "rules_zig",
+              "extension": "zig"
+            }
+          },
+          "path": "zig"
+        },
+        "wrappers": [],
+        "synonym": null,
+        "unmet": [
+          {
+            "because": "Zig promises a reproducible build in its release modes and disclaims one in Debug, whose code generator emits from every core at once and writes out whichever thread finished first",
+            "any_of": [
+              "-O=ReleaseFast",
+              "-O=ReleaseSafe",
+              "-O=ReleaseSmall",
+              "-fllvm"
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "count": 1,
+      "violation": {
+        "kind": "conditional_reproducibility",
+        "action": {
+          "mnemonic": "ZigBuildExe",
+          "target": "//canonical-name-module:binary"
+        },
+        "program": {
+          "origin": {
+            "module": {
+              "name": "rules_zig",
+              "extension": "zig"
+            }
+          },
+          "path": "zig"
+        },
+        "wrappers": [],
+        "synonym": null,
+        "unmet": [
+          {
+            "because": "Zig promises a reproducible build in its release modes and disclaims one in Debug, whose code generator emits from every core at once and writes out whichever thread finished first",
+            "any_of": [
+              "-O=ReleaseFast",
+              "-O=ReleaseSafe",
+              "-O=ReleaseSmall",
+              "-fllvm"
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "count": 2,
+      "violation": {
+        "kind": "conditional_reproducibility",
+        "action": {
+          "mnemonic": "ZigBuildExe",
+          "target": "//configure-mode:binary"
+        },
+        "program": {
+          "origin": {
+            "module": {
+              "name": "rules_zig",
+              "extension": "zig"
+            }
+          },
+          "path": "zig"
+        },
+        "wrappers": [],
+        "synonym": null,
+        "unmet": [
+          {
+            "because": "Zig promises a reproducible build in its release modes and disclaims one in Debug, whose code generator emits from every core at once and writes out whichever thread finished first",
+            "any_of": [
+              "-O=ReleaseFast",
+              "-O=ReleaseSafe",
+              "-O=ReleaseSmall",
+              "-fllvm"
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "count": 2,
+      "violation": {
+        "kind": "conditional_reproducibility",
+        "action": {
+          "mnemonic": "ZigBuildExe",
+          "target": "//configure-target:binary"
+        },
+        "program": {
+          "origin": {
+            "module": {
+              "name": "rules_zig",
+              "extension": "zig"
+            }
+          },
+          "path": "zig"
+        },
+        "wrappers": [],
+        "synonym": null,
+        "unmet": [
+          {
+            "because": "Zig promises a reproducible build in its release modes and disclaims one in Debug, whose code generator emits from every core at once and writes out whichever thread finished first",
+            "any_of": [
+              "-O=ReleaseFast",
+              "-O=ReleaseSafe",
+              "-O=ReleaseSmall",
+              "-fllvm"
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "count": 1,
+      "violation": {
+        "kind": "conditional_reproducibility",
+        "action": {
+          "mnemonic": "ZigBuildExe",
+          "target": "//configure-target:read_elf_arch"
+        },
+        "program": {
+          "origin": {
+            "module": {
+              "name": "rules_zig",
+              "extension": "zig"
+            }
+          },
+          "path": "zig"
+        },
+        "wrappers": [],
+        "synonym": null,
+        "unmet": [
+          {
+            "because": "Zig promises a reproducible build in its release modes and disclaims one in Debug, whose code generator emits from every core at once and writes out whichever thread finished first",
+            "any_of": [
+              "-O=ReleaseFast",
+              "-O=ReleaseSafe",
+              "-O=ReleaseSmall",
+              "-fllvm"
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "count": 1,
+      "violation": {
+        "kind": "conditional_reproducibility",
+        "action": {
+          "mnemonic": "ZigBuildExe",
+          "target": "//configure-target:read_pe32_arch"
+        },
+        "program": {
+          "origin": {
+            "module": {
+              "name": "rules_zig",
+              "extension": "zig"
+            }
+          },
+          "path": "zig"
+        },
+        "wrappers": [],
+        "synonym": null,
+        "unmet": [
+          {
+            "because": "Zig promises a reproducible build in its release modes and disclaims one in Debug, whose code generator emits from every core at once and writes out whichever thread finished first",
+            "any_of": [
+              "-O=ReleaseFast",
+              "-O=ReleaseSafe",
+              "-O=ReleaseSmall",
+              "-fllvm"
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "count": 2,
+      "violation": {
+        "kind": "conditional_reproducibility",
+        "action": {
+          "mnemonic": "ZigBuildExe",
+          "target": "//configure-threaded:host_binary"
+        },
+        "program": {
+          "origin": {
+            "module": {
+              "name": "rules_zig",
+              "extension": "zig"
+            }
+          },
+          "path": "zig"
+        },
+        "wrappers": [],
+        "synonym": null,
+        "unmet": [
+          {
+            "because": "Zig promises a reproducible build in its release modes and disclaims one in Debug, whose code generator emits from every core at once and writes out whichever thread finished first",
+            "any_of": [
+              "-O=ReleaseFast",
+              "-O=ReleaseSafe",
+              "-O=ReleaseSmall",
+              "-fllvm"
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "count": 1,
+      "violation": {
+        "kind": "conditional_reproducibility",
+        "action": {
+          "mnemonic": "ZigBuildExe",
+          "target": "//embed-file:binary"
+        },
+        "program": {
+          "origin": {
+            "module": {
+              "name": "rules_zig",
+              "extension": "zig"
+            }
+          },
+          "path": "zig"
+        },
+        "wrappers": [],
+        "synonym": null,
+        "unmet": [
+          {
+            "because": "Zig promises a reproducible build in its release modes and disclaims one in Debug, whose code generator emits from every core at once and writes out whichever thread finished first",
+            "any_of": [
+              "-O=ReleaseFast",
+              "-O=ReleaseSafe",
+              "-O=ReleaseSmall",
+              "-fllvm"
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "count": 1,
+      "violation": {
+        "kind": "conditional_reproducibility",
+        "action": {
+          "mnemonic": "ZigBuildExe",
+          "target": "//env-attr:binary"
+        },
+        "program": {
+          "origin": {
+            "module": {
+              "name": "rules_zig",
+              "extension": "zig"
+            }
+          },
+          "path": "zig"
+        },
+        "wrappers": [],
+        "synonym": null,
+        "unmet": [
+          {
+            "because": "Zig promises a reproducible build in its release modes and disclaims one in Debug, whose code generator emits from every core at once and writes out whichever thread finished first",
+            "any_of": [
+              "-O=ReleaseFast",
+              "-O=ReleaseSafe",
+              "-O=ReleaseSmall",
+              "-fllvm"
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "count": 1,
+      "violation": {
+        "kind": "conditional_reproducibility",
+        "action": {
+          "mnemonic": "ZigBuildExe",
+          "target": "//import-name-attr:binary"
+        },
+        "program": {
+          "origin": {
+            "module": {
+              "name": "rules_zig",
+              "extension": "zig"
+            }
+          },
+          "path": "zig"
+        },
+        "wrappers": [],
+        "synonym": null,
+        "unmet": [
+          {
+            "because": "Zig promises a reproducible build in its release modes and disclaims one in Debug, whose code generator emits from every core at once and writes out whichever thread finished first",
+            "any_of": [
+              "-O=ReleaseFast",
+              "-O=ReleaseSafe",
+              "-O=ReleaseSmall",
+              "-fllvm"
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "count": 1,
+      "violation": {
+        "kind": "conditional_reproducibility",
+        "action": {
+          "mnemonic": "ZigBuildExe",
+          "target": "//import-names-attr:binary"
+        },
+        "program": {
+          "origin": {
+            "module": {
+              "name": "rules_zig",
+              "extension": "zig"
+            }
+          },
+          "path": "zig"
+        },
+        "wrappers": [],
+        "synonym": null,
+        "unmet": [
+          {
+            "because": "Zig promises a reproducible build in its release modes and disclaims one in Debug, whose code generator emits from every core at once and writes out whichever thread finished first",
+            "any_of": [
+              "-O=ReleaseFast",
+              "-O=ReleaseSafe",
+              "-O=ReleaseSmall",
+              "-fllvm"
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "count": 1,
+      "violation": {
+        "kind": "conditional_reproducibility",
+        "action": {
+          "mnemonic": "ZigBuildExe",
+          "target": "//include-dependencies/zig-include-define:binary"
+        },
+        "program": {
+          "origin": {
+            "module": {
+              "name": "rules_zig",
+              "extension": "zig"
+            }
+          },
+          "path": "zig"
+        },
+        "wrappers": [],
+        "synonym": null,
+        "unmet": [
+          {
+            "because": "Zig promises a reproducible build in its release modes and disclaims one in Debug, whose code generator emits from every core at once and writes out whichever thread finished first",
+            "any_of": [
+              "-O=ReleaseFast",
+              "-O=ReleaseSafe",
+              "-O=ReleaseSmall",
+              "-fllvm"
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "count": 1,
+      "violation": {
+        "kind": "conditional_reproducibility",
+        "action": {
+          "mnemonic": "ZigBuildExe",
+          "target": "//include-dependencies/zig-include-isystem:binary"
+        },
+        "program": {
+          "origin": {
+            "module": {
+              "name": "rules_zig",
+              "extension": "zig"
+            }
+          },
+          "path": "zig"
+        },
+        "wrappers": [],
+        "synonym": null,
+        "unmet": [
+          {
+            "because": "Zig promises a reproducible build in its release modes and disclaims one in Debug, whose code generator emits from every core at once and writes out whichever thread finished first",
+            "any_of": [
+              "-O=ReleaseFast",
+              "-O=ReleaseSafe",
+              "-O=ReleaseSmall",
+              "-fllvm"
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "count": 1,
+      "violation": {
+        "kind": "conditional_reproducibility",
+        "action": {
+          "mnemonic": "ZigBuildExe",
+          "target": "//include-dependencies/zig-include:binary"
+        },
+        "program": {
+          "origin": {
+            "module": {
+              "name": "rules_zig",
+              "extension": "zig"
+            }
+          },
+          "path": "zig"
+        },
+        "wrappers": [],
+        "synonym": null,
+        "unmet": [
+          {
+            "because": "Zig promises a reproducible build in its release modes and disclaims one in Debug, whose code generator emits from every core at once and writes out whichever thread finished first",
+            "any_of": [
+              "-O=ReleaseFast",
+              "-O=ReleaseSafe",
+              "-O=ReleaseSmall",
+              "-fllvm"
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "count": 1,
+      "violation": {
+        "kind": "conditional_reproducibility",
+        "action": {
+          "mnemonic": "ZigBuildExe",
+          "target": "//include-dependencies/zig-std-include:binary"
+        },
+        "program": {
+          "origin": {
+            "module": {
+              "name": "rules_zig",
+              "extension": "zig"
+            }
+          },
+          "path": "zig"
+        },
+        "wrappers": [],
+        "synonym": null,
+        "unmet": [
+          {
+            "because": "Zig promises a reproducible build in its release modes and disclaims one in Debug, whose code generator emits from every core at once and writes out whichever thread finished first",
+            "any_of": [
+              "-O=ReleaseFast",
+              "-O=ReleaseSafe",
+              "-O=ReleaseSmall",
+              "-fllvm"
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "count": 1,
+      "violation": {
+        "kind": "conditional_reproducibility",
+        "action": {
+          "mnemonic": "ZigBuildExe",
+          "target": "//link-dependencies/shared-library:binary"
+        },
+        "program": {
+          "origin": {
+            "module": {
+              "name": "rules_zig",
+              "extension": "zig"
+            }
+          },
+          "path": "zig"
+        },
+        "wrappers": [],
+        "synonym": null,
+        "unmet": [
+          {
+            "because": "Zig promises a reproducible build in its release modes and disclaims one in Debug, whose code generator emits from every core at once and writes out whichever thread finished first",
+            "any_of": [
+              "-O=ReleaseFast",
+              "-O=ReleaseSafe",
+              "-O=ReleaseSmall",
+              "-fllvm"
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "count": 1,
+      "violation": {
+        "kind": "conditional_reproducibility",
+        "action": {
+          "mnemonic": "ZigBuildExe",
+          "target": "//link-dependencies/static-library:binary"
+        },
+        "program": {
+          "origin": {
+            "module": {
+              "name": "rules_zig",
+              "extension": "zig"
+            }
+          },
+          "path": "zig"
+        },
+        "wrappers": [],
+        "synonym": null,
+        "unmet": [
+          {
+            "because": "Zig promises a reproducible build in its release modes and disclaims one in Debug, whose code generator emits from every core at once and writes out whichever thread finished first",
+            "any_of": [
+              "-O=ReleaseFast",
+              "-O=ReleaseSafe",
+              "-O=ReleaseSmall",
+              "-fllvm"
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "count": 1,
+      "violation": {
+        "kind": "conditional_reproducibility",
+        "action": {
+          "mnemonic": "ZigBuildExe",
+          "target": "//linkopts-attr:binary"
+        },
+        "program": {
+          "origin": {
+            "module": {
+              "name": "rules_zig",
+              "extension": "zig"
+            }
+          },
+          "path": "zig"
+        },
+        "wrappers": [],
+        "synonym": null,
+        "unmet": [
+          {
+            "because": "Zig promises a reproducible build in its release modes and disclaims one in Debug, whose code generator emits from every core at once and writes out whichever thread finished first",
+            "any_of": [
+              "-O=ReleaseFast",
+              "-O=ReleaseSafe",
+              "-O=ReleaseSmall",
+              "-fllvm"
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "count": 1,
+      "violation": {
+        "kind": "conditional_reproducibility",
+        "action": {
+          "mnemonic": "ZigBuildExe",
+          "target": "//multiple-sources-binary:binary"
+        },
+        "program": {
+          "origin": {
+            "module": {
+              "name": "rules_zig",
+              "extension": "zig"
+            }
+          },
+          "path": "zig"
+        },
+        "wrappers": [],
+        "synonym": null,
+        "unmet": [
+          {
+            "because": "Zig promises a reproducible build in its release modes and disclaims one in Debug, whose code generator emits from every core at once and writes out whichever thread finished first",
+            "any_of": [
+              "-O=ReleaseFast",
+              "-O=ReleaseSafe",
+              "-O=ReleaseSmall",
+              "-fllvm"
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "count": 1,
+      "violation": {
+        "kind": "conditional_reproducibility",
+        "action": {
+          "mnemonic": "ZigBuildExe",
+          "target": "//root-module-from-single-dependency:binary"
+        },
+        "program": {
+          "origin": {
+            "module": {
+              "name": "rules_zig",
+              "extension": "zig"
+            }
+          },
+          "path": "zig"
+        },
+        "wrappers": [],
+        "synonym": null,
+        "unmet": [
+          {
+            "because": "Zig promises a reproducible build in its release modes and disclaims one in Debug, whose code generator emits from every core at once and writes out whichever thread finished first",
+            "any_of": [
+              "-O=ReleaseFast",
+              "-O=ReleaseSafe",
+              "-O=ReleaseSmall",
+              "-fllvm"
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "count": 1,
+      "violation": {
+        "kind": "conditional_reproducibility",
+        "action": {
+          "mnemonic": "ZigBuildExe",
+          "target": "//runfiles-library:binary"
+        },
+        "program": {
+          "origin": {
+            "module": {
+              "name": "rules_zig",
+              "extension": "zig"
+            }
+          },
+          "path": "zig"
+        },
+        "wrappers": [],
+        "synonym": null,
+        "unmet": [
+          {
+            "because": "Zig promises a reproducible build in its release modes and disclaims one in Debug, whose code generator emits from every core at once and writes out whichever thread finished first",
+            "any_of": [
+              "-O=ReleaseFast",
+              "-O=ReleaseSafe",
+              "-O=ReleaseSmall",
+              "-fllvm"
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "count": 1,
+      "violation": {
+        "kind": "conditional_reproducibility",
+        "action": {
+          "mnemonic": "ZigBuildExe",
+          "target": "//simple-binary:binary"
+        },
+        "program": {
+          "origin": {
+            "module": {
+              "name": "rules_zig",
+              "extension": "zig"
+            }
+          },
+          "path": "zig"
+        },
+        "wrappers": [],
+        "synonym": null,
+        "unmet": [
+          {
+            "because": "Zig promises a reproducible build in its release modes and disclaims one in Debug, whose code generator emits from every core at once and writes out whichever thread finished first",
+            "any_of": [
+              "-O=ReleaseFast",
+              "-O=ReleaseSafe",
+              "-O=ReleaseSmall",
+              "-fllvm"
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "count": 1,
+      "violation": {
+        "kind": "conditional_reproducibility",
+        "action": {
+          "mnemonic": "ZigBuildExe",
+          "target": "//simple-cmake-library:main"
+        },
+        "program": {
+          "origin": {
+            "module": {
+              "name": "rules_zig",
+              "extension": "zig"
+            }
+          },
+          "path": "zig"
+        },
+        "wrappers": [],
+        "synonym": null,
+        "unmet": [
+          {
+            "because": "Zig promises a reproducible build in its release modes and disclaims one in Debug, whose code generator emits from every core at once and writes out whichever thread finished first",
+            "any_of": [
+              "-O=ReleaseFast",
+              "-O=ReleaseSafe",
+              "-O=ReleaseSmall",
+              "-fllvm"
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "count": 2,
+      "violation": {
+        "kind": "conditional_reproducibility",
+        "action": {
+          "mnemonic": "ZigBuildExe",
+          "target": "//toolchain-glibc-version:main-unconfigured"
+        },
+        "program": {
+          "origin": {
+            "module": {
+              "name": "rules_zig",
+              "extension": "zig"
+            }
+          },
+          "path": "zig"
+        },
+        "wrappers": [],
+        "synonym": null,
+        "unmet": [
+          {
+            "because": "Zig promises a reproducible build in its release modes and disclaims one in Debug, whose code generator emits from every core at once and writes out whichever thread finished first",
+            "any_of": [
+              "-O=ReleaseFast",
+              "-O=ReleaseSafe",
+              "-O=ReleaseSmall",
+              "-fllvm"
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "count": 1,
+      "violation": {
+        "kind": "conditional_reproducibility",
+        "action": {
+          "mnemonic": "ZigBuildExe",
+          "target": "//transitive-zig-modules-binary:binary"
+        },
+        "program": {
+          "origin": {
+            "module": {
+              "name": "rules_zig",
+              "extension": "zig"
+            }
+          },
+          "path": "zig"
+        },
+        "wrappers": [],
+        "synonym": null,
+        "unmet": [
+          {
+            "because": "Zig promises a reproducible build in its release modes and disclaims one in Debug, whose code generator emits from every core at once and writes out whichever thread finished first",
+            "any_of": [
+              "-O=ReleaseFast",
+              "-O=ReleaseSafe",
+              "-O=ReleaseSmall",
+              "-fllvm"
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "count": 1,
+      "violation": {
+        "kind": "conditional_reproducibility",
+        "action": {
+          "mnemonic": "ZigBuildExe",
+          "target": "//translate-c/transitive-cc-library-zig-binary:binary"
+        },
+        "program": {
+          "origin": {
+            "module": {
+              "name": "rules_zig",
+              "extension": "zig"
+            }
+          },
+          "path": "zig"
+        },
+        "wrappers": [],
+        "synonym": null,
+        "unmet": [
+          {
+            "because": "Zig promises a reproducible build in its release modes and disclaims one in Debug, whose code generator emits from every core at once and writes out whichever thread finished first",
+            "any_of": [
+              "-O=ReleaseFast",
+              "-O=ReleaseSafe",
+              "-O=ReleaseSmall",
+              "-fllvm"
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "count": 1,
+      "violation": {
+        "kind": "conditional_reproducibility",
+        "action": {
+          "mnemonic": "ZigBuildExe",
+          "target": "//translate-c/transitive-cc-library-zig-binary:global_binary"
+        },
+        "program": {
+          "origin": {
+            "module": {
+              "name": "rules_zig",
+              "extension": "zig"
+            }
+          },
+          "path": "zig"
+        },
+        "wrappers": [],
+        "synonym": null,
+        "unmet": [
+          {
+            "because": "Zig promises a reproducible build in its release modes and disclaims one in Debug, whose code generator emits from every core at once and writes out whichever thread finished first",
+            "any_of": [
+              "-O=ReleaseFast",
+              "-O=ReleaseSafe",
+              "-O=ReleaseSmall",
+              "-fllvm"
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "count": 2,
+      "violation": {
+        "kind": "conditional_reproducibility",
+        "action": {
+          "mnemonic": "ZigBuildExe",
+          "target": "//zig-docs:binary"
+        },
+        "program": {
+          "origin": {
+            "module": {
+              "name": "rules_zig",
+              "extension": "zig"
+            }
+          },
+          "path": "zig"
+        },
+        "wrappers": [],
+        "synonym": null,
+        "unmet": [
+          {
+            "because": "Zig promises a reproducible build in its release modes and disclaims one in Debug, whose code generator emits from every core at once and writes out whichever thread finished first",
+            "any_of": [
+              "-O=ReleaseFast",
+              "-O=ReleaseSafe",
+              "-O=ReleaseSmall",
+              "-fllvm"
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "count": 1,
+      "violation": {
+        "kind": "conditional_reproducibility",
+        "action": {
+          "mnemonic": "ZigBuildExe",
+          "target": "//zig-module-binary:binary"
+        },
+        "program": {
+          "origin": {
+            "module": {
+              "name": "rules_zig",
+              "extension": "zig"
+            }
+          },
+          "path": "zig"
+        },
+        "wrappers": [],
+        "synonym": null,
+        "unmet": [
+          {
+            "because": "Zig promises a reproducible build in its release modes and disclaims one in Debug, whose code generator emits from every core at once and writes out whichever thread finished first",
+            "any_of": [
+              "-O=ReleaseFast",
+              "-O=ReleaseSafe",
+              "-O=ReleaseSmall",
+              "-fllvm"
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "count": 1,
+      "violation": {
+        "kind": "conditional_reproducibility",
+        "action": {
+          "mnemonic": "ZigBuildLib",
+          "target": "//configure-use_cc_common_link/shared-library:binary"
+        },
+        "program": {
+          "origin": {
+            "module": {
+              "name": "rules_zig",
+              "extension": "zig"
+            }
+          },
+          "path": "zig"
+        },
+        "wrappers": [],
+        "synonym": null,
+        "unmet": [
+          {
+            "because": "Zig promises a reproducible build in its release modes and disclaims one in Debug, whose code generator emits from every core at once and writes out whichever thread finished first",
+            "any_of": [
+              "-O=ReleaseFast",
+              "-O=ReleaseSafe",
+              "-O=ReleaseSmall",
+              "-fllvm"
+            ]
+          },
+          {
+            "because": "a static archive stores the name of the temporary directory its object was assembled in, which is drawn afresh for every invocation",
+            "present": [
+              "-femit-bin=bazel-out/k8-fastbuild-ST-692ef125fc87/bin/configure-use_cc_common_link/shared-library/binary.a"
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "count": 1,
+      "violation": {
+        "kind": "conditional_reproducibility",
+        "action": {
+          "mnemonic": "ZigBuildLib",
+          "target": "//configure-use_cc_common_link/shared-library:shared-library"
+        },
+        "program": {
+          "origin": {
+            "module": {
+              "name": "rules_zig",
+              "extension": "zig"
+            }
+          },
+          "path": "zig"
+        },
+        "wrappers": [],
+        "synonym": null,
+        "unmet": [
+          {
+            "because": "Zig promises a reproducible build in its release modes and disclaims one in Debug, whose code generator emits from every core at once and writes out whichever thread finished first",
+            "any_of": [
+              "-O=ReleaseFast",
+              "-O=ReleaseSafe",
+              "-O=ReleaseSmall",
+              "-fllvm"
+            ]
+          },
+          {
+            "because": "a static archive stores the name of the temporary directory its object was assembled in, which is drawn afresh for every invocation",
+            "present": [
+              "-femit-bin=bazel-out/k8-fastbuild-ST-692ef125fc87/bin/configure-use_cc_common_link/shared-library/shared-library.a"
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "count": 1,
+      "violation": {
+        "kind": "conditional_reproducibility",
+        "action": {
+          "mnemonic": "ZigBuildLib",
+          "target": "//configure-use_cc_common_link/shared-library:test"
+        },
+        "program": {
+          "origin": {
+            "module": {
+              "name": "rules_zig",
+              "extension": "zig"
+            }
+          },
+          "path": "zig"
+        },
+        "wrappers": [],
+        "synonym": null,
+        "unmet": [
+          {
+            "because": "Zig promises a reproducible build in its release modes and disclaims one in Debug, whose code generator emits from every core at once and writes out whichever thread finished first",
+            "any_of": [
+              "-O=ReleaseFast",
+              "-O=ReleaseSafe",
+              "-O=ReleaseSmall",
+              "-fllvm"
+            ]
+          },
+          {
+            "because": "a static archive stores the name of the temporary directory its object was assembled in, which is drawn afresh for every invocation",
+            "present": [
+              "-femit-bin=bazel-out/k8-fastbuild-ST-692ef125fc87/bin/configure-use_cc_common_link/shared-library/test.a"
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "count": 1,
+      "violation": {
+        "kind": "conditional_reproducibility",
+        "action": {
+          "mnemonic": "ZigBuildLib",
+          "target": "//configure-use_cc_common_link/static-library:binary"
+        },
+        "program": {
+          "origin": {
+            "module": {
+              "name": "rules_zig",
+              "extension": "zig"
+            }
+          },
+          "path": "zig"
+        },
+        "wrappers": [],
+        "synonym": null,
+        "unmet": [
+          {
+            "because": "Zig promises a reproducible build in its release modes and disclaims one in Debug, whose code generator emits from every core at once and writes out whichever thread finished first",
+            "any_of": [
+              "-O=ReleaseFast",
+              "-O=ReleaseSafe",
+              "-O=ReleaseSmall",
+              "-fllvm"
+            ]
+          },
+          {
+            "because": "a static archive stores the name of the temporary directory its object was assembled in, which is drawn afresh for every invocation",
+            "present": [
+              "-femit-bin=bazel-out/k8-fastbuild-ST-692ef125fc87/bin/configure-use_cc_common_link/static-library/binary.a"
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "count": 1,
+      "violation": {
+        "kind": "conditional_reproducibility",
+        "action": {
+          "mnemonic": "ZigBuildLib",
+          "target": "//configure-use_cc_common_link/static-library:shared-library"
+        },
+        "program": {
+          "origin": {
+            "module": {
+              "name": "rules_zig",
+              "extension": "zig"
+            }
+          },
+          "path": "zig"
+        },
+        "wrappers": [],
+        "synonym": null,
+        "unmet": [
+          {
+            "because": "Zig promises a reproducible build in its release modes and disclaims one in Debug, whose code generator emits from every core at once and writes out whichever thread finished first",
+            "any_of": [
+              "-O=ReleaseFast",
+              "-O=ReleaseSafe",
+              "-O=ReleaseSmall",
+              "-fllvm"
+            ]
+          },
+          {
+            "because": "a static archive stores the name of the temporary directory its object was assembled in, which is drawn afresh for every invocation",
+            "present": [
+              "-femit-bin=bazel-out/k8-fastbuild-ST-692ef125fc87/bin/configure-use_cc_common_link/static-library/shared-library.a"
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "count": 1,
+      "violation": {
+        "kind": "conditional_reproducibility",
+        "action": {
+          "mnemonic": "ZigBuildLib",
+          "target": "//configure-use_cc_common_link/static-library:test"
+        },
+        "program": {
+          "origin": {
+            "module": {
+              "name": "rules_zig",
+              "extension": "zig"
+            }
+          },
+          "path": "zig"
+        },
+        "wrappers": [],
+        "synonym": null,
+        "unmet": [
+          {
+            "because": "Zig promises a reproducible build in its release modes and disclaims one in Debug, whose code generator emits from every core at once and writes out whichever thread finished first",
+            "any_of": [
+              "-O=ReleaseFast",
+              "-O=ReleaseSafe",
+              "-O=ReleaseSmall",
+              "-fllvm"
+            ]
+          },
+          {
+            "because": "a static archive stores the name of the temporary directory its object was assembled in, which is drawn afresh for every invocation",
+            "present": [
+              "-femit-bin=bazel-out/k8-fastbuild-ST-692ef125fc87/bin/configure-use_cc_common_link/static-library/test.a"
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "count": 1,
+      "violation": {
+        "kind": "conditional_reproducibility",
+        "action": {
+          "mnemonic": "ZigBuildLib",
+          "target": "//linkopts-attr:binary"
+        },
+        "program": {
+          "origin": {
+            "module": {
+              "name": "rules_zig",
+              "extension": "zig"
+            }
+          },
+          "path": "zig"
+        },
+        "wrappers": [],
+        "synonym": null,
+        "unmet": [
+          {
+            "because": "Zig promises a reproducible build in its release modes and disclaims one in Debug, whose code generator emits from every core at once and writes out whichever thread finished first",
+            "any_of": [
+              "-O=ReleaseFast",
+              "-O=ReleaseSafe",
+              "-O=ReleaseSmall",
+              "-fllvm"
+            ]
+          },
+          {
+            "because": "a static archive stores the name of the temporary directory its object was assembled in, which is drawn afresh for every invocation",
+            "present": [
+              "-femit-bin=bazel-out/k8-fastbuild-ST-692ef125fc87/bin/linkopts-attr/binary.a"
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "count": 1,
+      "violation": {
+        "kind": "conditional_reproducibility",
+        "action": {
+          "mnemonic": "ZigBuildLib",
+          "target": "//linkopts-attr:shared-library"
+        },
+        "program": {
+          "origin": {
+            "module": {
+              "name": "rules_zig",
+              "extension": "zig"
+            }
+          },
+          "path": "zig"
+        },
+        "wrappers": [],
+        "synonym": null,
+        "unmet": [
+          {
+            "because": "Zig promises a reproducible build in its release modes and disclaims one in Debug, whose code generator emits from every core at once and writes out whichever thread finished first",
+            "any_of": [
+              "-O=ReleaseFast",
+              "-O=ReleaseSafe",
+              "-O=ReleaseSmall",
+              "-fllvm"
+            ]
+          },
+          {
+            "because": "a static archive stores the name of the temporary directory its object was assembled in, which is drawn afresh for every invocation",
+            "present": [
+              "-femit-bin=bazel-out/k8-fastbuild-ST-692ef125fc87/bin/linkopts-attr/shared-library.a"
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "count": 1,
+      "violation": {
+        "kind": "conditional_reproducibility",
+        "action": {
+          "mnemonic": "ZigBuildLib",
+          "target": "//linkopts-attr:test"
+        },
+        "program": {
+          "origin": {
+            "module": {
+              "name": "rules_zig",
+              "extension": "zig"
+            }
+          },
+          "path": "zig"
+        },
+        "wrappers": [],
+        "synonym": null,
+        "unmet": [
+          {
+            "because": "Zig promises a reproducible build in its release modes and disclaims one in Debug, whose code generator emits from every core at once and writes out whichever thread finished first",
+            "any_of": [
+              "-O=ReleaseFast",
+              "-O=ReleaseSafe",
+              "-O=ReleaseSmall",
+              "-fllvm"
+            ]
+          },
+          {
+            "because": "a static archive stores the name of the temporary directory its object was assembled in, which is drawn afresh for every invocation",
+            "present": [
+              "-femit-bin=bazel-out/k8-fastbuild-ST-692ef125fc87/bin/linkopts-attr/test.a"
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "count": 1,
+      "violation": {
+        "kind": "conditional_reproducibility",
+        "action": {
+          "mnemonic": "ZigBuildSharedLib",
+          "target": "//cc-dependencies/shared-library:add"
+        },
+        "program": {
+          "origin": {
+            "module": {
+              "name": "rules_zig",
+              "extension": "zig"
+            }
+          },
+          "path": "zig"
+        },
+        "wrappers": [],
+        "synonym": null,
+        "unmet": [
+          {
+            "because": "Zig promises a reproducible build in its release modes and disclaims one in Debug, whose code generator emits from every core at once and writes out whichever thread finished first",
+            "any_of": [
+              "-O=ReleaseFast",
+              "-O=ReleaseSafe",
+              "-O=ReleaseSmall",
+              "-fllvm"
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "count": 1,
+      "violation": {
+        "kind": "conditional_reproducibility",
+        "action": {
+          "mnemonic": "ZigBuildSharedLib",
+          "target": "//cc-dependencies/shared-library:mul"
+        },
+        "program": {
+          "origin": {
+            "module": {
+              "name": "rules_zig",
+              "extension": "zig"
+            }
+          },
+          "path": "zig"
+        },
+        "wrappers": [],
+        "synonym": null,
+        "unmet": [
+          {
+            "because": "Zig promises a reproducible build in its release modes and disclaims one in Debug, whose code generator emits from every core at once and writes out whichever thread finished first",
+            "any_of": [
+              "-O=ReleaseFast",
+              "-O=ReleaseSafe",
+              "-O=ReleaseSmall",
+              "-fllvm"
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "count": 1,
+      "violation": {
+        "kind": "conditional_reproducibility",
+        "action": {
+          "mnemonic": "ZigBuildSharedLib",
+          "target": "//linkopts-attr:shared-library"
+        },
+        "program": {
+          "origin": {
+            "module": {
+              "name": "rules_zig",
+              "extension": "zig"
+            }
+          },
+          "path": "zig"
+        },
+        "wrappers": [],
+        "synonym": null,
+        "unmet": [
+          {
+            "because": "Zig promises a reproducible build in its release modes and disclaims one in Debug, whose code generator emits from every core at once and writes out whichever thread finished first",
+            "any_of": [
+              "-O=ReleaseFast",
+              "-O=ReleaseSafe",
+              "-O=ReleaseSmall",
+              "-fllvm"
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "count": 1,
+      "violation": {
+        "kind": "conditional_reproducibility",
+        "action": {
+          "mnemonic": "ZigBuildSharedLib",
+          "target": "//root-module-from-single-dependency:shared-library"
+        },
+        "program": {
+          "origin": {
+            "module": {
+              "name": "rules_zig",
+              "extension": "zig"
+            }
+          },
+          "path": "zig"
+        },
+        "wrappers": [],
+        "synonym": null,
+        "unmet": [
+          {
+            "because": "Zig promises a reproducible build in its release modes and disclaims one in Debug, whose code generator emits from every core at once and writes out whichever thread finished first",
+            "any_of": [
+              "-O=ReleaseFast",
+              "-O=ReleaseSafe",
+              "-O=ReleaseSmall",
+              "-fllvm"
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "count": 1,
+      "violation": {
+        "kind": "conditional_reproducibility",
+        "action": {
+          "mnemonic": "ZigBuildSharedLib",
+          "target": "//simple-shared-library:shared"
+        },
+        "program": {
+          "origin": {
+            "module": {
+              "name": "rules_zig",
+              "extension": "zig"
+            }
+          },
+          "path": "zig"
+        },
+        "wrappers": [],
+        "synonym": null,
+        "unmet": [
+          {
+            "because": "Zig promises a reproducible build in its release modes and disclaims one in Debug, whose code generator emits from every core at once and writes out whichever thread finished first",
+            "any_of": [
+              "-O=ReleaseFast",
+              "-O=ReleaseSafe",
+              "-O=ReleaseSmall",
+              "-fllvm"
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "count": 2,
+      "violation": {
+        "kind": "conditional_reproducibility",
+        "action": {
+          "mnemonic": "ZigBuildSharedLib",
+          "target": "//zig-docs:shared-library"
+        },
+        "program": {
+          "origin": {
+            "module": {
+              "name": "rules_zig",
+              "extension": "zig"
+            }
+          },
+          "path": "zig"
+        },
+        "wrappers": [],
+        "synonym": null,
+        "unmet": [
+          {
+            "because": "Zig promises a reproducible build in its release modes and disclaims one in Debug, whose code generator emits from every core at once and writes out whichever thread finished first",
+            "any_of": [
+              "-O=ReleaseFast",
+              "-O=ReleaseSafe",
+              "-O=ReleaseSmall",
+              "-fllvm"
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "count": 1,
+      "violation": {
+        "kind": "conditional_reproducibility",
+        "action": {
+          "mnemonic": "ZigBuildStaticLib",
+          "target": "//c-sources:library"
+        },
+        "program": {
+          "origin": {
+            "module": {
+              "name": "rules_zig",
+              "extension": "zig"
+            }
+          },
+          "path": "zig"
+        },
+        "wrappers": [],
+        "synonym": null,
+        "unmet": [
+          {
+            "because": "Zig promises a reproducible build in its release modes and disclaims one in Debug, whose code generator emits from every core at once and writes out whichever thread finished first",
+            "any_of": [
+              "-O=ReleaseFast",
+              "-O=ReleaseSafe",
+              "-O=ReleaseSmall",
+              "-fllvm"
+            ]
+          },
+          {
+            "because": "a static archive stores the name of the temporary directory its object was assembled in, which is drawn afresh for every invocation",
+            "present": [
+              "-femit-bin=bazel-out/k8-fastbuild/bin/c-sources/liblibrary.a"
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "count": 1,
+      "violation": {
+        "kind": "conditional_reproducibility",
+        "action": {
+          "mnemonic": "ZigBuildStaticLib",
+          "target": "//cc-dependencies/static-library-cdeps:add"
+        },
+        "program": {
+          "origin": {
+            "module": {
+              "name": "rules_zig",
+              "extension": "zig"
+            }
+          },
+          "path": "zig"
+        },
+        "wrappers": [],
+        "synonym": null,
+        "unmet": [
+          {
+            "because": "Zig promises a reproducible build in its release modes and disclaims one in Debug, whose code generator emits from every core at once and writes out whichever thread finished first",
+            "any_of": [
+              "-O=ReleaseFast",
+              "-O=ReleaseSafe",
+              "-O=ReleaseSmall",
+              "-fllvm"
+            ]
+          },
+          {
+            "because": "a static archive stores the name of the temporary directory its object was assembled in, which is drawn afresh for every invocation",
+            "present": [
+              "-femit-bin=bazel-out/k8-fastbuild/bin/cc-dependencies/static-library-cdeps/libadd.a"
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "count": 1,
+      "violation": {
+        "kind": "conditional_reproducibility",
+        "action": {
+          "mnemonic": "ZigBuildStaticLib",
+          "target": "//cc-dependencies/static-library-cdeps:add"
+        },
+        "program": {
+          "origin": {
+            "module": {
+              "name": "rules_zig",
+              "extension": "zig"
+            }
+          },
+          "path": "zig"
+        },
+        "wrappers": [],
+        "synonym": null,
+        "unmet": [
+          {
+            "because": "a static archive stores the name of the temporary directory its object was assembled in, which is drawn afresh for every invocation",
+            "present": [
+              "-femit-bin=bazel-out/k8-fastbuild-ST-8e42560474ff/bin/cc-dependencies/static-library-cdeps/libadd.a"
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "count": 1,
+      "violation": {
+        "kind": "conditional_reproducibility",
+        "action": {
+          "mnemonic": "ZigBuildStaticLib",
+          "target": "//cc-dependencies/static-library-cdeps:mul"
+        },
+        "program": {
+          "origin": {
+            "module": {
+              "name": "rules_zig",
+              "extension": "zig"
+            }
+          },
+          "path": "zig"
+        },
+        "wrappers": [],
+        "synonym": null,
+        "unmet": [
+          {
+            "because": "Zig promises a reproducible build in its release modes and disclaims one in Debug, whose code generator emits from every core at once and writes out whichever thread finished first",
+            "any_of": [
+              "-O=ReleaseFast",
+              "-O=ReleaseSafe",
+              "-O=ReleaseSmall",
+              "-fllvm"
+            ]
+          },
+          {
+            "because": "a static archive stores the name of the temporary directory its object was assembled in, which is drawn afresh for every invocation",
+            "present": [
+              "-femit-bin=bazel-out/k8-fastbuild/bin/cc-dependencies/static-library-cdeps/libmul.a"
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "count": 1,
+      "violation": {
+        "kind": "conditional_reproducibility",
+        "action": {
+          "mnemonic": "ZigBuildStaticLib",
+          "target": "//cc-dependencies/static-library-cdeps:mul"
+        },
+        "program": {
+          "origin": {
+            "module": {
+              "name": "rules_zig",
+              "extension": "zig"
+            }
+          },
+          "path": "zig"
+        },
+        "wrappers": [],
+        "synonym": null,
+        "unmet": [
+          {
+            "because": "a static archive stores the name of the temporary directory its object was assembled in, which is drawn afresh for every invocation",
+            "present": [
+              "-femit-bin=bazel-out/k8-fastbuild-ST-8e42560474ff/bin/cc-dependencies/static-library-cdeps/libmul.a"
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "count": 1,
+      "violation": {
+        "kind": "conditional_reproducibility",
+        "action": {
+          "mnemonic": "ZigBuildStaticLib",
+          "target": "//cc-dependencies/static-library:add"
+        },
+        "program": {
+          "origin": {
+            "module": {
+              "name": "rules_zig",
+              "extension": "zig"
+            }
+          },
+          "path": "zig"
+        },
+        "wrappers": [],
+        "synonym": null,
+        "unmet": [
+          {
+            "because": "Zig promises a reproducible build in its release modes and disclaims one in Debug, whose code generator emits from every core at once and writes out whichever thread finished first",
+            "any_of": [
+              "-O=ReleaseFast",
+              "-O=ReleaseSafe",
+              "-O=ReleaseSmall",
+              "-fllvm"
+            ]
+          },
+          {
+            "because": "a static archive stores the name of the temporary directory its object was assembled in, which is drawn afresh for every invocation",
+            "present": [
+              "-femit-bin=bazel-out/k8-fastbuild/bin/cc-dependencies/static-library/libadd.a"
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "count": 1,
+      "violation": {
+        "kind": "conditional_reproducibility",
+        "action": {
+          "mnemonic": "ZigBuildStaticLib",
+          "target": "//cc-dependencies/static-library:add"
+        },
+        "program": {
+          "origin": {
+            "module": {
+              "name": "rules_zig",
+              "extension": "zig"
+            }
+          },
+          "path": "zig"
+        },
+        "wrappers": [],
+        "synonym": null,
+        "unmet": [
+          {
+            "because": "a static archive stores the name of the temporary directory its object was assembled in, which is drawn afresh for every invocation",
+            "present": [
+              "-femit-bin=bazel-out/k8-fastbuild-ST-8e42560474ff/bin/cc-dependencies/static-library/libadd.a"
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "count": 1,
+      "violation": {
+        "kind": "conditional_reproducibility",
+        "action": {
+          "mnemonic": "ZigBuildStaticLib",
+          "target": "//cc-dependencies/static-library:mul"
+        },
+        "program": {
+          "origin": {
+            "module": {
+              "name": "rules_zig",
+              "extension": "zig"
+            }
+          },
+          "path": "zig"
+        },
+        "wrappers": [],
+        "synonym": null,
+        "unmet": [
+          {
+            "because": "Zig promises a reproducible build in its release modes and disclaims one in Debug, whose code generator emits from every core at once and writes out whichever thread finished first",
+            "any_of": [
+              "-O=ReleaseFast",
+              "-O=ReleaseSafe",
+              "-O=ReleaseSmall",
+              "-fllvm"
+            ]
+          },
+          {
+            "because": "a static archive stores the name of the temporary directory its object was assembled in, which is drawn afresh for every invocation",
+            "present": [
+              "-femit-bin=bazel-out/k8-fastbuild/bin/cc-dependencies/static-library/libmul.a"
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "count": 1,
+      "violation": {
+        "kind": "conditional_reproducibility",
+        "action": {
+          "mnemonic": "ZigBuildStaticLib",
+          "target": "//cc-dependencies/static-library:mul"
+        },
+        "program": {
+          "origin": {
+            "module": {
+              "name": "rules_zig",
+              "extension": "zig"
+            }
+          },
+          "path": "zig"
+        },
+        "wrappers": [],
+        "synonym": null,
+        "unmet": [
+          {
+            "because": "a static archive stores the name of the temporary directory its object was assembled in, which is drawn afresh for every invocation",
+            "present": [
+              "-femit-bin=bazel-out/k8-fastbuild-ST-8e42560474ff/bin/cc-dependencies/static-library/libmul.a"
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "count": 1,
+      "violation": {
+        "kind": "conditional_reproducibility",
+        "action": {
+          "mnemonic": "ZigBuildStaticLib",
+          "target": "//configure-mode:library"
+        },
+        "program": {
+          "origin": {
+            "module": {
+              "name": "rules_zig",
+              "extension": "zig"
+            }
+          },
+          "path": "zig"
+        },
+        "wrappers": [],
+        "synonym": null,
+        "unmet": [
+          {
+            "because": "Zig promises a reproducible build in its release modes and disclaims one in Debug, whose code generator emits from every core at once and writes out whichever thread finished first",
+            "any_of": [
+              "-O=ReleaseFast",
+              "-O=ReleaseSafe",
+              "-O=ReleaseSmall",
+              "-fllvm"
+            ]
+          },
+          {
+            "because": "a static archive stores the name of the temporary directory its object was assembled in, which is drawn afresh for every invocation",
+            "present": [
+              "-femit-bin=bazel-out/k8-fastbuild-ST-706cfd714727/bin/configure-mode/liblibrary.a"
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "count": 1,
+      "violation": {
+        "kind": "conditional_reproducibility",
+        "action": {
+          "mnemonic": "ZigBuildStaticLib",
+          "target": "//configure-mode:library"
+        },
+        "program": {
+          "origin": {
+            "module": {
+              "name": "rules_zig",
+              "extension": "zig"
+            }
+          },
+          "path": "zig"
+        },
+        "wrappers": [],
+        "synonym": null,
+        "unmet": [
+          {
+            "because": "a static archive stores the name of the temporary directory its object was assembled in, which is drawn afresh for every invocation",
+            "present": [
+              "-femit-bin=bazel-out/k8-fastbuild-ST-84de4b4c55ec/bin/configure-mode/liblibrary.a"
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "count": 1,
+      "violation": {
+        "kind": "conditional_reproducibility",
+        "action": {
+          "mnemonic": "ZigBuildStaticLib",
+          "target": "//configure-threaded:library"
+        },
+        "program": {
+          "origin": {
+            "module": {
+              "name": "rules_zig",
+              "extension": "zig"
+            }
+          },
+          "path": "zig"
+        },
+        "wrappers": [],
+        "synonym": null,
+        "unmet": [
+          {
+            "because": "Zig promises a reproducible build in its release modes and disclaims one in Debug, whose code generator emits from every core at once and writes out whichever thread finished first",
+            "any_of": [
+              "-O=ReleaseFast",
+              "-O=ReleaseSafe",
+              "-O=ReleaseSmall",
+              "-fllvm"
+            ]
+          },
+          {
+            "because": "a static archive stores the name of the temporary directory its object was assembled in, which is drawn afresh for every invocation",
+            "present": [
+              "-femit-bin=bazel-out/k8-fastbuild-ST-07e9fd467e13/bin/configure-threaded/liblibrary.a"
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "count": 1,
+      "violation": {
+        "kind": "conditional_reproducibility",
+        "action": {
+          "mnemonic": "ZigBuildStaticLib",
+          "target": "//configure-threaded:library"
+        },
+        "program": {
+          "origin": {
+            "module": {
+              "name": "rules_zig",
+              "extension": "zig"
+            }
+          },
+          "path": "zig"
+        },
+        "wrappers": [],
+        "synonym": null,
+        "unmet": [
+          {
+            "because": "Zig promises a reproducible build in its release modes and disclaims one in Debug, whose code generator emits from every core at once and writes out whichever thread finished first",
+            "any_of": [
+              "-O=ReleaseFast",
+              "-O=ReleaseSafe",
+              "-O=ReleaseSmall",
+              "-fllvm"
+            ]
+          },
+          {
+            "because": "a static archive stores the name of the temporary directory its object was assembled in, which is drawn afresh for every invocation",
+            "present": [
+              "-femit-bin=bazel-out/k8-fastbuild/bin/configure-threaded/liblibrary.a"
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "count": 1,
+      "violation": {
+        "kind": "conditional_reproducibility",
+        "action": {
+          "mnemonic": "ZigBuildStaticLib",
+          "target": "//configure-use_cc_common_link/shared-library:static-library"
+        },
+        "program": {
+          "origin": {
+            "module": {
+              "name": "rules_zig",
+              "extension": "zig"
+            }
+          },
+          "path": "zig"
+        },
+        "wrappers": [],
+        "synonym": null,
+        "unmet": [
+          {
+            "because": "Zig promises a reproducible build in its release modes and disclaims one in Debug, whose code generator emits from every core at once and writes out whichever thread finished first",
+            "any_of": [
+              "-O=ReleaseFast",
+              "-O=ReleaseSafe",
+              "-O=ReleaseSmall",
+              "-fllvm"
+            ]
+          },
+          {
+            "because": "a static archive stores the name of the temporary directory its object was assembled in, which is drawn afresh for every invocation",
+            "present": [
+              "-femit-bin=bazel-out/k8-fastbuild-ST-692ef125fc87/bin/configure-use_cc_common_link/shared-library/libstatic-library.a"
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "count": 1,
+      "violation": {
+        "kind": "conditional_reproducibility",
+        "action": {
+          "mnemonic": "ZigBuildStaticLib",
+          "target": "//configure-use_cc_common_link/static-library:static-library"
+        },
+        "program": {
+          "origin": {
+            "module": {
+              "name": "rules_zig",
+              "extension": "zig"
+            }
+          },
+          "path": "zig"
+        },
+        "wrappers": [],
+        "synonym": null,
+        "unmet": [
+          {
+            "because": "Zig promises a reproducible build in its release modes and disclaims one in Debug, whose code generator emits from every core at once and writes out whichever thread finished first",
+            "any_of": [
+              "-O=ReleaseFast",
+              "-O=ReleaseSafe",
+              "-O=ReleaseSmall",
+              "-fllvm"
+            ]
+          },
+          {
+            "because": "a static archive stores the name of the temporary directory its object was assembled in, which is drawn afresh for every invocation",
+            "present": [
+              "-femit-bin=bazel-out/k8-fastbuild-ST-692ef125fc87/bin/configure-use_cc_common_link/static-library/libstatic-library.a"
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "count": 1,
+      "violation": {
+        "kind": "conditional_reproducibility",
+        "action": {
+          "mnemonic": "ZigBuildStaticLib",
+          "target": "//embed-file:library"
+        },
+        "program": {
+          "origin": {
+            "module": {
+              "name": "rules_zig",
+              "extension": "zig"
+            }
+          },
+          "path": "zig"
+        },
+        "wrappers": [],
+        "synonym": null,
+        "unmet": [
+          {
+            "because": "Zig promises a reproducible build in its release modes and disclaims one in Debug, whose code generator emits from every core at once and writes out whichever thread finished first",
+            "any_of": [
+              "-O=ReleaseFast",
+              "-O=ReleaseSafe",
+              "-O=ReleaseSmall",
+              "-fllvm"
+            ]
+          },
+          {
+            "because": "a static archive stores the name of the temporary directory its object was assembled in, which is drawn afresh for every invocation",
+            "present": [
+              "-femit-bin=bazel-out/k8-fastbuild/bin/embed-file/liblibrary.a"
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "count": 1,
+      "violation": {
+        "kind": "conditional_reproducibility",
+        "action": {
+          "mnemonic": "ZigBuildStaticLib",
+          "target": "//include-dependencies/zig-include-define:library"
+        },
+        "program": {
+          "origin": {
+            "module": {
+              "name": "rules_zig",
+              "extension": "zig"
+            }
+          },
+          "path": "zig"
+        },
+        "wrappers": [],
+        "synonym": null,
+        "unmet": [
+          {
+            "because": "Zig promises a reproducible build in its release modes and disclaims one in Debug, whose code generator emits from every core at once and writes out whichever thread finished first",
+            "any_of": [
+              "-O=ReleaseFast",
+              "-O=ReleaseSafe",
+              "-O=ReleaseSmall",
+              "-fllvm"
+            ]
+          },
+          {
+            "because": "a static archive stores the name of the temporary directory its object was assembled in, which is drawn afresh for every invocation",
+            "present": [
+              "-femit-bin=bazel-out/k8-fastbuild/bin/include-dependencies/zig-include-define/liblibrary.a"
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "count": 1,
+      "violation": {
+        "kind": "conditional_reproducibility",
+        "action": {
+          "mnemonic": "ZigBuildStaticLib",
+          "target": "//include-dependencies/zig-include-isystem:library"
+        },
+        "program": {
+          "origin": {
+            "module": {
+              "name": "rules_zig",
+              "extension": "zig"
+            }
+          },
+          "path": "zig"
+        },
+        "wrappers": [],
+        "synonym": null,
+        "unmet": [
+          {
+            "because": "Zig promises a reproducible build in its release modes and disclaims one in Debug, whose code generator emits from every core at once and writes out whichever thread finished first",
+            "any_of": [
+              "-O=ReleaseFast",
+              "-O=ReleaseSafe",
+              "-O=ReleaseSmall",
+              "-fllvm"
+            ]
+          },
+          {
+            "because": "a static archive stores the name of the temporary directory its object was assembled in, which is drawn afresh for every invocation",
+            "present": [
+              "-femit-bin=bazel-out/k8-fastbuild/bin/include-dependencies/zig-include-isystem/liblibrary.a"
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "count": 1,
+      "violation": {
+        "kind": "conditional_reproducibility",
+        "action": {
+          "mnemonic": "ZigBuildStaticLib",
+          "target": "//include-dependencies/zig-include:library"
+        },
+        "program": {
+          "origin": {
+            "module": {
+              "name": "rules_zig",
+              "extension": "zig"
+            }
+          },
+          "path": "zig"
+        },
+        "wrappers": [],
+        "synonym": null,
+        "unmet": [
+          {
+            "because": "Zig promises a reproducible build in its release modes and disclaims one in Debug, whose code generator emits from every core at once and writes out whichever thread finished first",
+            "any_of": [
+              "-O=ReleaseFast",
+              "-O=ReleaseSafe",
+              "-O=ReleaseSmall",
+              "-fllvm"
+            ]
+          },
+          {
+            "because": "a static archive stores the name of the temporary directory its object was assembled in, which is drawn afresh for every invocation",
+            "present": [
+              "-femit-bin=bazel-out/k8-fastbuild/bin/include-dependencies/zig-include/liblibrary.a"
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "count": 1,
+      "violation": {
+        "kind": "conditional_reproducibility",
+        "action": {
+          "mnemonic": "ZigBuildStaticLib",
+          "target": "//include-dependencies/zig-std-include:library"
+        },
+        "program": {
+          "origin": {
+            "module": {
+              "name": "rules_zig",
+              "extension": "zig"
+            }
+          },
+          "path": "zig"
+        },
+        "wrappers": [],
+        "synonym": null,
+        "unmet": [
+          {
+            "because": "Zig promises a reproducible build in its release modes and disclaims one in Debug, whose code generator emits from every core at once and writes out whichever thread finished first",
+            "any_of": [
+              "-O=ReleaseFast",
+              "-O=ReleaseSafe",
+              "-O=ReleaseSmall",
+              "-fllvm"
+            ]
+          },
+          {
+            "because": "a static archive stores the name of the temporary directory its object was assembled in, which is drawn afresh for every invocation",
+            "present": [
+              "-femit-bin=bazel-out/k8-fastbuild/bin/include-dependencies/zig-std-include/liblibrary.a"
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "count": 1,
+      "violation": {
+        "kind": "conditional_reproducibility",
+        "action": {
+          "mnemonic": "ZigBuildStaticLib",
+          "target": "//link-dependencies/shared-library:library"
+        },
+        "program": {
+          "origin": {
+            "module": {
+              "name": "rules_zig",
+              "extension": "zig"
+            }
+          },
+          "path": "zig"
+        },
+        "wrappers": [],
+        "synonym": null,
+        "unmet": [
+          {
+            "because": "Zig promises a reproducible build in its release modes and disclaims one in Debug, whose code generator emits from every core at once and writes out whichever thread finished first",
+            "any_of": [
+              "-O=ReleaseFast",
+              "-O=ReleaseSafe",
+              "-O=ReleaseSmall",
+              "-fllvm"
+            ]
+          },
+          {
+            "because": "a static archive stores the name of the temporary directory its object was assembled in, which is drawn afresh for every invocation",
+            "present": [
+              "-femit-bin=bazel-out/k8-fastbuild/bin/link-dependencies/shared-library/liblibrary.a"
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "count": 1,
+      "violation": {
+        "kind": "conditional_reproducibility",
+        "action": {
+          "mnemonic": "ZigBuildStaticLib",
+          "target": "//link-dependencies/static-library:library"
+        },
+        "program": {
+          "origin": {
+            "module": {
+              "name": "rules_zig",
+              "extension": "zig"
+            }
+          },
+          "path": "zig"
+        },
+        "wrappers": [],
+        "synonym": null,
+        "unmet": [
+          {
+            "because": "Zig promises a reproducible build in its release modes and disclaims one in Debug, whose code generator emits from every core at once and writes out whichever thread finished first",
+            "any_of": [
+              "-O=ReleaseFast",
+              "-O=ReleaseSafe",
+              "-O=ReleaseSmall",
+              "-fllvm"
+            ]
+          },
+          {
+            "because": "a static archive stores the name of the temporary directory its object was assembled in, which is drawn afresh for every invocation",
+            "present": [
+              "-femit-bin=bazel-out/k8-fastbuild/bin/link-dependencies/static-library/liblibrary.a"
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "count": 1,
+      "violation": {
+        "kind": "conditional_reproducibility",
+        "action": {
+          "mnemonic": "ZigBuildStaticLib",
+          "target": "//linker-script:library"
+        },
+        "program": {
+          "origin": {
+            "module": {
+              "name": "rules_zig",
+              "extension": "zig"
+            }
+          },
+          "path": "zig"
+        },
+        "wrappers": [],
+        "synonym": null,
+        "unmet": [
+          {
+            "because": "a static archive stores the name of the temporary directory its object was assembled in, which is drawn afresh for every invocation",
+            "present": [
+              "-femit-bin=bazel-out/k8-fastbuild/bin/linker-script/liblibrary.a"
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "count": 1,
+      "violation": {
+        "kind": "conditional_reproducibility",
+        "action": {
+          "mnemonic": "ZigBuildStaticLib",
+          "target": "//root-module-from-single-dependency:static-library"
+        },
+        "program": {
+          "origin": {
+            "module": {
+              "name": "rules_zig",
+              "extension": "zig"
+            }
+          },
+          "path": "zig"
+        },
+        "wrappers": [],
+        "synonym": null,
+        "unmet": [
+          {
+            "because": "Zig promises a reproducible build in its release modes and disclaims one in Debug, whose code generator emits from every core at once and writes out whichever thread finished first",
+            "any_of": [
+              "-O=ReleaseFast",
+              "-O=ReleaseSafe",
+              "-O=ReleaseSmall",
+              "-fllvm"
+            ]
+          },
+          {
+            "because": "a static archive stores the name of the temporary directory its object was assembled in, which is drawn afresh for every invocation",
+            "present": [
+              "-femit-bin=bazel-out/k8-fastbuild/bin/root-module-from-single-dependency/libstatic-library.a"
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "count": 1,
+      "violation": {
+        "kind": "conditional_reproducibility",
+        "action": {
+          "mnemonic": "ZigBuildStaticLib",
+          "target": "//simple-library:library"
+        },
+        "program": {
+          "origin": {
+            "module": {
+              "name": "rules_zig",
+              "extension": "zig"
+            }
+          },
+          "path": "zig"
+        },
+        "wrappers": [],
+        "synonym": null,
+        "unmet": [
+          {
+            "because": "Zig promises a reproducible build in its release modes and disclaims one in Debug, whose code generator emits from every core at once and writes out whichever thread finished first",
+            "any_of": [
+              "-O=ReleaseFast",
+              "-O=ReleaseSafe",
+              "-O=ReleaseSmall",
+              "-fllvm"
+            ]
+          },
+          {
+            "because": "a static archive stores the name of the temporary directory its object was assembled in, which is drawn afresh for every invocation",
+            "present": [
+              "-femit-bin=bazel-out/k8-fastbuild/bin/simple-library/liblibrary.a"
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "count": 1,
+      "violation": {
+        "kind": "conditional_reproducibility",
+        "action": {
+          "mnemonic": "ZigBuildStaticLib",
+          "target": "//zig-docs:library"
+        },
+        "program": {
+          "origin": {
+            "module": {
+              "name": "rules_zig",
+              "extension": "zig"
+            }
+          },
+          "path": "zig"
+        },
+        "wrappers": [],
+        "synonym": null,
+        "unmet": [
+          {
+            "because": "Zig promises a reproducible build in its release modes and disclaims one in Debug, whose code generator emits from every core at once and writes out whichever thread finished first",
+            "any_of": [
+              "-O=ReleaseFast",
+              "-O=ReleaseSafe",
+              "-O=ReleaseSmall",
+              "-fllvm"
+            ]
+          },
+          {
+            "because": "a static archive stores the name of the temporary directory its object was assembled in, which is drawn afresh for every invocation",
+            "present": [
+              "-femit-bin=bazel-out/k8-fastbuild-ST-0e8471026165/bin/zig-docs/liblibrary.a"
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "count": 1,
+      "violation": {
+        "kind": "conditional_reproducibility",
+        "action": {
+          "mnemonic": "ZigBuildStaticLib",
+          "target": "//zig-docs:library"
+        },
+        "program": {
+          "origin": {
+            "module": {
+              "name": "rules_zig",
+              "extension": "zig"
+            }
+          },
+          "path": "zig"
+        },
+        "wrappers": [],
+        "synonym": null,
+        "unmet": [
+          {
+            "because": "Zig promises a reproducible build in its release modes and disclaims one in Debug, whose code generator emits from every core at once and writes out whichever thread finished first",
+            "any_of": [
+              "-O=ReleaseFast",
+              "-O=ReleaseSafe",
+              "-O=ReleaseSmall",
+              "-fllvm"
+            ]
+          },
+          {
+            "because": "a static archive stores the name of the temporary directory its object was assembled in, which is drawn afresh for every invocation",
+            "present": [
+              "-femit-bin=bazel-out/k8-fastbuild/bin/zig-docs/liblibrary.a"
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "count": 1,
+      "violation": {
+        "kind": "conditional_reproducibility",
+        "action": {
+          "mnemonic": "ZigBuildTest",
+          "target": "//bazel_builtin:test"
+        },
+        "program": {
+          "origin": {
+            "module": {
+              "name": "rules_zig",
+              "extension": "zig"
+            }
+          },
+          "path": "zig"
+        },
+        "wrappers": [],
+        "synonym": null,
+        "unmet": [
+          {
+            "because": "Zig promises a reproducible build in its release modes and disclaims one in Debug, whose code generator emits from every core at once and writes out whichever thread finished first",
+            "any_of": [
+              "-O=ReleaseFast",
+              "-O=ReleaseSafe",
+              "-O=ReleaseSmall",
+              "-fllvm"
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "count": 1,
+      "violation": {
+        "kind": "conditional_reproducibility",
+        "action": {
+          "mnemonic": "ZigBuildTest",
+          "target": "//c-sources:test"
+        },
+        "program": {
+          "origin": {
+            "module": {
+              "name": "rules_zig",
+              "extension": "zig"
+            }
+          },
+          "path": "zig"
+        },
+        "wrappers": [],
+        "synonym": null,
+        "unmet": [
+          {
+            "because": "Zig promises a reproducible build in its release modes and disclaims one in Debug, whose code generator emits from every core at once and writes out whichever thread finished first",
+            "any_of": [
+              "-O=ReleaseFast",
+              "-O=ReleaseSafe",
+              "-O=ReleaseSmall",
+              "-fllvm"
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "count": 1,
+      "violation": {
+        "kind": "conditional_reproducibility",
+        "action": {
+          "mnemonic": "ZigBuildTest",
+          "target": "//configure-mode:_test_debug"
+        },
+        "program": {
+          "origin": {
+            "module": {
+              "name": "rules_zig",
+              "extension": "zig"
+            }
+          },
+          "path": "zig"
+        },
+        "wrappers": [],
+        "synonym": null,
+        "unmet": [
+          {
+            "because": "Zig promises a reproducible build in its release modes and disclaims one in Debug, whose code generator emits from every core at once and writes out whichever thread finished first",
+            "any_of": [
+              "-O=ReleaseFast",
+              "-O=ReleaseSafe",
+              "-O=ReleaseSmall",
+              "-fllvm"
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "count": 2,
+      "violation": {
+        "kind": "conditional_reproducibility",
+        "action": {
+          "mnemonic": "ZigBuildTest",
+          "target": "//configure-target:test"
+        },
+        "program": {
+          "origin": {
+            "module": {
+              "name": "rules_zig",
+              "extension": "zig"
+            }
+          },
+          "path": "zig"
+        },
+        "wrappers": [],
+        "synonym": null,
+        "unmet": [
+          {
+            "because": "Zig promises a reproducible build in its release modes and disclaims one in Debug, whose code generator emits from every core at once and writes out whichever thread finished first",
+            "any_of": [
+              "-O=ReleaseFast",
+              "-O=ReleaseSafe",
+              "-O=ReleaseSmall",
+              "-fllvm"
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "count": 1,
+      "violation": {
+        "kind": "conditional_reproducibility",
+        "action": {
+          "mnemonic": "ZigBuildTest",
+          "target": "//configure-threaded:_test_multi"
+        },
+        "program": {
+          "origin": {
+            "module": {
+              "name": "rules_zig",
+              "extension": "zig"
+            }
+          },
+          "path": "zig"
+        },
+        "wrappers": [],
+        "synonym": null,
+        "unmet": [
+          {
+            "because": "Zig promises a reproducible build in its release modes and disclaims one in Debug, whose code generator emits from every core at once and writes out whichever thread finished first",
+            "any_of": [
+              "-O=ReleaseFast",
+              "-O=ReleaseSafe",
+              "-O=ReleaseSmall",
+              "-fllvm"
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "count": 1,
+      "violation": {
+        "kind": "conditional_reproducibility",
+        "action": {
+          "mnemonic": "ZigBuildTest",
+          "target": "//configure-threaded:_test_single"
+        },
+        "program": {
+          "origin": {
+            "module": {
+              "name": "rules_zig",
+              "extension": "zig"
+            }
+          },
+          "path": "zig"
+        },
+        "wrappers": [],
+        "synonym": null,
+        "unmet": [
+          {
+            "because": "Zig promises a reproducible build in its release modes and disclaims one in Debug, whose code generator emits from every core at once and writes out whichever thread finished first",
+            "any_of": [
+              "-O=ReleaseFast",
+              "-O=ReleaseSafe",
+              "-O=ReleaseSmall",
+              "-fllvm"
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "count": 1,
+      "violation": {
+        "kind": "conditional_reproducibility",
+        "action": {
+          "mnemonic": "ZigBuildTest",
+          "target": "//configure-version:zig_test_0.15.2_manual"
+        },
+        "program": {
+          "origin": {
+            "module": {
+              "name": "rules_zig",
+              "extension": "zig"
+            }
+          },
+          "path": "zig"
+        },
+        "wrappers": [],
+        "synonym": null,
+        "unmet": [
+          {
+            "because": "Zig promises a reproducible build in its release modes and disclaims one in Debug, whose code generator emits from every core at once and writes out whichever thread finished first",
+            "any_of": [
+              "-O=ReleaseFast",
+              "-O=ReleaseSafe",
+              "-O=ReleaseSmall",
+              "-fllvm"
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "count": 1,
+      "violation": {
+        "kind": "conditional_reproducibility",
+        "action": {
+          "mnemonic": "ZigBuildTest",
+          "target": "//data-dependencies:direct-data"
+        },
+        "program": {
+          "origin": {
+            "module": {
+              "name": "rules_zig",
+              "extension": "zig"
+            }
+          },
+          "path": "zig"
+        },
+        "wrappers": [],
+        "synonym": null,
+        "unmet": [
+          {
+            "because": "Zig promises a reproducible build in its release modes and disclaims one in Debug, whose code generator emits from every core at once and writes out whichever thread finished first",
+            "any_of": [
+              "-O=ReleaseFast",
+              "-O=ReleaseSafe",
+              "-O=ReleaseSmall",
+              "-fllvm"
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "count": 1,
+      "violation": {
+        "kind": "conditional_reproducibility",
+        "action": {
+          "mnemonic": "ZigBuildTest",
+          "target": "//data-dependencies:direct-module-data"
+        },
+        "program": {
+          "origin": {
+            "module": {
+              "name": "rules_zig",
+              "extension": "zig"
+            }
+          },
+          "path": "zig"
+        },
+        "wrappers": [],
+        "synonym": null,
+        "unmet": [
+          {
+            "because": "Zig promises a reproducible build in its release modes and disclaims one in Debug, whose code generator emits from every core at once and writes out whichever thread finished first",
+            "any_of": [
+              "-O=ReleaseFast",
+              "-O=ReleaseSafe",
+              "-O=ReleaseSmall",
+              "-fllvm"
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "count": 1,
+      "violation": {
+        "kind": "conditional_reproducibility",
+        "action": {
+          "mnemonic": "ZigBuildTest",
+          "target": "//data-dependencies:indirect-module-data"
+        },
+        "program": {
+          "origin": {
+            "module": {
+              "name": "rules_zig",
+              "extension": "zig"
+            }
+          },
+          "path": "zig"
+        },
+        "wrappers": [],
+        "synonym": null,
+        "unmet": [
+          {
+            "because": "Zig promises a reproducible build in its release modes and disclaims one in Debug, whose code generator emits from every core at once and writes out whichever thread finished first",
+            "any_of": [
+              "-O=ReleaseFast",
+              "-O=ReleaseSafe",
+              "-O=ReleaseSmall",
+              "-fllvm"
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "count": 1,
+      "violation": {
+        "kind": "conditional_reproducibility",
+        "action": {
+          "mnemonic": "ZigBuildTest",
+          "target": "//embed-file:test"
+        },
+        "program": {
+          "origin": {
+            "module": {
+              "name": "rules_zig",
+              "extension": "zig"
+            }
+          },
+          "path": "zig"
+        },
+        "wrappers": [],
+        "synonym": null,
+        "unmet": [
+          {
+            "because": "Zig promises a reproducible build in its release modes and disclaims one in Debug, whose code generator emits from every core at once and writes out whichever thread finished first",
+            "any_of": [
+              "-O=ReleaseFast",
+              "-O=ReleaseSafe",
+              "-O=ReleaseSmall",
+              "-fllvm"
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "count": 1,
+      "violation": {
+        "kind": "conditional_reproducibility",
+        "action": {
+          "mnemonic": "ZigBuildTest",
+          "target": "//embed-file:test-with-module"
+        },
+        "program": {
+          "origin": {
+            "module": {
+              "name": "rules_zig",
+              "extension": "zig"
+            }
+          },
+          "path": "zig"
+        },
+        "wrappers": [],
+        "synonym": null,
+        "unmet": [
+          {
+            "because": "Zig promises a reproducible build in its release modes and disclaims one in Debug, whose code generator emits from every core at once and writes out whichever thread finished first",
+            "any_of": [
+              "-O=ReleaseFast",
+              "-O=ReleaseSafe",
+              "-O=ReleaseSmall",
+              "-fllvm"
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "count": 1,
+      "violation": {
+        "kind": "conditional_reproducibility",
+        "action": {
+          "mnemonic": "ZigBuildTest",
+          "target": "//env-attr:test"
+        },
+        "program": {
+          "origin": {
+            "module": {
+              "name": "rules_zig",
+              "extension": "zig"
+            }
+          },
+          "path": "zig"
+        },
+        "wrappers": [],
+        "synonym": null,
+        "unmet": [
+          {
+            "because": "Zig promises a reproducible build in its release modes and disclaims one in Debug, whose code generator emits from every core at once and writes out whichever thread finished first",
+            "any_of": [
+              "-O=ReleaseFast",
+              "-O=ReleaseSafe",
+              "-O=ReleaseSmall",
+              "-fllvm"
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "count": 1,
+      "violation": {
+        "kind": "conditional_reproducibility",
+        "action": {
+          "mnemonic": "ZigBuildTest",
+          "target": "//include-dependencies/zig-include-define:test"
+        },
+        "program": {
+          "origin": {
+            "module": {
+              "name": "rules_zig",
+              "extension": "zig"
+            }
+          },
+          "path": "zig"
+        },
+        "wrappers": [],
+        "synonym": null,
+        "unmet": [
+          {
+            "because": "Zig promises a reproducible build in its release modes and disclaims one in Debug, whose code generator emits from every core at once and writes out whichever thread finished first",
+            "any_of": [
+              "-O=ReleaseFast",
+              "-O=ReleaseSafe",
+              "-O=ReleaseSmall",
+              "-fllvm"
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "count": 1,
+      "violation": {
+        "kind": "conditional_reproducibility",
+        "action": {
+          "mnemonic": "ZigBuildTest",
+          "target": "//include-dependencies/zig-include-isystem:test"
+        },
+        "program": {
+          "origin": {
+            "module": {
+              "name": "rules_zig",
+              "extension": "zig"
+            }
+          },
+          "path": "zig"
+        },
+        "wrappers": [],
+        "synonym": null,
+        "unmet": [
+          {
+            "because": "Zig promises a reproducible build in its release modes and disclaims one in Debug, whose code generator emits from every core at once and writes out whichever thread finished first",
+            "any_of": [
+              "-O=ReleaseFast",
+              "-O=ReleaseSafe",
+              "-O=ReleaseSmall",
+              "-fllvm"
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "count": 1,
+      "violation": {
+        "kind": "conditional_reproducibility",
+        "action": {
+          "mnemonic": "ZigBuildTest",
+          "target": "//include-dependencies/zig-include:test"
+        },
+        "program": {
+          "origin": {
+            "module": {
+              "name": "rules_zig",
+              "extension": "zig"
+            }
+          },
+          "path": "zig"
+        },
+        "wrappers": [],
+        "synonym": null,
+        "unmet": [
+          {
+            "because": "Zig promises a reproducible build in its release modes and disclaims one in Debug, whose code generator emits from every core at once and writes out whichever thread finished first",
+            "any_of": [
+              "-O=ReleaseFast",
+              "-O=ReleaseSafe",
+              "-O=ReleaseSmall",
+              "-fllvm"
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "count": 1,
+      "violation": {
+        "kind": "conditional_reproducibility",
+        "action": {
+          "mnemonic": "ZigBuildTest",
+          "target": "//include-dependencies/zig-std-include:test"
+        },
+        "program": {
+          "origin": {
+            "module": {
+              "name": "rules_zig",
+              "extension": "zig"
+            }
+          },
+          "path": "zig"
+        },
+        "wrappers": [],
+        "synonym": null,
+        "unmet": [
+          {
+            "because": "Zig promises a reproducible build in its release modes and disclaims one in Debug, whose code generator emits from every core at once and writes out whichever thread finished first",
+            "any_of": [
+              "-O=ReleaseFast",
+              "-O=ReleaseSafe",
+              "-O=ReleaseSmall",
+              "-fllvm"
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "count": 1,
+      "violation": {
+        "kind": "conditional_reproducibility",
+        "action": {
+          "mnemonic": "ZigBuildTest",
+          "target": "//link-dependencies/shared-library:test"
+        },
+        "program": {
+          "origin": {
+            "module": {
+              "name": "rules_zig",
+              "extension": "zig"
+            }
+          },
+          "path": "zig"
+        },
+        "wrappers": [],
+        "synonym": null,
+        "unmet": [
+          {
+            "because": "Zig promises a reproducible build in its release modes and disclaims one in Debug, whose code generator emits from every core at once and writes out whichever thread finished first",
+            "any_of": [
+              "-O=ReleaseFast",
+              "-O=ReleaseSafe",
+              "-O=ReleaseSmall",
+              "-fllvm"
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "count": 1,
+      "violation": {
+        "kind": "conditional_reproducibility",
+        "action": {
+          "mnemonic": "ZigBuildTest",
+          "target": "//link-dependencies/static-library:test"
+        },
+        "program": {
+          "origin": {
+            "module": {
+              "name": "rules_zig",
+              "extension": "zig"
+            }
+          },
+          "path": "zig"
+        },
+        "wrappers": [],
+        "synonym": null,
+        "unmet": [
+          {
+            "because": "Zig promises a reproducible build in its release modes and disclaims one in Debug, whose code generator emits from every core at once and writes out whichever thread finished first",
+            "any_of": [
+              "-O=ReleaseFast",
+              "-O=ReleaseSafe",
+              "-O=ReleaseSmall",
+              "-fllvm"
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "count": 1,
+      "violation": {
+        "kind": "conditional_reproducibility",
+        "action": {
+          "mnemonic": "ZigBuildTest",
+          "target": "//linkopts-attr:test"
+        },
+        "program": {
+          "origin": {
+            "module": {
+              "name": "rules_zig",
+              "extension": "zig"
+            }
+          },
+          "path": "zig"
+        },
+        "wrappers": [],
+        "synonym": null,
+        "unmet": [
+          {
+            "because": "Zig promises a reproducible build in its release modes and disclaims one in Debug, whose code generator emits from every core at once and writes out whichever thread finished first",
+            "any_of": [
+              "-O=ReleaseFast",
+              "-O=ReleaseSafe",
+              "-O=ReleaseSmall",
+              "-fllvm"
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "count": 1,
+      "violation": {
+        "kind": "conditional_reproducibility",
+        "action": {
+          "mnemonic": "ZigBuildTest",
+          "target": "//location-expansion:test"
+        },
+        "program": {
+          "origin": {
+            "module": {
+              "name": "rules_zig",
+              "extension": "zig"
+            }
+          },
+          "path": "zig"
+        },
+        "wrappers": [],
+        "synonym": null,
+        "unmet": [
+          {
+            "because": "Zig promises a reproducible build in its release modes and disclaims one in Debug, whose code generator emits from every core at once and writes out whichever thread finished first",
+            "any_of": [
+              "-O=ReleaseFast",
+              "-O=ReleaseSafe",
+              "-O=ReleaseSmall",
+              "-fllvm"
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "count": 1,
+      "violation": {
+        "kind": "conditional_reproducibility",
+        "action": {
+          "mnemonic": "ZigBuildTest",
+          "target": "//multiple-sources-and-packages-test:test"
+        },
+        "program": {
+          "origin": {
+            "module": {
+              "name": "rules_zig",
+              "extension": "zig"
+            }
+          },
+          "path": "zig"
+        },
+        "wrappers": [],
+        "synonym": null,
+        "unmet": [
+          {
+            "because": "Zig promises a reproducible build in its release modes and disclaims one in Debug, whose code generator emits from every core at once and writes out whichever thread finished first",
+            "any_of": [
+              "-O=ReleaseFast",
+              "-O=ReleaseSafe",
+              "-O=ReleaseSmall",
+              "-fllvm"
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "count": 1,
+      "violation": {
+        "kind": "conditional_reproducibility",
+        "action": {
+          "mnemonic": "ZigBuildTest",
+          "target": "//root-module-from-single-dependency:test"
+        },
+        "program": {
+          "origin": {
+            "module": {
+              "name": "rules_zig",
+              "extension": "zig"
+            }
+          },
+          "path": "zig"
+        },
+        "wrappers": [],
+        "synonym": null,
+        "unmet": [
+          {
+            "because": "Zig promises a reproducible build in its release modes and disclaims one in Debug, whose code generator emits from every core at once and writes out whichever thread finished first",
+            "any_of": [
+              "-O=ReleaseFast",
+              "-O=ReleaseSafe",
+              "-O=ReleaseSmall",
+              "-fllvm"
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "count": 1,
+      "violation": {
+        "kind": "conditional_reproducibility",
+        "action": {
+          "mnemonic": "ZigBuildTest",
+          "target": "//runfiles-library:test"
+        },
+        "program": {
+          "origin": {
+            "module": {
+              "name": "rules_zig",
+              "extension": "zig"
+            }
+          },
+          "path": "zig"
+        },
+        "wrappers": [],
+        "synonym": null,
+        "unmet": [
+          {
+            "because": "Zig promises a reproducible build in its release modes and disclaims one in Debug, whose code generator emits from every core at once and writes out whichever thread finished first",
+            "any_of": [
+              "-O=ReleaseFast",
+              "-O=ReleaseSafe",
+              "-O=ReleaseSmall",
+              "-fllvm"
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "count": 1,
+      "violation": {
+        "kind": "conditional_reproducibility",
+        "action": {
+          "mnemonic": "ZigBuildTest",
+          "target": "//simple-test:succeeds"
+        },
+        "program": {
+          "origin": {
+            "module": {
+              "name": "rules_zig",
+              "extension": "zig"
+            }
+          },
+          "path": "zig"
+        },
+        "wrappers": [],
+        "synonym": null,
+        "unmet": [
+          {
+            "because": "Zig promises a reproducible build in its release modes and disclaims one in Debug, whose code generator emits from every core at once and writes out whichever thread finished first",
+            "any_of": [
+              "-O=ReleaseFast",
+              "-O=ReleaseSafe",
+              "-O=ReleaseSmall",
+              "-fllvm"
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "count": 1,
+      "violation": {
+        "kind": "conditional_reproducibility",
+        "action": {
+          "mnemonic": "ZigBuildTest",
+          "target": "//toolchain-glibc-version:fallback_glibc.2.17"
+        },
+        "program": {
+          "origin": {
+            "module": {
+              "name": "rules_zig",
+              "extension": "zig"
+            }
+          },
+          "path": "zig"
+        },
+        "wrappers": [],
+        "synonym": null,
+        "unmet": [
+          {
+            "because": "Zig promises a reproducible build in its release modes and disclaims one in Debug, whose code generator emits from every core at once and writes out whichever thread finished first",
+            "any_of": [
+              "-O=ReleaseFast",
+              "-O=ReleaseSafe",
+              "-O=ReleaseSmall",
+              "-fllvm"
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "count": 2,
+      "violation": {
+        "kind": "conditional_reproducibility",
+        "action": {
+          "mnemonic": "ZigBuildTest",
+          "target": "//zig-docs:test"
+        },
+        "program": {
+          "origin": {
+            "module": {
+              "name": "rules_zig",
+              "extension": "zig"
+            }
+          },
+          "path": "zig"
+        },
+        "wrappers": [],
+        "synonym": null,
+        "unmet": [
+          {
+            "because": "Zig promises a reproducible build in its release modes and disclaims one in Debug, whose code generator emits from every core at once and writes out whichever thread finished first",
+            "any_of": [
+              "-O=ReleaseFast",
+              "-O=ReleaseSafe",
+              "-O=ReleaseSmall",
+              "-fllvm"
+            ]
+          }
+        ]
+      }
+    }
+  ]
+}

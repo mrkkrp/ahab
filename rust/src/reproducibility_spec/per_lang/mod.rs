@@ -7,6 +7,7 @@ pub(super) mod kotlin;
 pub(super) mod pkg;
 pub(super) mod python;
 pub(super) mod rust;
+pub(super) mod zig;
 
 /// Helpers every per-language test module needs.
 #[cfg(test)]

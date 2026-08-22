@@ -129,6 +129,7 @@ fn entries() -> Vec<(ProgramId, Entry)> {
     entries.extend(super::per_lang::kotlin::entries());
     entries.extend(super::per_lang::pkg::entries());
     entries.extend(super::per_lang::python::entries());
+    entries.extend(super::per_lang::zig::entries());
     entries.extend(language_agnostic());
     entries
 }

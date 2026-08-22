@@ -1,0 +1,52 @@
+{
+  "exceptions": [
+    {
+      "reason": "the e2e workspace builds its C and C++ dependencies with Bazel's autoconfigured non-hermetic C++ toolchain",
+      "kind": "system_program",
+      "program": "*/bin/gcc"
+    },
+    {
+      "reason": "the e2e workspace builds its C and C++ dependencies with Bazel's autoconfigured non-hermetic C++ toolchain",
+      "kind": "system_program",
+      "program": "*/bin/ar"
+    },
+    {
+      "reason": "the e2e workspace builds its C and C++ dependencies with Bazel's autoconfigured non-hermetic C++ toolchain",
+      "kind": "system_program",
+      "program": "*/bin/strip"
+    },
+    {
+      "reason": "Bazel runs genrules and every other shell action through the system shell, which is Bazel's own arrangement and not something rules_zig or a project using it chose",
+      "kind": "system_program",
+      "program": "/bin/bash"
+    },
+    {
+      "reason": "every zig action is pointed at the compiler's own cache outside the sandbox, by --cache-dir and --global-cache-dir and by ZIG_LOCAL_CACHE_DIR and ZIG_GLOBAL_CACHE_DIR, which is how rules_zig is built and not something a project using it chose",
+      "kind": "absolute_path",
+      "path": "/tmp/zig-cache"
+    },
+    {
+      "reason": "a genrule lists symbols with the autoconfigured C++ toolchain's nm, named by absolute path",
+      "kind": "absolute_path",
+      "path": "*/bin/nm"
+    },
+    {
+      "reason": "translate-c is handed the autoconfigured C++ toolchain's builtin include directories, which are whatever the machine has",
+      "kind": "absolute_path",
+      "mnemonic": "ZigTranslateC",
+      "path": "*/include"
+    },
+    {
+      "reason": "translate-c is handed the autoconfigured C++ toolchain's builtin include directories, which are whatever the machine has",
+      "kind": "absolute_path",
+      "mnemonic": "ZigTranslateC",
+      "path": "*/include/*"
+    },
+    {
+      "reason": "translate-c is handed the autoconfigured C++ toolchain's builtin include directories, which are whatever the machine has",
+      "kind": "absolute_path",
+      "mnemonic": "ZigTranslateC",
+      "path": "*/include-fixed"
+    }
+  ]
+}
