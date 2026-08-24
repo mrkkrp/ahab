@@ -1,4 +1,4 @@
-## Unreleased
+## Ahab 0.2.1
 
 * Add reproducibility specs for Closure and J2CL build tools, the metadata
   merger shipped by `rules_webtesting`, and Brotli compression.
