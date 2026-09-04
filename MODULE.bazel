@@ -29,7 +29,7 @@ use_repo(version, "ahab_version")
 # Building Ahab itself
 ###############################################################################
 
-bazel_dep(name = "rules_rs", version = "0.0.104", dev_dependency = True)
+bazel_dep(name = "rules_rs", version = "0.0.108", dev_dependency = True)
 bazel_dep(name = "rules_proto", version = "7.1.0", dev_dependency = True)
 bazel_dep(name = "protobuf", version = "35.1", dev_dependency = True)
 
