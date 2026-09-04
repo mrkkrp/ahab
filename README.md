@@ -195,9 +195,9 @@ Everything else—`supports-workers`, `cpu:4`, `resources:…`,
 
 ### Absolute paths
 
-Any `/`-rooted run appearing in an argument, a param file line, or an
-environment variable value. A build that names `/opt/toolchain/bin/cc` is a
-build that only works where that exists.
+Ahab is capable of detecting absolute paths in command arguments using a
+heuristic algorithm that takes into account the context where a `/`-rooted
+run appears.
 
 Not every absolute path is a path on the build machine, though. A tool that
 builds a container image, a package or an installer is routinely told where

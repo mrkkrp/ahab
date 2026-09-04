@@ -1,6 +1,6 @@
 //! Pure hermeticity checks over a decoded `analysis.ActionGraphContainer`.
 
-use std::collections::{BTreeMap, BTreeSet, HashMap, HashSet};
+use std::collections::{BTreeMap, BTreeSet, HashMap};
 
 use analysis_v2_proto::analysis::{
     Action, ActionGraphContainer, DepSetOfFiles, PathFragment,
@@ -16,6 +16,8 @@ use crate::reproducibility_spec::{
     program_id::{Origin, ProgramId},
 };
 use crate::terminal_color::Palette;
+
+mod absolute_paths;
 
 /// The exact value of `PATH` that every action is required to use.
 const EXPECTED_PATH: &str = "/bin:/usr/bin:/usr/local/bin";
@@ -613,7 +615,7 @@ pub(crate) fn check_all(
 ) -> BTreeMap<Violation, usize> {
     let mut violations = check_environment_leaks(container, user, hostname);
     violations.extend(check_path(container));
-    violations.extend(check_absolute_paths(container, library));
+    violations.extend(absolute_paths::check(container, library));
     violations.extend(check_execution_requirements(container));
     violations.extend(check_workspace_status(container));
     violations.extend(check_reproducibility(container, library));
@@ -892,337 +894,6 @@ fn check_path(container: &ActionGraphContainer) -> Vec<Violation> {
     violations
 }
 
-/// Whether `c` may appear *inside* an absolute path run. Deliberately
-/// broad: the usual filename characters plus the separators that show up in
-/// real paths (`.`, `-`, `_`, `+`, `~`, `@`, `%`) and `/` itself.
-/// Characters *not* in this set—whitespace, `=`, `:`, `,`, quotes,
-/// etc.—terminate a run, which is how paths "glued" to other text via those
-/// separators get split out.
-///
-/// Brackets are not here, and are not an omission. They are legal in a
-/// filename, so they cannot simply terminate a run; but `[` also opens a
-/// list, so a `/` after one does begin a fresh value. The two readings are
-/// told apart by whether the group is balanced, which is a question about
-/// a span rather than about one character—see [`boundary_at`] and the run
-/// in [`absolute_paths`].
-fn is_path_char(c: char) -> bool {
-    c.is_ascii_alphanumeric()
-        || matches!(c, '/' | '.' | '-' | '_' | '+' | '~' | '@' | '%')
-}
-
-/// Compiler/linker flag prefixes that take a path glued directly after
-/// them, with no `=` or space separator (e.g. `-I/usr/include`,
-/// `-L/opt/lib`, `-isystem/usr/include`). A candidate `/` glued right onto
-/// one of these is treated as the start of an absolute path.
-const GLUED_FLAG_PREFIXES: &[&str] =
-    &["-I", "-L", "-isystem", "-iquote", "-idirafter"];
-
-/// Whether the candidate `/` at `slash` sits immediately after one of the
-/// [`GLUED_FLAG_PREFIXES`], i.e. the text `prefix` occupies
-/// `bytes[..slash]` ending exactly at the `/` and begins at a separator
-/// boundary. This is what lets `-I/usr/include` be recognised while a
-/// relative value like `-Irelative/include` (where the `/` does not sit
-/// right after the flag) is left alone.
-fn glued_onto_flag(bytes: &[u8], slash: usize) -> bool {
-    GLUED_FLAG_PREFIXES.iter().any(|flag| {
-        let flag = flag.as_bytes();
-        slash >= flag.len()
-            && &bytes[slash - flag.len()..slash] == flag
-            // The flag itself must start at a boundary (start of string or
-            // a non-path char before it), so we don't match a `-I` buried
-            // inside some longer token.
-            && (slash == flag.len() || !is_path_char(bytes[slash - flag.len() - 1] as char))
-    })
-}
-
-/// Placeholders that stand for a location inside the build, and that
-/// therefore say nothing about the machine the build runs on.
-///
-/// All three are substituted by rules_rust's `process_wrapper` (see the
-/// `--subst pwd=${pwd}` arguments it is handed) and name the execution
-/// root, the source root under it, and the output base. A path written
-/// against one of these is as machine-independent as a relative path.
-///
-/// The list is closed on purpose.
-const BUILD_PLACEHOLDERS: &[&str] = &["pwd", "exec_root", "output_base"];
-
-/// Whether the character just before `slash` closes a `${…}` or `$(…)`
-/// naming one of [`BUILD_PLACEHOLDERS`].
-///
-/// rules_rust sets `CLIPPY_CONF_DIR=${pwd}/external/…` and
-/// `CARGO_MANIFEST_DIR=${pwd}/proto`. The `/` after the closing brace is
-/// not the root of anything: it separates segments of a path relative to
-/// wherever the placeholder lands at execution time. The action records the
-/// placeholder rather than the directory it will become, so nothing about
-/// the machine is baked in.
-fn closes_build_placeholder(bytes: &[u8], slash: usize) -> bool {
-    let open = match bytes.get(slash.wrapping_sub(1)) {
-        Some(b'}') => b'{',
-        Some(b')') => b'(',
-        _ => return false,
-    };
-
-    // A placeholder name is a plain identifier, so the opening bracket is
-    // however far back the identifier characters run. Scanning for that
-    // rather than balancing brackets also rejects a command substitution
-    // like `$(realpath x)`, whose contents are not an identifier at all.
-    let close_at = slash - 1;
-    let mut start = close_at;
-    while start > 0 {
-        let byte = bytes[start - 1];
-        if byte.is_ascii_alphanumeric() || byte == b'_' {
-            start -= 1;
-        } else {
-            break;
-        }
-    }
-
-    // `start < 2` leaves no room for the `$` and the bracket that must
-    // precede the name.
-    if start < 2 || bytes[start - 1] != open || bytes[start - 2] != b'$' {
-        return false;
-    }
-
-    let name = &bytes[start..close_at];
-    BUILD_PLACEHOLDERS
-        .iter()
-        .any(|known| known.as_bytes() == name)
-}
-
-/// Where to ask the boundary question, given a candidate `/` at `slash`.
-///
-/// Normally that is `slash` itself. When the preceding character closes a
-/// balanced `[…]` group the question moves to where the group opened: a
-/// bracket is an ordinary filename character, so `axes/[...id]/page` is one
-/// relative path and the `/` after the group continues it, exactly as it
-/// would after any other directory name.
-fn boundary_at(bytes: &[u8], slash: usize) -> usize {
-    if bytes.get(slash.wrapping_sub(1)) != Some(&b']') {
-        return slash;
-    }
-    let mut depth = 0usize;
-    for at in (0..slash - 1).rev() {
-        match bytes[at] {
-            b']' => depth += 1,
-            b'[' if depth == 0 => return at,
-            b'[' => depth -= 1,
-            b'/' => break,
-            byte if byte.is_ascii_whitespace() => break,
-            _ => {}
-        }
-    }
-    slash
-}
-
-/// Extract every absolute path embedded in `text`. A run begins at a `/` that
-///
-/// * is followed by at least one path character,
-/// * is not the start of a `//` sequence (so Bazel labels like `//foo:bar` are
-///   skipped), and
-/// * sits at an absolute-path boundary—either the `/` is at the start of
-///   the string / preceded by a separator (whitespace, `=`, `:`, `,`, a
-///   quote, …), or it is glued directly onto a flag prefix like
-///   `-I`/`-L`/`-isystem`.
-///
-/// It then continues over path characters. This catches standalone paths,
-/// colon-lists (`/bin:/usr/bin`), `--sysroot=/opt/x`, and `-I/usr/include`,
-/// while leaving relative paths such as `foo/bar` untouched. Runs are
-/// returned in order of appearance.
-fn absolute_paths(text: &str) -> Vec<String> {
-    let bytes = text.as_bytes();
-    let mut paths = Vec::new();
-    let mut i = 0;
-
-    while i < bytes.len() {
-        if bytes[i] == b'/' {
-            let next = bytes.get(i + 1).copied();
-            let followed_by_path_char =
-                next.is_some_and(|b| is_path_char(b as char));
-            let not_double_slash = next != Some(b'/');
-
-            // A `/` is an absolute-path start if it's at a separator
-            // boundary (start of string or preceded by a non-path char) or
-            // glued onto a flag prefix—unless what precedes it is a
-            // build-internal placeholder, which makes the path relative to
-            // that placeholder however separator-like the `}` looks.
-            //
-            // The boundary is not always at the `/` itself: a `[…]` group
-            // is a filename character like any other, so the question is
-            // asked where the group began. See [`boundary_at`].
-            let boundary = if i == 0 {
-                true
-            } else if closes_build_placeholder(bytes, i) {
-                false
-            } else {
-                let at = boundary_at(bytes, i);
-                at == 0
-                    || !is_path_char(bytes[at - 1] as char)
-                    || glued_onto_flag(bytes, i)
-            };
-
-            if followed_by_path_char && not_double_slash && boundary {
-                let start = i;
-                i += 1;
-                // A `[…]` group belongs to the path—`/usr/lib/[abi]/x`
-                // is one path—but a `]` with nothing open is the close of
-                // something the path sits inside, as in `[/usr/lib]`, and
-                // ends the run.
-                let mut depth = 0usize;
-                while i < bytes.len() {
-                    match bytes[i] {
-                        b'[' => depth += 1,
-                        b']' if depth > 0 => depth -= 1,
-                        b']' => break,
-                        byte if is_path_char(byte as char) => {}
-                        _ => break,
-                    }
-                    i += 1;
-                }
-                paths.push(text[start..i].to_owned());
-                continue;
-            }
-        }
-        i += 1;
-    }
-
-    paths
-}
-
-/// Absolute paths that are allowed to appear in an action and must not be
-/// reported as hermeticity violations.
-///
-/// `/dev/null` and `/proc/self/cwd` are special files that name the same
-/// thing on every machine. The other two are placeholders that well-known
-/// rule sets write into their actions on purpose:
-///
-/// * `/PLACEHOLDER_DEVELOPER_DIR` is what `apple_support` and `rules_swift`
-///   map the Xcode developer directory onto, passing
-///   `__BAZEL_XCODE_DEVELOPER_DIR__=/PLACEHOLDER_DEVELOPER_DIR` to
-///   `-fdebug-prefix-map` and `-file-prefix-map`. It is the replacement
-///   side of the map: the string that stands in the output *instead of*
-///   wherever Xcode happens to be installed. Reporting it would be
-///   reporting the very mechanism that keeps the developer directory out
-///   of the artifact.
-///
-/// * `/bazel_rules_apple/fakepath` is the `--binary-file` argument
-///   `rules_apple` hands to `appintentsmetadataprocessor`. Compile-time
-///   extraction reads no binary, but the tool insists on the flag having a
-///   value, so the rule invents one that cannot exist.
-///
-/// The list is closed on purpose: a project's own placeholder is a project
-/// exception, not a default.
-const ALLOWED_ABSOLUTE_PATHS: &[&str] = &[
-    "/dev/null",
-    "/proc/self/cwd",
-    "/PLACEHOLDER_DEVELOPER_DIR",
-    "/bazel_rules_apple/fakepath",
-];
-
-/// Whether an extracted absolute path is exempt from the absolute-path
-/// check.
-fn is_allowed_absolute_path(path: &str) -> bool {
-    ALLOWED_ABSOLUTE_PATHS.contains(&path)
-}
-
-/// The strings with which this action's program declares a path inside the
-/// artifact it produces, as the library describes that program.
-///
-/// Matched by value rather than by position, because the scan runs over the
-/// raw command line followed by every param file, which is not the sequence
-/// the program itself receives.
-fn declared_path_strings<'a>(
-    action: &'a Action,
-    library: &Library,
-) -> HashSet<&'a str> {
-    let command_line = expanded_command_line(action);
-    let Some((executable, args)) = command_line.split_first() else {
-        return HashSet::new();
-    };
-    let resolved = library.resolve(
-        ProgramId::of(executable.value),
-        args.iter().map(|sourced| sourced.value).collect(),
-    );
-    let Some((_, spec)) = &resolved.spec else {
-        return HashSet::new();
-    };
-    spec.declared_path_args(&resolved.args)
-        .into_iter()
-        .collect()
-}
-
-/// Find every absolute path (a `/`-rooted run) referenced in an action's
-/// command line, in one of its param files, or in the value of any of its
-/// `environment_variables`, and return one [`Violation`] per path found.
-///
-/// The environment variable literally named `PATH` is skipped: it is
-/// expected to hold absolute paths and is governed separately by
-/// [`check_path`]. Paths in [`ALLOWED_ABSOLUTE_PATHS`] (such as
-/// `/dev/null`) are also skipped.
-fn check_absolute_paths(
-    container: &ActionGraphContainer,
-    library: &Library,
-) -> Vec<Violation> {
-    let mut violations = Vec::new();
-    let targets = target_labels(container);
-
-    for action in &container.actions {
-        // Worked out at the first path we would otherwise report, so that
-        // the great majority of actions—which have no absolute path in them
-        // at all—never pay for resolving their program a second time.
-        let mut declared: Option<HashSet<&str>> = None;
-
-        // Spilling a command line into a param file must not launder an
-        // absolute path out of the report, so both are scanned.
-        let program = usize::from(!action.arguments.is_empty());
-        for sourced in analyzable_strings(action).into_iter().skip(program)
-        {
-            let paths = absolute_paths(sourced.value);
-            if paths.is_empty() {
-                continue;
-            }
-            if declared
-                .get_or_insert_with(|| {
-                    declared_path_strings(action, library)
-                })
-                .contains(sourced.value)
-            {
-                continue;
-            }
-            for path in paths {
-                if is_allowed_absolute_path(&path) {
-                    continue;
-                }
-                violations.push(Violation::AbsolutePath {
-                    action: ActionRef::of(action, &targets),
-                    path,
-                    site: LeakSite::of(sourced),
-                });
-            }
-        }
-
-        for kv in &action.environment_variables {
-            if kv.key == "PATH" {
-                continue;
-            }
-            for path in absolute_paths(&kv.value) {
-                if is_allowed_absolute_path(&path) {
-                    continue;
-                }
-                violations.push(Violation::AbsolutePath {
-                    action: ActionRef::of(action, &targets),
-                    path,
-                    site: LeakSite::EnvVar {
-                        key: kv.key.clone(),
-                        value: kv.value.clone(),
-                    },
-                });
-            }
-        }
-    }
-
-    violations
-}
-
 /// Check each action's program against the library of reproducibility
 /// specs.
 fn check_reproducibility(
@@ -1300,6 +971,7 @@ fn check_reproducibility(
 
 #[cfg(test)]
 pub(crate) mod tests {
+
     use super::*;
     use crate::reproducibility_spec::program_id::Origin;
     use analysis_v2_proto::analysis::KeyValuePair;
@@ -1311,7 +983,7 @@ pub(crate) mod tests {
 
     /// Build an [`Action`] with the given mnemonic, target id, and environment
     /// variables (as `(key, value)` pairs).
-    fn action_with_env(
+    pub(crate) fn action_with_env(
         mnemonic: &str,
         target_id: u32,
         env: &[(&str, &str)],
@@ -1332,7 +1004,7 @@ pub(crate) mod tests {
 
     /// Build an [`Action`] with the given mnemonic, target id, and command-line
     /// arguments.
-    fn action_with_args(
+    pub(crate) fn action_with_args(
         mnemonic: &str,
         target_id: u32,
         args: &[&str],
@@ -1347,7 +1019,7 @@ pub(crate) mod tests {
 
     /// Build an [`Action`] with command-line arguments and param files, each
     /// given as `(exec_path, lines)`.
-    fn action_with_param_files(
+    pub(crate) fn action_with_param_files(
         mnemonic: &str,
         target_id: u32,
         args: &[&str],
@@ -1371,7 +1043,31 @@ pub(crate) mod tests {
     }
 
     /// Wrap a list of actions in an [`ActionGraphContainer`].
-    fn container(actions: Vec<Action>) -> ActionGraphContainer {
+    /// Assert that `v` is a [`Violation::AbsolutePath`] with the given fields.
+    #[track_caller]
+    pub(crate) fn assert_abs_path(
+        v: &Violation,
+        mnemonic: &str,
+        target_id: u32,
+        path: &str,
+        site: LeakSite,
+    ) {
+        match v {
+            Violation::AbsolutePath {
+                action,
+                path: got_path,
+                site: got_site,
+            } => {
+                assert_eq!(action.mnemonic, mnemonic);
+                assert_eq!(action.target, test_label(target_id));
+                assert_eq!(got_path, path);
+                assert_eq!(*got_site, site);
+            }
+            other => panic!("expected AbsolutePath, got {other:?}"),
+        }
+    }
+
+    pub(crate) fn container(actions: Vec<Action>) -> ActionGraphContainer {
         // Describe every target the actions refer to, as a real dump would, so
         // the fixtures exercise label resolution rather than sidestep it.
         let mut ids: Vec<u32> =
@@ -2008,489 +1704,6 @@ pub(crate) mod tests {
         assert!(check_path(&c).is_empty());
     }
 
-    // ---- absolute_paths (the extractor): unit tests ----
-
-    #[test]
-    fn extracts_a_bare_absolute_path() {
-        assert_eq!(absolute_paths("/usr/bin"), vec!["/usr/bin".to_owned()]);
-    }
-
-    #[test]
-    fn extracts_path_glued_after_a_flag_without_separator() {
-        // -I/usr/include: the path starts mid-token, glued to the flag.
-        assert_eq!(
-            absolute_paths("-I/usr/include"),
-            vec!["/usr/include".to_owned()]
-        );
-    }
-
-    #[test]
-    fn extracts_path_glued_after_isystem_flag() {
-        assert_eq!(
-            absolute_paths("-isystem/usr/include"),
-            vec!["/usr/include".to_owned()]
-        );
-    }
-
-    #[test]
-    fn relative_value_after_a_flag_is_not_absolute() {
-        // -Irelative/include: the `/` does not sit right after the flag, so the
-        // value is relative and must not be flagged.
-        assert!(absolute_paths("-Irelative/include").is_empty());
-    }
-
-    #[test]
-    fn a_bracketed_segment_does_not_start_an_absolute_path() {
-        // A SvelteKit rest-parameter route puts `[...id]` in a directory
-        // name. The whole path is relative, so nothing absolute is in it.
-        assert!(
-            absolute_paths("src/routes/axes/[...id]/+page.svelte")
-                .is_empty()
-        );
-    }
-
-    #[test]
-    fn a_bracketed_segment_is_part_of_the_path_it_sits_in() {
-        // The group is a directory name, so the path runs through it
-        // rather than stopping at the bracket—a truncated path would be
-        // reported as a path that does not exist.
-        assert_eq!(
-            absolute_paths("/usr/lib/[abi]/libfoo.so"),
-            vec!["/usr/lib/[abi]/libfoo.so"],
-        );
-    }
-
-    #[test]
-    fn a_bracket_opening_a_list_still_starts_a_path() {
-        // The other reading of a bracket: not part of a name, but the
-        // start of a list of them. Both paths are absolute and both are
-        // reported, neither carrying the bracket that wraps them.
-        assert_eq!(
-            absolute_paths("--paths=[/usr/lib,/opt/lib]"),
-            vec!["/usr/lib", "/opt/lib"],
-        );
-        assert_eq!(absolute_paths("[/usr/lib]"), vec!["/usr/lib"]);
-    }
-
-    #[test]
-    fn extracts_path_glued_with_equals() {
-        assert_eq!(
-            absolute_paths("--sysroot=/opt/toolchain/sysroot"),
-            vec!["/opt/toolchain/sysroot".to_owned()]
-        );
-    }
-
-    #[test]
-    fn extracts_each_path_in_a_colon_list() {
-        assert_eq!(
-            absolute_paths("/bin:/usr/bin:/usr/local/bin"),
-            vec![
-                "/bin".to_owned(),
-                "/usr/bin".to_owned(),
-                "/usr/local/bin".to_owned(),
-            ]
-        );
-    }
-
-    #[test]
-    fn stops_a_run_at_separators() {
-        // A comma and whitespace both terminate the run.
-        assert_eq!(
-            absolute_paths("/a/b,/c/d /e"),
-            vec!["/a/b".to_owned(), "/c/d".to_owned(), "/e".to_owned()]
-        );
-    }
-
-    #[test]
-    fn keeps_dotted_and_dashed_path_characters() {
-        assert_eq!(
-            absolute_paths("/opt/gcc-12.2/lib/libfoo.so.1"),
-            vec!["/opt/gcc-12.2/lib/libfoo.so.1".to_owned()]
-        );
-    }
-
-    #[test]
-    fn ignores_bare_slash_and_relative_paths() {
-        assert!(absolute_paths("/").is_empty());
-        assert!(absolute_paths("foo/bar").is_empty());
-        assert!(absolute_paths("./rel/path").is_empty());
-        assert!(absolute_paths("no paths here").is_empty());
-    }
-
-    #[test]
-    fn ignores_double_slash_bazel_labels() {
-        // //foo:bar is a Bazel label, not an absolute filesystem path.
-        assert!(absolute_paths("//foo:bar").is_empty());
-        // ...but a real path elsewhere in the same string is still found.
-        assert_eq!(
-            absolute_paths("//foo=/real/path"),
-            vec!["/real/path".to_owned()]
-        );
-    }
-
-    // ---- check_absolute_paths: pathological cases (expect violations) ----
-
-    /// Assert that `v` is a [`Violation::AbsolutePath`] with the given fields.
-    #[track_caller]
-    fn assert_abs_path(
-        v: &Violation,
-        mnemonic: &str,
-        target_id: u32,
-        path: &str,
-        site: LeakSite,
-    ) {
-        match v {
-            Violation::AbsolutePath {
-                action,
-                path: got_path,
-                site: got_site,
-            } => {
-                assert_eq!(action.mnemonic, mnemonic);
-                assert_eq!(action.target, test_label(target_id));
-                assert_eq!(got_path, path);
-                assert_eq!(*got_site, site);
-            }
-            other => panic!("expected AbsolutePath, got {other:?}"),
-        }
-    }
-
-    #[test]
-    fn absolute_path_in_argument_is_a_violation() {
-        let c = container(vec![action_with_args(
-            "CppCompile",
-            1,
-            &["tool", "-I/usr/include"],
-        )]);
-        let found = check_absolute_paths(&c, &Library::default());
-        assert_eq!(found.len(), 1);
-        assert_abs_path(
-            &found[0],
-            "CppCompile",
-            1,
-            "/usr/include",
-            LeakSite::Argument {
-                value: "-I/usr/include".to_owned(),
-            },
-        );
-    }
-
-    #[test]
-    fn absolute_path_in_env_value_is_a_violation() {
-        let c = container(vec![action_with_env(
-            "Genrule",
-            2,
-            &[("CC", "/usr/bin/gcc")],
-        )]);
-        let found = check_absolute_paths(&c, &Library::default());
-        assert_eq!(found.len(), 1);
-        assert_abs_path(
-            &found[0],
-            "Genrule",
-            2,
-            "/usr/bin/gcc",
-            LeakSite::EnvVar {
-                key: "CC".to_owned(),
-                value: "/usr/bin/gcc".to_owned(),
-            },
-        );
-    }
-
-    #[test]
-    fn colon_list_argument_reports_each_path() {
-        let c = container(vec![action_with_args(
-            "A",
-            1,
-            &["tool", "/bin:/usr/bin"],
-        )]);
-        let found = check_absolute_paths(&c, &Library::default());
-        assert_eq!(found.len(), 2);
-        assert_abs_path(
-            &found[0],
-            "A",
-            1,
-            "/bin",
-            LeakSite::Argument {
-                value: "/bin:/usr/bin".to_owned(),
-            },
-        );
-        assert_abs_path(
-            &found[1],
-            "A",
-            1,
-            "/usr/bin",
-            LeakSite::Argument {
-                value: "/bin:/usr/bin".to_owned(),
-            },
-        );
-    }
-
-    #[test]
-    fn path_env_var_is_skipped_by_absolute_path_check() {
-        // PATH is expected to hold absolute paths and is governed by check_path;
-        // the absolute-path check must not double-report it.
-        let c = container(vec![action_with_env(
-            "A",
-            1,
-            &[("PATH", EXPECTED_PATH)],
-        )]);
-        assert!(check_absolute_paths(&c, &Library::default()).is_empty());
-    }
-
-    #[test]
-    fn other_absolute_path_env_vars_are_still_flagged() {
-        // Only the var literally named PATH is skipped; LD_LIBRARY_PATH is not.
-        let c = container(vec![action_with_env(
-            "A",
-            1,
-            &[("LD_LIBRARY_PATH", "/opt/lib")],
-        )]);
-        let found = check_absolute_paths(&c, &Library::default());
-        assert_eq!(found.len(), 1);
-        assert_abs_path(
-            &found[0],
-            "A",
-            1,
-            "/opt/lib",
-            LeakSite::EnvVar {
-                key: "LD_LIBRARY_PATH".to_owned(),
-                value: "/opt/lib".to_owned(),
-            },
-        );
-    }
-
-    // ---- check_absolute_paths: paths the program declares ----
-
-    /// An `img manifest` command line, as rules_img writes it: an in-image
-    /// working directory, and a real output under `bazel-out`.
-    fn image_manifest_action() -> Action {
-        action_with_args(
-            "ImageManifest",
-            1,
-            &[
-                "bazel-out/k8-opt-exec/bin/external/rules_img_tool+/cmd/img\
-                 /img_linux_amd64_/img_linux_amd64",
-                "manifest",
-                "--working-dir",
-                "/app",
-                "--manifest",
-                "bazel-out/k8-fastbuild/bin/img/base/scratch_manifest.json",
-            ],
-        )
-    }
-
-    #[test]
-    fn a_path_the_program_declares_in_its_output_is_not_reported() {
-        // `/app` does not exist on this machine and is not supposed to: it
-        // is where the image will put things once someone runs it.
-        let c = container(vec![image_manifest_action()]);
-        assert!(check_absolute_paths(&c, &Library::builtin()).is_empty());
-    }
-
-    #[test]
-    fn the_same_path_is_reported_when_the_library_says_nothing() {
-        // The whole difference is the library. Without an entry for the
-        // program there is nothing to say the path describes an image, and
-        // Ahab reports it—which is what it should do for a tool it has
-        // never heard of.
-        let c = container(vec![image_manifest_action()]);
-        let found = check_absolute_paths(&c, &Library::default());
-        assert_eq!(found.len(), 1);
-        assert_abs_path(
-            &found[0],
-            "ImageManifest",
-            1,
-            "/app",
-            LeakSite::Argument {
-                value: "/app".to_owned(),
-            },
-        );
-    }
-
-    #[test]
-    fn declaring_paths_does_not_excuse_the_rest_of_the_action() {
-        // An entry naming some of a program's options must not turn into a
-        // blanket pardon for the program: an absolute path anywhere else on
-        // the same command line is still a finding.
-        let mut action = image_manifest_action();
-        action.arguments.push("--annotations-file".to_owned());
-        action
-            .arguments
-            .push("/home/someone/annotations.json".to_owned());
-        let c = container(vec![action]);
-        let found = check_absolute_paths(&c, &Library::builtin());
-        assert_eq!(found.len(), 1);
-        assert_abs_path(
-            &found[0],
-            "ImageManifest",
-            1,
-            "/home/someone/annotations.json",
-            LeakSite::Argument {
-                value: "/home/someone/annotations.json".to_owned(),
-            },
-        );
-    }
-
-    // ---- check_absolute_paths: benign cases (expect no violations) ----
-
-    #[test]
-    fn relative_paths_and_labels_pass_absolute_path_check() {
-        let c = container(vec![action_with_args(
-            "A",
-            1,
-            &["-Irelative/include", "//pkg:target", "foo.o"],
-        )]);
-        assert!(check_absolute_paths(&c, &Library::default()).is_empty());
-    }
-
-    #[test]
-    fn a_path_under_a_variable_expansion_is_not_absolute() {
-        // rules_rust writes exactly these. `${pwd}` becomes the execution
-        // root at run time, so nothing machine-specific is recorded.
-        let c = container(vec![action_with_env(
-            "Clippy",
-            1,
-            &[
-                (
-                    "CLIPPY_CONF_DIR",
-                    "${pwd}/external/rules_rust+/rust/settings",
-                ),
-                ("CARGO_MANIFEST_DIR", "${pwd}/proto"),
-            ],
-        )]);
-        assert!(check_absolute_paths(&c, &Library::default()).is_empty());
-    }
-
-    #[test]
-    fn every_build_placeholder_is_understood() {
-        let c = container(vec![action_with_args(
-            "A",
-            1,
-            &[
-                "tool",
-                "--remap-path-prefix=${pwd}=.",
-                "-I${output_base}/include",
-                "$(exec_root)/gen",
-                // A bare `$name` was never picked up, since the `/` sits
-                // right after a path character; pinned so it stays that way.
-                "$pwd/external/thing",
-            ],
-        )]);
-        let found = check_absolute_paths(&c, &Library::default());
-        assert!(found.is_empty(), "{found:?}");
-    }
-
-    #[test]
-    fn an_unrecognized_expansion_is_not_trusted() {
-        // The whole point of the allow-list. `${HOME}` expands to a
-        // host-specific absolute path, and a project's own placeholder
-        // could expand to anything at all, so neither is excused: an
-        // unknown name has to be reported rather than assumed harmless.
-        let c = container(vec![action_with_args(
-            "A",
-            1,
-            &[
-                "tool",
-                "${HOME}/lib",
-                "${foobar}/usr/lib",
-                "$(realpath x)/y",
-            ],
-        )]);
-        let found = check_absolute_paths(&c, &Library::default());
-        assert_eq!(found.len(), 3, "{found:?}");
-    }
-
-    #[test]
-    fn a_closing_brace_alone_does_not_excuse_an_absolute_path() {
-        // Even a known name needs the `$`: brackets that merely happen to
-        // precede a `/` are just brackets.
-        let c = container(vec![action_with_args(
-            "A",
-            1,
-            &["tool", "[pwd]/usr/lib", "{pwd}/opt/tool"],
-        )]);
-        let found = check_absolute_paths(&c, &Library::default());
-        assert_eq!(found.len(), 2, "{found:?}");
-    }
-
-    #[test]
-    fn an_absolute_path_after_an_expansion_is_still_reported() {
-        // The expansion excuses the path glued to it, not the whole
-        // argument: a genuine absolute path later on still counts.
-        let c = container(vec![action_with_args(
-            "A",
-            1,
-            &["tool", "${pwd}/external/ok:/usr/lib"],
-        )]);
-        let found = check_absolute_paths(&c, &Library::default());
-        assert_eq!(found.len(), 1, "{found:?}");
-        assert_abs_path(
-            &found[0],
-            "A",
-            1,
-            "/usr/lib",
-            LeakSite::Argument {
-                value: "${pwd}/external/ok:/usr/lib".to_owned(),
-            },
-        );
-    }
-
-    #[test]
-    fn proc_self_cwd_is_allowed() {
-        // What Bazel sets on every C++ action so that a compiler embedding
-        // `$PWD` records the same bytes on every machine. It names the
-        // working directory without saying where it is.
-        let c = container(vec![action_with_env(
-            "CppCompile",
-            1,
-            &[("PWD", "/proc/self/cwd")],
-        )]);
-        assert!(check_absolute_paths(&c, &Library::default()).is_empty());
-    }
-
-    #[test]
-    fn a_path_below_proc_self_cwd_is_still_reported() {
-        // Only the bare directory is exempt. Anything reaching further is
-        // an ordinary path that happens to start there, and the allow-list
-        // matches the whole run rather than a prefix.
-        let c = container(vec![action_with_args(
-            "A",
-            1,
-            &["tool", "/proc/self/cwd/foo", "/proc/self/root"],
-        )]);
-        let found = check_absolute_paths(&c, &Library::default());
-        assert_eq!(found.len(), 2, "{found:?}");
-    }
-
-    #[test]
-    fn dev_null_is_allowed_in_argument() {
-        // /dev/null is a portable special file, not a hermeticity leak.
-        let c =
-            container(vec![action_with_args("A", 1, &["-o", "/dev/null"])]);
-        assert!(check_absolute_paths(&c, &Library::default()).is_empty());
-    }
-
-    #[test]
-    fn dev_null_exemption_does_not_suppress_other_paths() {
-        // Only the exact /dev/null run is exempt; a real path in the same list
-        // is still reported. /dev/urandom is not on the allow-list.
-        let c = container(vec![action_with_args(
-            "A",
-            1,
-            &["tool", "/dev/null:/opt/bin"],
-        )]);
-        let found = check_absolute_paths(&c, &Library::default());
-        assert_eq!(found.len(), 1);
-        assert_abs_path(
-            &found[0],
-            "A",
-            1,
-            "/opt/bin",
-            LeakSite::Argument {
-                value: "/dev/null:/opt/bin".to_owned(),
-            },
-        );
-    }
-
     // ---- check_reproducibility ----
 
     /// Assert that `v` is a [`Violation::UnknownProgram`] for the given action
@@ -2643,8 +1856,8 @@ pub(crate) mod tests {
 
     #[test]
     fn a_sentinel_in_the_program_path_is_still_a_leak() {
-        // Why the argv[0] skip belongs to `check_absolute_paths` and not to
-        // `analyzable_strings`: a toolchain configured under the invoking
+        // Why the argv[0] skip belongs to the absolute-path check and not
+        // to `analyzable_strings`: a toolchain configured under the invoking
         // user's home bakes their name into argv[0], and that is exactly the
         // leak Ahab hunts. Nothing else would report it — the accompanying
         // SystemProgram violation says the tool is external, not that a
@@ -2678,7 +1891,7 @@ pub(crate) mod tests {
             1,
             &["/bin/bash", "-c", "true"],
         )]);
-        assert!(check_absolute_paths(&c, &Library::default()).is_empty());
+        assert!(absolute_paths::check(&c, &Library::default()).is_empty());
         assert_eq!(check_reproducibility(&c, &Library::builtin()).len(), 1);
     }
 
@@ -2690,7 +1903,7 @@ pub(crate) mod tests {
             1,
             &["/bin/bash", "-I/usr/include"],
         )]);
-        let found = check_absolute_paths(&c, &Library::default());
+        let found = absolute_paths::check(&c, &Library::default());
         assert_eq!(found.len(), 1);
         assert_abs_path(
             &found[0],
@@ -2712,7 +1925,7 @@ pub(crate) mod tests {
         let found = check_reproducibility(&c, &Library::builtin());
         assert_eq!(found.len(), 1);
         assert!(matches!(found[0], Violation::SystemProgram { .. }));
-        assert!(check_absolute_paths(&c, &Library::default()).is_empty());
+        assert!(absolute_paths::check(&c, &Library::default()).is_empty());
     }
 
     #[test]
@@ -2852,7 +2065,7 @@ pub(crate) mod tests {
         let mut individually =
             check_environment_leaks(&c, USER_SENTINEL, HOST_SENTINEL);
         individually.extend(check_path(&c));
-        individually.extend(check_absolute_paths(&c, &Library::default()));
+        individually.extend(absolute_paths::check(&c, &Library::default()));
         individually.extend(check_reproducibility(&c, &Library::builtin()));
 
         let combined = check_all(
@@ -2992,7 +2205,7 @@ pub(crate) mod tests {
             &["clang", "@out/foo.params"],
             &[("out/foo.params", &["-L/opt/lib"])],
         )]);
-        let found = check_absolute_paths(&c, &Library::default());
+        let found = absolute_paths::check(&c, &Library::default());
         assert_eq!(found.len(), 1, "{found:?}");
         match &found[0] {
             Violation::AbsolutePath { path, site, .. } => {
@@ -3019,7 +2232,7 @@ pub(crate) mod tests {
             &["clang", "-fmodule-map-file=out/m.cppmap"],
             &[("out/m.cppmap", &["umbrella \"/usr/include\""])],
         )]);
-        let found = check_absolute_paths(&c, &Library::default());
+        let found = absolute_paths::check(&c, &Library::default());
         assert_eq!(found.len(), 1, "{found:?}");
     }
 
@@ -3032,7 +2245,7 @@ pub(crate) mod tests {
             &["clang", "@out/foo.params", "@out/foo.params"],
             &[("out/foo.params", &["-L/opt/lib"])],
         )]);
-        assert_eq!(check_absolute_paths(&c, &Library::default()).len(), 1);
+        assert_eq!(absolute_paths::check(&c, &Library::default()).len(), 1);
     }
 
     #[test]
