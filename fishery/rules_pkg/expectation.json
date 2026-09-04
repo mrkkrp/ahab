@@ -27,36 +27,6 @@
       "violation": {
         "kind": "absolute_path",
         "action": {
-          "mnemonic": "Genrule",
-          "target": "//distro:small_module"
-        },
-        "path": "/version",
-        "site": {
-          "location": "argument",
-          "value": "source external/bazel_tools/tools/genrule/genrule-setup.sh; sed -e 's/version = \"\"/version = \"1.2.0\"/' -e '/### INTERNAL ONLY/,$d' ./MODULE.bazel >bazel-out/k8-fastbuild/bin/distro/MODULE.bazel"
-        }
-      }
-    },
-    {
-      "count": 1,
-      "violation": {
-        "kind": "absolute_path",
-        "action": {
-          "mnemonic": "Genrule",
-          "target": "//doc_build:toc"
-        },
-        "path": "/1.2.0/",
-        "site": {
-          "location": "argument",
-          "value": "source external/bazel_tools/tools/genrule/genrule-setup.sh; sed -e 's/{VERSION}/1.2.0/' doc_build/toc.md.tpl >bazel-out/k8-fastbuild/bin/doc_build/toc.md"
-        }
-      }
-    },
-    {
-      "count": 1,
-      "violation": {
-        "kind": "absolute_path",
-        "action": {
           "mnemonic": "MakeDeb",
           "target": "//tests/deb:test_deb"
         },

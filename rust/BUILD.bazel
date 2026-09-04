@@ -19,6 +19,7 @@ rust_library(
     srcs = [
         "src/aquery.rs",
         "src/checks.rs",
+        "src/checks/absolute_paths.rs",
         "src/cli.rs",
         "src/exceptions.rs",
         "src/glob.rs",

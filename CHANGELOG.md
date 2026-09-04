@@ -1,5 +1,46 @@
 ## Unreleased
 
+* A `/` roots a path only where something in the text says a value begins
+  there, and the list of such things is closed: the start of the text, a
+  word separator, an opening quote, the `=` of an assignment, the `:` or `,`
+  between list elements, the `[`, and a known prefix such as `-I` in
+  `-I/usr/include`. Ahab used to ask the opposite question—whether the
+  character before the `/` merely looked like a separator—and almost every
+  character that is not a filename character looks like one, so it answered
+  yes to text that was not a path.
+
+* No expansion roots a path. `${pwd}/proto` was already understood, from a
+  list of three names that rules_rust substitutes; but whatever an expansion
+  becomes, the `/` after it separates the segments of a path relative to
+  that, so the name inside the brackets need not be consulted and is not.
+  `${RUNFILES_DIR}/bazel_tools/…`, `$(dirname x)/keytool` and the
+  `{pkg}`-style placeholder of a template all read the same way now,
+  wherever in a value they sit. A path rooted at a host-dependent variable,
+  as `${HOME}/lib` is, stops being reported with them; it deserves a finding
+  that names the variable rather than one that prints `/lib`.
+
+* A run holding a backslash before a regular expression's metacharacter is
+  not a path: `/R\.class,/BR\.class` names no directory called `R`. A
+  backslash before anything else belongs to the text around the path rather
+  than to a pattern, so `echo \"/opt/toolchain/bin/cc\"` and `printf
+  "prefix=/opt/x\n"` still report the path they hold.
+
+* A genrule's `cmd` is read as the shell script it is, which is what tells
+  the `<` of a quoted `'</manifest>'` from the one redirecting `cat
+  </etc/passwd`.
+
+* The `#!/bin/bash` of a script a genrule generates is no longer reported.
+  A shebang is a thing a *file* begins with, and what Ahab reads is an
+  argument, a param file line or an environment variable value—so the `#!`
+  there is two characters and not a prefix a path hangs off. Nothing is lost
+  by it: the `/bin/bash` such a genrule runs is reported as a program from
+  outside the build, which is the same host dependency said once.
+
+* A path is reported as it is written. `/usr/lib/*` used to come out as
+  `/usr/lib/` and `/opt/café/bin` as `/opt/caf`—in both cases a path nothing
+  has. A glob character belongs to the pattern it is part of, and a filename
+  is in whatever language its author wrote it in.
+
 * Ahab knows the Apple toolchain, and the answer is the same for all of it:
   an Apple build works from the Xcode installed on the machine, so its tools
   are host-derived.

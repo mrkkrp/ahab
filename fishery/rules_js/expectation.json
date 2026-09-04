@@ -617,21 +617,6 @@
       }
     },
     {
-      "count": 5,
-      "violation": {
-        "kind": "absolute_path",
-        "action": {
-          "mnemonic": "Genrule",
-          "target": "//js/private/test:shell_launcher_sed"
-        },
-        "path": "/~",
-        "site": {
-          "location": "argument",
-          "value": "source external/bazel_tools/tools/genrule/genrule-setup.sh; cat bazel-out/k8-fastbuild/bin/js/private/test/shellcheck_launcher_/shellcheck_launcher | sed \"s#bazel-out/k8-fastbuild/bin#bazel-out/k8-fastbuild/bin#\" | sed \"s#JS_BINARY__TARGET_CPU=\\\"k8\\\"#JS_BINARY__TARGET_CPU=\\\"k8\\\"#\" | sed \"s#linux_amd64#linux_amd64#\" | sed \"s#\\\"linux\\\"#\\\"k8\\\"#\" | sed -E -e 's/~~/++/g' -e 's|([+][+][^/~]+)~([^/~]+)~([^/~]+)|\\1+\\2+\\3|g' -e 's|([+][+][^/~]+)~([^/~]+)|\\1+\\2|g' > bazel-out/k8-fastbuild/bin/js/private/test/shellcheck_launcher_sed.sh"
-        }
-      }
-    },
-    {
       "count": 1,
       "violation": {
         "kind": "system_program",
