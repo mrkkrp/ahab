@@ -1089,7 +1089,33 @@ fn absolute_paths(text: &str) -> Vec<String> {
 
 /// Absolute paths that are allowed to appear in an action and must not be
 /// reported as hermeticity violations.
-const ALLOWED_ABSOLUTE_PATHS: &[&str] = &["/dev/null", "/proc/self/cwd"];
+///
+/// `/dev/null` and `/proc/self/cwd` are special files that name the same
+/// thing on every machine. The other two are placeholders that well-known
+/// rule sets write into their actions on purpose:
+///
+/// * `/PLACEHOLDER_DEVELOPER_DIR` is what `apple_support` and `rules_swift`
+///   map the Xcode developer directory onto, passing
+///   `__BAZEL_XCODE_DEVELOPER_DIR__=/PLACEHOLDER_DEVELOPER_DIR` to
+///   `-fdebug-prefix-map` and `-file-prefix-map`. It is the replacement
+///   side of the map: the string that stands in the output *instead of*
+///   wherever Xcode happens to be installed. Reporting it would be
+///   reporting the very mechanism that keeps the developer directory out
+///   of the artifact.
+///
+/// * `/bazel_rules_apple/fakepath` is the `--binary-file` argument
+///   `rules_apple` hands to `appintentsmetadataprocessor`. Compile-time
+///   extraction reads no binary, but the tool insists on the flag having a
+///   value, so the rule invents one that cannot exist.
+///
+/// The list is closed on purpose: a project's own placeholder is a project
+/// exception, not a default.
+const ALLOWED_ABSOLUTE_PATHS: &[&str] = &[
+    "/dev/null",
+    "/proc/self/cwd",
+    "/PLACEHOLDER_DEVELOPER_DIR",
+    "/bazel_rules_apple/fakepath",
+];
 
 /// Whether an extracted absolute path is exempt from the absolute-path
 /// check.

@@ -1,3 +1,14 @@
+## Unreleased
+
+* Two placeholders that well-known rule sets write into their actions on
+  purpose no longer count as absolute paths. `/PLACEHOLDER_DEVELOPER_DIR` is
+  what `apple_support` and `rules_swift` map the Xcode developer directory
+  onto—it is the string that stands in the output instead of wherever Xcode
+  is installed. `/bazel_rules_apple/fakepath` is the `--binary-file`
+  argument `rules_apple` hands to `appintentsmetadataprocessor`, which
+  insists on the flag having a value even when compile-time extraction reads
+  no binary.
+
 ## Ahab 0.2.1
 
 * Add reproducibility specs for Closure and J2CL build tools, the metadata
