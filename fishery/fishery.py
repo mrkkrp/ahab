@@ -61,6 +61,11 @@ def read_spec(name):
             fail(f"{path}: missing {required!r}")
     return spec
 
+def expand(flag, name):
+    """Fill in `{target}` with the target's own directory.
+    """
+    return flag.replace("{target}", str(target_dir(name)))
+
 def work_dir(name):
     return target_dir(name) / "work"
 
@@ -183,6 +188,8 @@ def ahab_run(name, args):
     mode = spec.get("compilation_mode")
     if mode:
         command.append(f"--compilation-mode={mode}")
+    for flag in spec.get("flags", []):
+        command.append(f"--bazel-flag={expand(flag, name)}")
     exceptions = target_dir(name) / "exceptions.json"
     if exceptions.is_file():
         command.append(f"--exceptions-json={exceptions}")

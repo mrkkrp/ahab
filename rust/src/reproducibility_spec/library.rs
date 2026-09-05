@@ -109,7 +109,8 @@ pub(super) fn never() -> ReproducibilitySpec {
     )
 }
 
-/// A spec for a program Bazel wrote by inspecting the machine.
+/// A spec for a program that works from what the machine has: one Bazel
+/// wrote by inspecting it, or one that runs a tool installed on it.
 pub(super) fn host_derived() -> ReproducibilitySpec {
     ReproducibilitySpec::new(
         Reproducibility::HostDerived,
@@ -121,6 +122,7 @@ pub(super) fn host_derived() -> ReproducibilitySpec {
 /// The library Ahab ships with.
 fn entries() -> Vec<(ProgramId, Entry)> {
     let mut entries = super::per_lang::rust::entries();
+    entries.extend(super::per_lang::apple::entries());
     entries.extend(super::per_lang::cc::entries());
     entries.extend(super::per_lang::container::entries());
     entries.extend(super::per_lang::go::entries());
@@ -264,6 +266,17 @@ fn language_agnostic() -> Vec<(ProgramId, Entry)> {
         (
             ProgramId::module("bazel_tools", "tools/zip/zipper/zipper"),
             Entry::Spec(always()),
+        ),
+        // The same binary under the path it is built at. `//tools/zip:zipper`
+        // is an alias for `//third_party/ijar:zipper`, and an action running
+        // it records where the `cc_binary` put it rather than where the
+        // alias stands.
+        (
+            ProgramId::module("bazel_tools", "third_party/ijar/zipper"),
+            Entry::SameAs(ProgramId::module(
+                "bazel_tools",
+                "tools/zip/zipper/zipper",
+            )),
         ),
         // Bazel's test shim. Its outputs—the log and the JUnit XML—carry
         // timings and so are never byte-identical, but they are terminal:

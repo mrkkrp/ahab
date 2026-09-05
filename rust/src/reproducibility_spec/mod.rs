@@ -25,8 +25,10 @@ pub enum Reproducibility {
     Always,
     /// The program is never reproducible; no set of flags can make it so.
     Never,
-    /// The program was written by inspecting the machine in ways that make
-    /// it non-hermetic.
+    /// The program does its work with what the machine has rather than
+    /// with what the build declares—either because Bazel wrote it by
+    /// inspecting the machine, or because it reaches for a tool installed
+    /// there when it runs.
     HostDerived,
     /// The program is reproducible only under some conditions—see the
     /// requirements and prohibitions of the [`ReproducibilitySpec`].

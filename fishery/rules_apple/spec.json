@@ -1,0 +1,13 @@
+{
+  "repo": "https://github.com/bazelbuild/rules_apple",
+  "commit": "74a3c3a2eb3d9c6432a32c158fc11e0cfaa4f881",
+  "label": "deps(//examples/ios/HelloWorldSwift:HelloWorldSwift)",
+  "configs": [],
+  "flags": [
+    "--inject_repository=fishery_xcode={target}/xcode",
+    "--xcode_version_config=@fishery_xcode//:xcodes",
+    "--extra_execution_platforms=@fishery_xcode//:macos_exec",
+    "--platforms=@@apple_support+//platforms:ios_x86_64"
+  ],
+  "weight": 2
+}

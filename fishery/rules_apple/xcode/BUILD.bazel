@@ -1,0 +1,56 @@
+"""What an Apple build needs from a Mac, written down instead.
+
+Analyzing an Apple target asks for two things Linux does not have. The cc
+toolchains `apple_support` registers declare `exec_compatible_with =
+["@platforms//os:macos"]`—"These only execute on macOS"—so toolchain
+resolution finds no execution platform to run them on. And `xcode_configure`
+writes a `local_config_xcode` holding no Xcode versions at all on a
+non-Darwin host, which `rules_swift` reports as "Could not determine Xcode
+version at all".
+
+Both are answered by declaring rather than discovering. Nothing here has to
+exist on the machine: the fishery only ever runs `aquery`, so an execution
+platform is a claim about where actions *would* run, and `xcode_version` is
+a Starlark rule that records a version rather than looking for one. The
+version below is a fiction, and a fixed one, which is what makes the
+recorded report the same on every machine—more stable, in fact, than
+recording on a real Mac, where the installed Xcode would vary.
+
+The labels below are canonical repository names, doubled at-sign and all,
+which buildifier is right to warn about everywhere else. A repository
+injected with `--inject_repository` does not inherit the project's repo
+mapping, and `rules_apple` calls this module `build_bazel_apple_support`, so
+an apparent name resolves to nothing from in here.
+"""
+
+# buildifier: disable=canonical-repository
+load("@@apple_support+//xcode:xcode_config.bzl", "xcode_config")
+
+# buildifier: disable=canonical-repository
+load("@@apple_support+//xcode:xcode_version.bzl", "xcode_version")
+
+package(default_visibility = ["//visibility:public"])
+
+xcode_version(
+    name = "version",
+    default_ios_sdk_version = "18.2",
+    default_macos_sdk_version = "15.2",
+    default_tvos_sdk_version = "18.2",
+    default_watchos_sdk_version = "11.2",
+    version = "16.2.0.16C5032a",
+)
+
+xcode_config(
+    name = "xcodes",
+    default = ":version",
+    versions = [":version"],
+)
+
+# buildifier: disable=canonical-repository
+platform(
+    name = "macos_exec",
+    constraint_values = [
+        "@@platforms//cpu:x86_64",
+        "@@platforms//os:macos",
+    ],
+)

@@ -138,11 +138,11 @@ ahab_explain(
 
 ### The macros
 
-`ahab` takes `label`, `configs`, `compilation_mode`, `repro_specs`,
-`exceptions`, `shut_up`, `no_fail`, `write_json`, `explain_json` and
-`expect_json`. The three wrappers take the subset that makes sense for them,
-plus `baseline` or `report`. All of them pass unrecognized arguments
-through, so `visibility` and `tags` work as usual.
+`ahab` takes `label`, `configs`, `bazel_flags`, `compilation_mode`,
+`repro_specs`, `exceptions`, `shut_up`, `no_fail`, `write_json`,
+`explain_json` and `expect_json`. The three wrappers take the subset that
+makes sense for them, plus `baseline` or `report`. All of them pass
+unrecognized arguments through, so `visibility` and `tags` work as usual.
 
 `configs` forwards `--config=<name>` values to the underlying `aquery`,
 which matters when the thing worth analyzing is a particular configuration.
@@ -233,7 +233,7 @@ out of that:
 | finding                     | meaning                            |
 | --------------------------- | ---------------------------------- |
 | system program              | reached outside the execution root |
-| host-derived program        | inside the execution root, but written by inspecting the machine |
+| host-derived program        | inside the execution root, but works from what the machine has |
 | unknown program             | Ahab has no specification for it, and says so rather than assuming the best |
 | never reproducible          | the program cannot be made deterministic by any flags |
 | conditional reproducibility | the program is deterministic only under conditions this invocation does not meet |

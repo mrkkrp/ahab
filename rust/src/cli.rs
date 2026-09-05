@@ -35,6 +35,10 @@ pub struct Cli {
     #[arg(long = "config", value_name = "NAME")]
     pub configs: Vec<String>,
 
+    /// A flag to hand to `bazel aquery` as it stands. May be repeated.
+    #[arg(long = "bazel-flag", value_name = "FLAG")]
+    pub bazel_flags: Vec<String>,
+
     /// The Bazel label or wildcard to query (e.g. `//foo:bar` or `//...`).
     ///
     /// Not needed with `--explain-json`, which reads a saved report rather
@@ -123,6 +127,7 @@ impl Cli {
         let container = run_aquery(
             &self.configs,
             self.compilation_mode.as_deref(),
+            &self.bazel_flags,
             label,
             &env,
             self.output_base.as_deref(),
