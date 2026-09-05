@@ -77,9 +77,10 @@ fn bazel_info() -> Result<std::collections::HashMap<String, String>> {
 }
 
 /// Invoke `bazel aquery` for `label`, forwarding each `--config` value and
-/// overriding the given environment variables `env` (as `(name, value)`
-/// pairs) on top of the inherited environment, and decode the binary-proto
-/// response into an [`ActionGraphContainer`].
+/// each of `bazel_flags` verbatim, overriding the given environment
+/// variables `env` (as `(name, value)` pairs) on top of the inherited
+/// environment, and decode the binary-proto response into an
+/// [`ActionGraphContainer`].
 ///
 /// Overriding `USER` matters here: it feeds both Bazel's output base and
 /// its output-user (install) root, so a naive env override would send the
@@ -94,6 +95,7 @@ fn bazel_info() -> Result<std::collections::HashMap<String, String>> {
 pub fn run_aquery(
     configs: &[String],
     compilation_mode: Option<&str>,
+    bazel_flags: &[String],
     label: &str,
     env: &[(&str, &str)],
     output_base: Option<&str>,
@@ -151,6 +153,12 @@ pub fn run_aquery(
     // a named configuration in the project's own rc files chose.
     if let Some(mode) = compilation_mode {
         command.arg(format!("--compilation_mode={mode}"));
+    }
+
+    // Last of the three, and so the final word on any option two of them
+    // set: what the caller spelled out here is as explicit as it gets.
+    for flag in bazel_flags {
+        command.arg(flag);
     }
 
     // Ask for the action graph as a binary protobuf ActionGraphContainer.

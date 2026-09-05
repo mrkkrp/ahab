@@ -27,6 +27,7 @@ rust_library(
         "src/param_files.rs",
         "src/reproducibility_spec/library.rs",
         "src/reproducibility_spec/mod.rs",
+        "src/reproducibility_spec/per_lang/apple.rs",
         "src/reproducibility_spec/per_lang/cc.rs",
         "src/reproducibility_spec/per_lang/container.rs",
         "src/reproducibility_spec/per_lang/go.rs",

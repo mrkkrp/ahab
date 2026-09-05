@@ -1,0 +1,1224 @@
+{
+  "violations": [
+    {
+      "count": 1,
+      "violation": {
+        "kind": "execution_requirement",
+        "action": {
+          "mnemonic": "AssetCatalogCompile",
+          "target": "//examples/ios/HelloWorldSwift:HelloWorldSwift"
+        },
+        "requirement": "no-sandbox"
+      }
+    },
+    {
+      "count": 1,
+      "violation": {
+        "kind": "execution_requirement",
+        "action": {
+          "mnemonic": "ProcessAndSign",
+          "target": "//examples/ios/HelloWorldSwift:HelloWorldSwift"
+        },
+        "requirement": "no-sandbox"
+      }
+    },
+    {
+      "count": 1,
+      "violation": {
+        "kind": "absolute_path",
+        "action": {
+          "mnemonic": "ObjcLink",
+          "target": "//examples/ios/HelloWorldSwift:HelloWorldSwift"
+        },
+        "path": "/usr/lib/swift",
+        "site": {
+          "location": "argument",
+          "value": "-L/usr/lib/swift"
+        }
+      }
+    },
+    {
+      "count": 1,
+      "violation": {
+        "kind": "absolute_path",
+        "action": {
+          "mnemonic": "ObjcLink",
+          "target": "//examples/ios/HelloWorldSwift:HelloWorldSwift"
+        },
+        "path": "/usr/lib/swift",
+        "site": {
+          "location": "argument",
+          "value": "-Wl,-rpath,/usr/lib/swift"
+        }
+      }
+    },
+    {
+      "count": 1,
+      "violation": {
+        "kind": "system_program",
+        "action": {
+          "mnemonic": "CcStrip",
+          "target": "@@bazel_tools//src/tools/launcher:launcher_maker"
+        },
+        "program": {
+          "origin": "system",
+          "path": "/usr/bin/strip"
+        },
+        "wrappers": []
+      }
+    },
+    {
+      "count": 1,
+      "violation": {
+        "kind": "system_program",
+        "action": {
+          "mnemonic": "CcStrip",
+          "target": "@@bazel_tools//third_party/ijar:zipper"
+        },
+        "program": {
+          "origin": "system",
+          "path": "/usr/bin/strip"
+        },
+        "wrappers": []
+      }
+    },
+    {
+      "count": 1,
+      "violation": {
+        "kind": "system_program",
+        "action": {
+          "mnemonic": "CcStrip",
+          "target": "@@rules_swift+//tools/worker:worker"
+        },
+        "program": {
+          "origin": "system",
+          "path": "/usr/bin/strip"
+        },
+        "wrappers": []
+      }
+    },
+    {
+      "count": 1,
+      "violation": {
+        "kind": "system_program",
+        "action": {
+          "mnemonic": "Genrule",
+          "target": "@@apple_support+//crosstool:exec_cc_wrapper.target_config"
+        },
+        "program": {
+          "origin": "system",
+          "path": "/bin/bash"
+        },
+        "wrappers": []
+      }
+    },
+    {
+      "count": 1,
+      "violation": {
+        "kind": "system_program",
+        "action": {
+          "mnemonic": "Genrule",
+          "target": "@@apple_support+//crosstool:exec_libtool.target_config"
+        },
+        "program": {
+          "origin": "system",
+          "path": "/bin/bash"
+        },
+        "wrappers": []
+      }
+    },
+    {
+      "count": 1,
+      "violation": {
+        "kind": "system_program",
+        "action": {
+          "mnemonic": "Genrule",
+          "target": "@@apple_support+//crosstool:exec_wrapped_clang.target_config"
+        },
+        "program": {
+          "origin": "system",
+          "path": "/bin/bash"
+        },
+        "wrappers": []
+      }
+    },
+    {
+      "count": 1,
+      "violation": {
+        "kind": "system_program",
+        "action": {
+          "mnemonic": "Genrule",
+          "target": "@@apple_support+//crosstool:exec_wrapped_clang_pp.target_config"
+        },
+        "program": {
+          "origin": "system",
+          "path": "/bin/bash"
+        },
+        "wrappers": []
+      }
+    },
+    {
+      "count": 1,
+      "violation": {
+        "kind": "system_program",
+        "action": {
+          "mnemonic": "Genrule",
+          "target": "@@zlib+//:copy_public_headers"
+        },
+        "program": {
+          "origin": "system",
+          "path": "/bin/bash"
+        },
+        "wrappers": []
+      }
+    },
+    {
+      "count": 1,
+      "violation": {
+        "kind": "system_program",
+        "action": {
+          "mnemonic": "ProcessDEREntitlements",
+          "target": "//examples/ios/HelloWorldSwift:HelloWorldSwift"
+        },
+        "program": {
+          "origin": "system",
+          "path": "/usr/bin/derq"
+        },
+        "wrappers": []
+      }
+    },
+    {
+      "count": 1,
+      "violation": {
+        "kind": "host_derived_program",
+        "action": {
+          "mnemonic": "Action",
+          "target": "//apple/internal:environment_plist_ios"
+        },
+        "program": {
+          "origin": {
+            "main": {
+              "extension": null
+            }
+          },
+          "path": "tools/environment_plist/environment_plist"
+        },
+        "wrappers": []
+      }
+    },
+    {
+      "count": 1,
+      "violation": {
+        "kind": "host_derived_program",
+        "action": {
+          "mnemonic": "AssetCatalogCompile",
+          "target": "//examples/ios/HelloWorldSwift:HelloWorldSwift"
+        },
+        "program": {
+          "origin": {
+            "main": {
+              "extension": null
+            }
+          },
+          "path": "tools/xctoolrunner/xctoolrunner"
+        },
+        "wrappers": []
+      }
+    },
+    {
+      "count": 1,
+      "violation": {
+        "kind": "host_derived_program",
+        "action": {
+          "mnemonic": "CompileRootInfoPlist",
+          "target": "//examples/ios/HelloWorldSwift:HelloWorldSwift"
+        },
+        "program": {
+          "origin": {
+            "main": {
+              "extension": null
+            }
+          },
+          "path": "tools/plisttool/plisttool"
+        },
+        "wrappers": []
+      }
+    },
+    {
+      "count": 1,
+      "violation": {
+        "kind": "host_derived_program",
+        "action": {
+          "mnemonic": "CompileXCStrings",
+          "target": "//examples/ios/HelloWorldSwift:HelloWorldSwift"
+        },
+        "program": {
+          "origin": {
+            "main": {
+              "extension": null
+            }
+          },
+          "path": "tools/xctoolrunner/xctoolrunner"
+        },
+        "wrappers": []
+      }
+    },
+    {
+      "count": 1,
+      "violation": {
+        "kind": "host_derived_program",
+        "action": {
+          "mnemonic": "CppArchive",
+          "target": "//examples/ios/HelloWorldSwift:Sources"
+        },
+        "program": {
+          "origin": {
+            "module": {
+              "name": "apple_support",
+              "extension": null
+            }
+          },
+          "path": "crosstool/libtool"
+        },
+        "wrappers": []
+      }
+    },
+    {
+      "count": 1,
+      "violation": {
+        "kind": "host_derived_program",
+        "action": {
+          "mnemonic": "CppArchive",
+          "target": "@@bazel_tools//src/main/cpp/util:errors"
+        },
+        "program": {
+          "origin": {
+            "module": {
+              "name": "apple_support",
+              "extension": null
+            }
+          },
+          "path": "crosstool/libtool"
+        },
+        "wrappers": []
+      }
+    },
+    {
+      "count": 1,
+      "violation": {
+        "kind": "host_derived_program",
+        "action": {
+          "mnemonic": "CppArchive",
+          "target": "@@bazel_tools//src/main/cpp/util:filesystem"
+        },
+        "program": {
+          "origin": {
+            "module": {
+              "name": "apple_support",
+              "extension": null
+            }
+          },
+          "path": "crosstool/libtool"
+        },
+        "wrappers": []
+      }
+    },
+    {
+      "count": 1,
+      "violation": {
+        "kind": "host_derived_program",
+        "action": {
+          "mnemonic": "CppArchive",
+          "target": "@@bazel_tools//src/main/cpp/util:logging"
+        },
+        "program": {
+          "origin": {
+            "module": {
+              "name": "apple_support",
+              "extension": null
+            }
+          },
+          "path": "crosstool/libtool"
+        },
+        "wrappers": []
+      }
+    },
+    {
+      "count": 1,
+      "violation": {
+        "kind": "host_derived_program",
+        "action": {
+          "mnemonic": "CppArchive",
+          "target": "@@bazel_tools//src/main/cpp/util:port"
+        },
+        "program": {
+          "origin": {
+            "module": {
+              "name": "apple_support",
+              "extension": null
+            }
+          },
+          "path": "crosstool/libtool"
+        },
+        "wrappers": []
+      }
+    },
+    {
+      "count": 1,
+      "violation": {
+        "kind": "host_derived_program",
+        "action": {
+          "mnemonic": "CppArchive",
+          "target": "@@bazel_tools//src/main/cpp/util:strings"
+        },
+        "program": {
+          "origin": {
+            "module": {
+              "name": "apple_support",
+              "extension": null
+            }
+          },
+          "path": "crosstool/libtool"
+        },
+        "wrappers": []
+      }
+    },
+    {
+      "count": 1,
+      "violation": {
+        "kind": "host_derived_program",
+        "action": {
+          "mnemonic": "CppArchive",
+          "target": "@@bazel_tools//third_party/ijar:platform_utils"
+        },
+        "program": {
+          "origin": {
+            "module": {
+              "name": "apple_support",
+              "extension": null
+            }
+          },
+          "path": "crosstool/libtool"
+        },
+        "wrappers": []
+      }
+    },
+    {
+      "count": 1,
+      "violation": {
+        "kind": "host_derived_program",
+        "action": {
+          "mnemonic": "CppArchive",
+          "target": "@@bazel_tools//third_party/ijar:zip"
+        },
+        "program": {
+          "origin": {
+            "module": {
+              "name": "apple_support",
+              "extension": null
+            }
+          },
+          "path": "crosstool/libtool"
+        },
+        "wrappers": []
+      }
+    },
+    {
+      "count": 1,
+      "violation": {
+        "kind": "host_derived_program",
+        "action": {
+          "mnemonic": "CppArchive",
+          "target": "@@bazel_tools//third_party/ijar:zlib_client"
+        },
+        "program": {
+          "origin": {
+            "module": {
+              "name": "apple_support",
+              "extension": null
+            }
+          },
+          "path": "crosstool/libtool"
+        },
+        "wrappers": []
+      }
+    },
+    {
+      "count": 1,
+      "violation": {
+        "kind": "host_derived_program",
+        "action": {
+          "mnemonic": "CppArchive",
+          "target": "@@rules_cc+//cc/runfiles:runfiles"
+        },
+        "program": {
+          "origin": {
+            "module": {
+              "name": "apple_support",
+              "extension": null
+            }
+          },
+          "path": "crosstool/libtool"
+        },
+        "wrappers": []
+      }
+    },
+    {
+      "count": 1,
+      "violation": {
+        "kind": "host_derived_program",
+        "action": {
+          "mnemonic": "CppArchive",
+          "target": "@@rules_swift+//tools/common:bazel_substitutions"
+        },
+        "program": {
+          "origin": {
+            "module": {
+              "name": "apple_support",
+              "extension": null
+            }
+          },
+          "path": "crosstool/libtool"
+        },
+        "wrappers": []
+      }
+    },
+    {
+      "count": 1,
+      "violation": {
+        "kind": "host_derived_program",
+        "action": {
+          "mnemonic": "CppArchive",
+          "target": "@@rules_swift+//tools/common:process"
+        },
+        "program": {
+          "origin": {
+            "module": {
+              "name": "apple_support",
+              "extension": null
+            }
+          },
+          "path": "crosstool/libtool"
+        },
+        "wrappers": []
+      }
+    },
+    {
+      "count": 1,
+      "violation": {
+        "kind": "host_derived_program",
+        "action": {
+          "mnemonic": "CppArchive",
+          "target": "@@rules_swift+//tools/worker:compile_with_worker"
+        },
+        "program": {
+          "origin": {
+            "module": {
+              "name": "apple_support",
+              "extension": null
+            }
+          },
+          "path": "crosstool/libtool"
+        },
+        "wrappers": []
+      }
+    },
+    {
+      "count": 1,
+      "violation": {
+        "kind": "host_derived_program",
+        "action": {
+          "mnemonic": "CppArchive",
+          "target": "@@rules_swift+//tools/worker:compile_without_worker"
+        },
+        "program": {
+          "origin": {
+            "module": {
+              "name": "apple_support",
+              "extension": null
+            }
+          },
+          "path": "crosstool/libtool"
+        },
+        "wrappers": []
+      }
+    },
+    {
+      "count": 1,
+      "violation": {
+        "kind": "host_derived_program",
+        "action": {
+          "mnemonic": "CppArchive",
+          "target": "@@rules_swift+//tools/worker:swift_runner"
+        },
+        "program": {
+          "origin": {
+            "module": {
+              "name": "apple_support",
+              "extension": null
+            }
+          },
+          "path": "crosstool/libtool"
+        },
+        "wrappers": []
+      }
+    },
+    {
+      "count": 1,
+      "violation": {
+        "kind": "host_derived_program",
+        "action": {
+          "mnemonic": "CppArchive",
+          "target": "@@rules_swift+//tools/worker:worker_protocol"
+        },
+        "program": {
+          "origin": {
+            "module": {
+              "name": "apple_support",
+              "extension": null
+            }
+          },
+          "path": "crosstool/libtool"
+        },
+        "wrappers": []
+      }
+    },
+    {
+      "count": 1,
+      "violation": {
+        "kind": "host_derived_program",
+        "action": {
+          "mnemonic": "CppArchive",
+          "target": "@@zlib+//:z"
+        },
+        "program": {
+          "origin": {
+            "module": {
+              "name": "apple_support",
+              "extension": null
+            }
+          },
+          "path": "crosstool/libtool"
+        },
+        "wrappers": []
+      }
+    },
+    {
+      "count": 1,
+      "violation": {
+        "kind": "host_derived_program",
+        "action": {
+          "mnemonic": "CppCompile",
+          "target": "@@bazel_tools//src/main/cpp/util:errors"
+        },
+        "program": {
+          "origin": {
+            "module": {
+              "name": "apple_support",
+              "extension": null
+            }
+          },
+          "path": "crosstool/wrapped_clang_pp"
+        },
+        "wrappers": []
+      }
+    },
+    {
+      "count": 4,
+      "violation": {
+        "kind": "host_derived_program",
+        "action": {
+          "mnemonic": "CppCompile",
+          "target": "@@bazel_tools//src/main/cpp/util:filesystem"
+        },
+        "program": {
+          "origin": {
+            "module": {
+              "name": "apple_support",
+              "extension": null
+            }
+          },
+          "path": "crosstool/wrapped_clang_pp"
+        },
+        "wrappers": []
+      }
+    },
+    {
+      "count": 1,
+      "violation": {
+        "kind": "host_derived_program",
+        "action": {
+          "mnemonic": "CppCompile",
+          "target": "@@bazel_tools//src/main/cpp/util:logging"
+        },
+        "program": {
+          "origin": {
+            "module": {
+              "name": "apple_support",
+              "extension": null
+            }
+          },
+          "path": "crosstool/wrapped_clang_pp"
+        },
+        "wrappers": []
+      }
+    },
+    {
+      "count": 1,
+      "violation": {
+        "kind": "host_derived_program",
+        "action": {
+          "mnemonic": "CppCompile",
+          "target": "@@bazel_tools//src/main/cpp/util:port"
+        },
+        "program": {
+          "origin": {
+            "module": {
+              "name": "apple_support",
+              "extension": null
+            }
+          },
+          "path": "crosstool/wrapped_clang_pp"
+        },
+        "wrappers": []
+      }
+    },
+    {
+      "count": 1,
+      "violation": {
+        "kind": "host_derived_program",
+        "action": {
+          "mnemonic": "CppCompile",
+          "target": "@@bazel_tools//src/main/cpp/util:strings"
+        },
+        "program": {
+          "origin": {
+            "module": {
+              "name": "apple_support",
+              "extension": null
+            }
+          },
+          "path": "crosstool/wrapped_clang_pp"
+        },
+        "wrappers": []
+      }
+    },
+    {
+      "count": 1,
+      "violation": {
+        "kind": "host_derived_program",
+        "action": {
+          "mnemonic": "CppCompile",
+          "target": "@@bazel_tools//src/tools/launcher:launcher_maker"
+        },
+        "program": {
+          "origin": {
+            "module": {
+              "name": "apple_support",
+              "extension": null
+            }
+          },
+          "path": "crosstool/wrapped_clang_pp"
+        },
+        "wrappers": []
+      }
+    },
+    {
+      "count": 1,
+      "violation": {
+        "kind": "host_derived_program",
+        "action": {
+          "mnemonic": "CppCompile",
+          "target": "@@bazel_tools//third_party/ijar:platform_utils"
+        },
+        "program": {
+          "origin": {
+            "module": {
+              "name": "apple_support",
+              "extension": null
+            }
+          },
+          "path": "crosstool/wrapped_clang_pp"
+        },
+        "wrappers": []
+      }
+    },
+    {
+      "count": 2,
+      "violation": {
+        "kind": "host_derived_program",
+        "action": {
+          "mnemonic": "CppCompile",
+          "target": "@@bazel_tools//third_party/ijar:zip"
+        },
+        "program": {
+          "origin": {
+            "module": {
+              "name": "apple_support",
+              "extension": null
+            }
+          },
+          "path": "crosstool/wrapped_clang_pp"
+        },
+        "wrappers": []
+      }
+    },
+    {
+      "count": 1,
+      "violation": {
+        "kind": "host_derived_program",
+        "action": {
+          "mnemonic": "CppCompile",
+          "target": "@@bazel_tools//third_party/ijar:zipper"
+        },
+        "program": {
+          "origin": {
+            "module": {
+              "name": "apple_support",
+              "extension": null
+            }
+          },
+          "path": "crosstool/wrapped_clang_pp"
+        },
+        "wrappers": []
+      }
+    },
+    {
+      "count": 1,
+      "violation": {
+        "kind": "host_derived_program",
+        "action": {
+          "mnemonic": "CppCompile",
+          "target": "@@bazel_tools//third_party/ijar:zlib_client"
+        },
+        "program": {
+          "origin": {
+            "module": {
+              "name": "apple_support",
+              "extension": null
+            }
+          },
+          "path": "crosstool/wrapped_clang_pp"
+        },
+        "wrappers": []
+      }
+    },
+    {
+      "count": 1,
+      "violation": {
+        "kind": "host_derived_program",
+        "action": {
+          "mnemonic": "CppCompile",
+          "target": "@@rules_cc+//cc/runfiles:runfiles"
+        },
+        "program": {
+          "origin": {
+            "module": {
+              "name": "apple_support",
+              "extension": null
+            }
+          },
+          "path": "crosstool/wrapped_clang_pp"
+        },
+        "wrappers": []
+      }
+    },
+    {
+      "count": 1,
+      "violation": {
+        "kind": "host_derived_program",
+        "action": {
+          "mnemonic": "CppCompile",
+          "target": "@@rules_swift+//tools/common:bazel_substitutions"
+        },
+        "program": {
+          "origin": {
+            "module": {
+              "name": "apple_support",
+              "extension": null
+            }
+          },
+          "path": "crosstool/wrapped_clang_pp"
+        },
+        "wrappers": []
+      }
+    },
+    {
+      "count": 1,
+      "violation": {
+        "kind": "host_derived_program",
+        "action": {
+          "mnemonic": "CppCompile",
+          "target": "@@rules_swift+//tools/common:process"
+        },
+        "program": {
+          "origin": {
+            "module": {
+              "name": "apple_support",
+              "extension": null
+            }
+          },
+          "path": "crosstool/wrapped_clang_pp"
+        },
+        "wrappers": []
+      }
+    },
+    {
+      "count": 2,
+      "violation": {
+        "kind": "host_derived_program",
+        "action": {
+          "mnemonic": "CppCompile",
+          "target": "@@rules_swift+//tools/worker:compile_with_worker"
+        },
+        "program": {
+          "origin": {
+            "module": {
+              "name": "apple_support",
+              "extension": null
+            }
+          },
+          "path": "crosstool/wrapped_clang_pp"
+        },
+        "wrappers": []
+      }
+    },
+    {
+      "count": 1,
+      "violation": {
+        "kind": "host_derived_program",
+        "action": {
+          "mnemonic": "CppCompile",
+          "target": "@@rules_swift+//tools/worker:compile_without_worker"
+        },
+        "program": {
+          "origin": {
+            "module": {
+              "name": "apple_support",
+              "extension": null
+            }
+          },
+          "path": "crosstool/wrapped_clang_pp"
+        },
+        "wrappers": []
+      }
+    },
+    {
+      "count": 2,
+      "violation": {
+        "kind": "host_derived_program",
+        "action": {
+          "mnemonic": "CppCompile",
+          "target": "@@rules_swift+//tools/worker:swift_runner"
+        },
+        "program": {
+          "origin": {
+            "module": {
+              "name": "apple_support",
+              "extension": null
+            }
+          },
+          "path": "crosstool/wrapped_clang_pp"
+        },
+        "wrappers": []
+      }
+    },
+    {
+      "count": 1,
+      "violation": {
+        "kind": "host_derived_program",
+        "action": {
+          "mnemonic": "CppCompile",
+          "target": "@@rules_swift+//tools/worker:worker"
+        },
+        "program": {
+          "origin": {
+            "module": {
+              "name": "apple_support",
+              "extension": null
+            }
+          },
+          "path": "crosstool/wrapped_clang_pp"
+        },
+        "wrappers": []
+      }
+    },
+    {
+      "count": 1,
+      "violation": {
+        "kind": "host_derived_program",
+        "action": {
+          "mnemonic": "CppCompile",
+          "target": "@@rules_swift+//tools/worker:worker_protocol"
+        },
+        "program": {
+          "origin": {
+            "module": {
+              "name": "apple_support",
+              "extension": null
+            }
+          },
+          "path": "crosstool/wrapped_clang_pp"
+        },
+        "wrappers": []
+      }
+    },
+    {
+      "count": 15,
+      "violation": {
+        "kind": "host_derived_program",
+        "action": {
+          "mnemonic": "CppCompile",
+          "target": "@@zlib+//:z"
+        },
+        "program": {
+          "origin": {
+            "module": {
+              "name": "apple_support",
+              "extension": null
+            }
+          },
+          "path": "crosstool/wrapped_clang"
+        },
+        "wrappers": []
+      }
+    },
+    {
+      "count": 1,
+      "violation": {
+        "kind": "host_derived_program",
+        "action": {
+          "mnemonic": "CppLink",
+          "target": "@@bazel_tools//src/tools/launcher:launcher_maker"
+        },
+        "program": {
+          "origin": {
+            "module": {
+              "name": "apple_support",
+              "extension": null
+            }
+          },
+          "path": "crosstool/cc_wrapper.sh"
+        },
+        "wrappers": []
+      }
+    },
+    {
+      "count": 1,
+      "violation": {
+        "kind": "host_derived_program",
+        "action": {
+          "mnemonic": "CppLink",
+          "target": "@@bazel_tools//third_party/ijar:zipper"
+        },
+        "program": {
+          "origin": {
+            "module": {
+              "name": "apple_support",
+              "extension": null
+            }
+          },
+          "path": "crosstool/cc_wrapper.sh"
+        },
+        "wrappers": []
+      }
+    },
+    {
+      "count": 1,
+      "violation": {
+        "kind": "host_derived_program",
+        "action": {
+          "mnemonic": "CppLink",
+          "target": "@@rules_swift+//tools/worker:worker"
+        },
+        "program": {
+          "origin": {
+            "module": {
+              "name": "apple_support",
+              "extension": null
+            }
+          },
+          "path": "crosstool/cc_wrapper.sh"
+        },
+        "wrappers": []
+      }
+    },
+    {
+      "count": 1,
+      "violation": {
+        "kind": "host_derived_program",
+        "action": {
+          "mnemonic": "GenerateCodesigningDossier",
+          "target": "//examples/ios/HelloWorldSwift:HelloWorldSwift"
+        },
+        "program": {
+          "origin": {
+            "main": {
+              "extension": null
+            }
+          },
+          "path": "tools/dossier_codesigningtool/dossier_codesigningtool"
+        },
+        "wrappers": []
+      }
+    },
+    {
+      "count": 1,
+      "violation": {
+        "kind": "host_derived_program",
+        "action": {
+          "mnemonic": "ObjcLink",
+          "target": "//examples/ios/HelloWorldSwift:HelloWorldSwift"
+        },
+        "program": {
+          "origin": {
+            "module": {
+              "name": "apple_support",
+              "extension": null
+            }
+          },
+          "path": "crosstool/wrapped_clang"
+        },
+        "wrappers": []
+      }
+    },
+    {
+      "count": 1,
+      "violation": {
+        "kind": "host_derived_program",
+        "action": {
+          "mnemonic": "ProcessEntitlementsFiles",
+          "target": "//examples/ios/HelloWorldSwift:HelloWorldSwift"
+        },
+        "program": {
+          "origin": {
+            "main": {
+              "extension": null
+            }
+          },
+          "path": "tools/plisttool/plisttool"
+        },
+        "wrappers": []
+      }
+    },
+    {
+      "count": 1,
+      "violation": {
+        "kind": "host_derived_program",
+        "action": {
+          "mnemonic": "ProcessSimulatorEntitlementsFile",
+          "target": "//examples/ios/HelloWorldSwift:HelloWorldSwift"
+        },
+        "program": {
+          "origin": {
+            "main": {
+              "extension": null
+            }
+          },
+          "path": "tools/plisttool/plisttool"
+        },
+        "wrappers": []
+      }
+    },
+    {
+      "count": 1,
+      "violation": {
+        "kind": "host_derived_program",
+        "action": {
+          "mnemonic": "SwiftStdlibCopy",
+          "target": "//examples/ios/HelloWorldSwift:HelloWorldSwift"
+        },
+        "program": {
+          "origin": {
+            "main": {
+              "extension": null
+            }
+          },
+          "path": "tools/swift_stdlib_tool/swift_stdlib_tool"
+        },
+        "wrappers": []
+      }
+    },
+    {
+      "count": 1,
+      "violation": {
+        "kind": "unknown_program",
+        "action": {
+          "mnemonic": "ProcessAndSign",
+          "target": "//examples/ios/HelloWorldSwift:HelloWorldSwift"
+        },
+        "program": {
+          "origin": {
+            "main": {
+              "extension": null
+            }
+          },
+          "path": "examples/ios/HelloWorldSwift/HelloWorldSwift-intermediates/process-and-sign-1474739944.sh"
+        },
+        "wrappers": []
+      }
+    },
+    {
+      "count": 1,
+      "violation": {
+        "kind": "unknown_program",
+        "action": {
+          "mnemonic": "SwiftCompile",
+          "target": "//examples/ios/HelloWorldSwift:Sources"
+        },
+        "program": {
+          "origin": {
+            "module": {
+              "name": "rules_swift",
+              "extension": null
+            }
+          },
+          "path": "tools/worker/worker"
+        },
+        "wrappers": []
+      }
+    },
+    {
+      "count": 1,
+      "violation": {
+        "kind": "unknown_program",
+        "action": {
+          "mnemonic": "SwiftDumpAST",
+          "target": "//examples/ios/HelloWorldSwift:Sources"
+        },
+        "program": {
+          "origin": {
+            "module": {
+              "name": "rules_swift",
+              "extension": null
+            }
+          },
+          "path": "tools/worker/worker"
+        },
+        "wrappers": []
+      }
+    },
+    {
+      "count": 2,
+      "violation": {
+        "kind": "workspace_status",
+        "action": {
+          "mnemonic": "TranslateBuildInfo",
+          "target": "@@bazel_tools//tools/build_defs/build_info:cc_build_info"
+        },
+        "path": "bazel-out/stable-status.txt"
+      }
+    },
+    {
+      "count": 2,
+      "violation": {
+        "kind": "workspace_status",
+        "action": {
+          "mnemonic": "TranslateBuildInfo",
+          "target": "@@bazel_tools//tools/build_defs/build_info:cc_build_info"
+        },
+        "path": "bazel-out/volatile-status.txt"
+      }
+    }
+  ]
+}

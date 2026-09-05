@@ -1,5 +1,16 @@
 ## Unreleased
 
+* Ahab knows the Apple toolchain, and the answer is the same for all of it:
+  an Apple build works from the Xcode installed on the machine, so its tools
+  are host-derived.
+
+* Bazel's `zipper` is recognized under the path it is built at,
+  `@bazel_tools//third_party/ijar/zipper`, and not only as the
+  `//tools/zip:zipper` alias for it—which is the name an action records.
+
+* The macros take `bazel_flags`, and the binary a `--bazel-flag` that may be
+  repeated, each value handed to `bazel aquery` as it stands.
+
 * Two placeholders that well-known rule sets write into their actions on
   purpose no longer count as absolute paths. `/PLACEHOLDER_DEVELOPER_DIR` is
   what `apple_support` and `rules_swift` map the Xcode developer directory
