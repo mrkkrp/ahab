@@ -1,24 +1,18 @@
 //! JavaScript and TypeScript builds.
 //!
-//! The npm ecosystem's unit of distribution is a package that may carry
-//! scripts the package manager is expected to run on installation, and that
-//! is where a JavaScript build stops being a function of its inputs.
-//!
-//! TypeScript shares this module rather than getting its own. Its compiler
-//! is an npm package, reached through the same `node_modules` machinery and
-//! launched by the same rules_js `js_binary`, so what Ahab has to know to
-//! name a program is the same knowledge in both cases.
+//! An npm package may carry scripts the package manager runs on
+//! installation, and that is where a JavaScript build stops being a
+//! function of its inputs. TypeScript shares this module because its
+//! compiler is an npm package reached the same way.
 
 use super::super::library::{Entry, always, never};
 use super::super::program_id::ProgramId;
 use super::super::{Reproducibility, ReproducibilitySpec};
 
-/// One of rules_js's own tools, under both names it answers to.
-///
-/// Depend on rules_js and its tools arrive from the module; analyze rules_js
-/// itself and the same tools are in the main one. The same loose end as
-/// rules_pkg's: the second form matches on path alone, so a project building
-/// something at the same path inherits a verdict meant for rules_js.
+/// One of rules_js's own tools, under both names it answers to: from the
+/// module for a consumer, from the main repository when rules_js itself is
+/// analyzed. The second form matches on path alone—the same loose end as
+/// rules_pkg's.
 fn rules_js_tool(path: &str) -> Vec<(ProgramId, Entry)> {
     let module = ProgramId::module("aspect_rules_js", path);
     vec![
@@ -28,13 +22,10 @@ fn rules_js_tool(path: &str) -> Vec<(ProgramId, Entry)> {
 }
 
 /// A program in the repository rules_ts's `typescript` extension builds.
-///
-/// The extension takes its name from where it is defined, not from where it
-/// is called, so every project that follows rules_ts's own instructions—
-/// `use_extension("@aspect_rules_ts//ts:extensions.bzl", "typescript")`—
-/// reaches these under this same identity. The loose end is a project that
-/// gets the extension through some intermediate module instead: then the
-/// repository is that module's and this does not match.
+/// The extension is named for where it is defined, so every project
+/// following rules_ts's own instructions reaches these under this identity.
+/// A project that gets the extension through an intermediate module does
+/// not match.
 fn npm_typescript(path: &str) -> ProgramId {
     ProgramId::main_extension("typescript", path)
 }
@@ -55,29 +46,20 @@ fn closure_worker() -> ProgramId {
 /// Everything Ahab knows about JavaScript builds, in source order.
 pub(in crate::reproducibility_spec) fn entries() -> Vec<(ProgramId, Entry)>
 {
-    // The runner for npm lifecycle hooks: `preinstall`, `install`,
-    // `postinstall`. What it executes is whatever the `scripts` of a
-    // third-party `package.json` say, through `@pnpm/lifecycle`, and when a
-    // package ships a `binding.gyp` and no install script of its own the
-    // runner supplies `node-gyp rebuild`—which compiles C++ against
-    // whatever toolchain the machine has.
-    //
-    // So this is `never` rather than unknown. Unknown would say nobody has
-    // described it yet; the truth is that no flag could redeem it, because
-    // the code it runs is not in the build at all. rules_js says as much
-    // itself: of the seven such actions in its own tree, four declare
-    // `requires-network` and five `no-sandbox`.
+    // The runner for npm lifecycle hooks, which executes whatever a
+    // third-party `package.json` says—or `node-gyp rebuild` against the
+    // machine's C++ toolchain when a package ships a `binding.gyp` and no
+    // install script. `never` rather than unknown: no flag could redeem it,
+    // because the code it runs is not in the build at all.
     let mut entries = rules_js_tool("npm/private/lifecycle/min/bin_/bin");
 
-    // ClosureWorker dispatches the Closure compiler, its library checker,
-    // and the webfiles validator. Each reads the sources, manifests and
-    // options named by the action. The validator has no clock or host input,
-    // and the webfiles archive writer fixes every ZIP timestamp.
+    // Dispatches the Closure compiler, its library checker and the webfiles
+    // validator, each reading the sources, manifests and options named by
+    // the action. The webfiles archive writer fixes every ZIP timestamp.
     entries.push((closure_worker(), Entry::Spec(always())));
 
-    // The stripper writes its source jar through J2CL's Bazel output helper,
-    // which resets every file and directory timestamp to the epoch. Its
-    // contents depend only on the sources and annotation names it receives.
+    // Writes its source jar through J2CL's Bazel output helper, which
+    // resets every timestamp to the epoch.
     entries.push((
         j2cl(
             "tools/java/com/google/j2cl/tools/gwtincompatible\
@@ -86,34 +68,24 @@ pub(in crate::reproducibility_spec) fn entries() -> Vec<(ProgramId, Entry)>
         Entry::Spec(always()),
     ));
 
-    // The transpiler uses the same output helper for archives, and clears
-    // its predictable per-target temporary directory before each worker
-    // request. Source maps, JavaScript and library metadata therefore come
-    // from the declared sources and compiler options rather than worker or
-    // machine state.
+    // The same output helper, plus a per-target temporary directory cleared
+    // before each worker request, so nothing carries over between them.
     entries.push((
         j2cl("transpiler/java/com/google/j2cl/transpiler/BazelJ2clBuilder"),
         Entry::Spec(always()),
     ));
 
-    // The TypeScript compiler. What it emits is decided by the sources and
-    // the `tsconfig.json` it is pointed at—there is no clock on the path
-    // that writes JavaScript, declarations, source maps or a
-    // `.tsbuildinfo`, and rules_ts hands it relative paths for `--rootDir`,
-    // `--outDir` and the rest.
+    // The TypeScript compiler: what it emits follows from the sources and
+    // the `tsconfig.json`, and rules_ts hands it relative paths throughout.
     //
-    // Except when asked for a trace. `--generateTrace` writes a Chrome
-    // tracing file, and every event in it is stamped: in the compiler
-    // shipped with the version analyzed here, `writeEvent` defaults its
-    // time to `1e3 * timestamp()`, where `timestamp` is the performance
-    // counter or `Date.now`. rules_ts declares the trace directory as an
-    // output of the action, so those timings are part of what the build
-    // produces rather than something written to a log.
+    // Except `--generateTrace`, which writes a Chrome tracing file whose
+    // every event is stamped from the performance counter or `Date.now`.
+    // rules_ts declares the trace directory as an output, so those timings
+    // are part of what the build produces.
     //
     // Deliberately not conditions: `--diagnostics`, `--extendedDiagnostics`,
-    // `--listFiles`, `--listEmittedFiles` and `--traceResolution` also
-    // report timings and machine detail, but to standard output, which is
-    // not an artifact. All five appear in rules_ts's own tests.
+    // `--listFiles`, `--listEmittedFiles` and `--traceResolution` report
+    // timings too, but to standard output, which is not an artifact.
     entries.push((
         npm_typescript("tsc_/tsc"),
         Entry::Spec(ReproducibilitySpec::new(
@@ -123,13 +95,10 @@ pub(in crate::reproducibility_spec) fn entries() -> Vec<(ProgramId, Entry)>
         )),
     ));
 
-    // rules_ts's own checker: it reads the `tsconfig.json`, compares what
-    // it finds against the attributes the rule was given, and writes those
-    // attributes back out as a marker so that Bazel has an output to hang
-    // the action on. No clock, no environment, nothing read that was not
-    // handed to it—and where tsc reports a path as absolute it turns it
-    // back into a relative one first, because, as its own comment says,
-    // sandbox paths differ across builds.
+    // rules_ts's own checker: reads the `tsconfig.json`, compares it against
+    // the rule's attributes and writes them back out as a marker. Where tsc
+    // reports an absolute path it relativizes first, since sandbox paths
+    // differ across builds.
     entries.push((
         npm_typescript("validator_/validator"),
         Entry::Spec(always()),
@@ -150,8 +119,6 @@ mod tests {
 
     #[test]
     fn running_a_packages_install_scripts_is_never_reproducible() {
-        // The arguments name the package and where to put it, and none of
-        // them says anything about what its scripts will do.
         assert_eq!(
             assess(
                 ProgramId::module("aspect_rules_js", LIFECYCLE),
@@ -170,8 +137,6 @@ mod tests {
 
     #[test]
     fn compiling_typescript_is_reproducible() {
-        // A `TsProject` command line as rules_ts writes it, in the two
-        // shapes its own tests produce most.
         for args in [
             vec![
                 "--project",
@@ -200,9 +165,6 @@ mod tests {
 
     #[test]
     fn asking_the_compiler_for_a_trace_records_the_clock() {
-        // The trace is a declared output, and every event in it carries a
-        // timestamp. Reporting timings to standard output is a different
-        // matter, and the flags that do that are left alone.
         assert!(matches!(
             assess(
                 npm_typescript("tsc_/tsc"),
@@ -309,8 +271,6 @@ mod tests {
 
     #[test]
     fn the_runner_answers_to_both_of_its_names() {
-        // rules_js is the rare rule set that runs its own tools on itself,
-        // so the fishery sees the main-repository spelling.
         let from_main =
             Library::builtin().resolve(ProgramId::main(LIFECYCLE), vec![]);
         assert_eq!(

@@ -11,28 +11,18 @@ fn rules_python(path: &str) -> ProgramId {
 pub(in crate::reproducibility_spec) fn entries() -> Vec<(ProgramId, Entry)>
 {
     vec![
-        // The interpreter is not a tool, it is how the tools are started,
-        // and the same argument applies to it as to the JVM: answering for
-        // `python3` would be answering for whatever script anyone hands it.
-        // Unlike `java` there is no `-jar` to hand over at—the script is
-        // simply the first argument—so the transition is positional, and
-        // declines to fire for `python3 -c` and `python3 -m`, which name no
-        // program to judge.
+        // As with the JVM, answering for the interpreter would be answering
+        // for whatever script anyone hands it. There is no `-jar` to hand
+        // over at—the script is simply the first argument—so the transition
+        // is positional and declines for `python3 -c` and `python3 -m`.
         (
             rules_python("python/private/python3"),
             Entry::Wraps(Transition::FirstArgument),
         ),
-        // Compiling `.py` to `.pyc` is where Python decides what to record
-        // about the source it came from. In `timestamp` mode—Python's own
-        // default—a `.pyc` stores the source's modification time and size,
-        // which makes it a function of when the tree was checked out. The
-        // two hash modes store a digest of the source instead, and either
-        // will do, which is why the pattern asks for the word rather than
-        // naming both.
-        //
-        // The mode arrives as a separate argument, so the flag is declared
-        // as taking a value and the pair is folded before the pattern sees
-        // it.
+        // In `timestamp` mode—Python's default—a `.pyc` stores the source's
+        // modification time and size. The two hash modes store a digest
+        // instead, and either will do, hence the pattern on the word. The
+        // mode is a separate argument, so the flag is declared as valued.
         (
             rules_python("tools/precompiler/precompiler"),
             Entry::Spec(
@@ -44,24 +34,16 @@ pub(in crate::reproducibility_spec) fn entries() -> Vec<(ProgramId, Entry)>
                 .with_valued_flags(["--invalidation_mode"]),
             ),
         ),
-        // The same precompiler under the name a later rules_python gives
-        // it. Both are the script the interpreter is handed; only the file
-        // name changed.
+        // The same precompiler under the name a later rules_python gives it.
         (
             rules_python("tools/precompiler/precompiler_.py"),
             Entry::SameAs(rules_python("tools/precompiler/precompiler")),
         ),
-        // Writes the handful of facts a `py_binary` can report about how it
-        // was built: its label, its compilation mode, and whether it was
-        // stamped. All three arrive in the environment from the target's
-        // own attributes.
-        //
-        // When stamping is on it also copies in Bazel's workspace status
-        // files, and that is deliberately not stated here—the same call as
-        // rules_pkg's `--stamp_from`. Reading a status file is a dependency
-        // rather than a flag, and the workspace status check reads it off
-        // the action's inputs already, so saying it twice would report one
-        // problem as two.
+        // Writes what a `py_binary` reports about how it was built: label,
+        // compilation mode, whether it was stamped—all from the target's own
+        // attributes. Stamping also copies in Bazel's status files, which is
+        // an input rather than a flag and the workspace status check's
+        // business; saying it here too would report one problem as two.
         (
             rules_python("python/private/build_data_writer.sh"),
             Entry::Spec(always()),
@@ -76,8 +58,7 @@ mod tests {
     use crate::reproducibility_spec::library::Library;
     use crate::reproducibility_spec::per_lang::testing::assess;
 
-    /// A `PyCompile` command line as rules_python writes it, from the
-    /// interpreter onwards.
+    /// A `PyCompile` command line, from the interpreter onwards.
     fn pycompile() -> Vec<&'static str> {
         vec![
             "bazel-out/k8-opt-exec/bin/external/rules_python+/tools\
@@ -95,8 +76,6 @@ mod tests {
     fn the_interpreter_hands_the_question_to_the_script() {
         let resolution = Library::builtin()
             .resolve(rules_python("python/private/python3"), pycompile());
-        // The verdict belongs to the precompiler, and the script's own
-        // path is not mistaken for one of its arguments.
         assert_eq!(
             resolution.program,
             rules_python("tools/precompiler/precompiler"),
@@ -108,10 +87,6 @@ mod tests {
 
     #[test]
     fn an_interpreter_given_no_script_is_not_vouched_for() {
-        // `python3 -c` runs code from the command line and `python3 -m` a
-        // module resolved at runtime. Neither names a program, so the
-        // transition declines and the interpreter—which has no spec—is
-        // what gets reported.
         for form in [vec!["-c", "print(1)"], vec!["-m", "compileall"]] {
             let resolution = Library::builtin()
                 .resolve(rules_python("python/private/python3"), form);
@@ -131,13 +106,9 @@ mod tests {
             flags.extend(["--src", "x.py", "--pyc", "x.pyc"]);
             assess(precompiler.clone(), flags)
         };
-        // Either hash mode records a digest of the source...
         for good in ["unchecked_hash", "checked_hash"] {
             assert_eq!(mode(good), Conformance::Reproducible, "{good}");
         }
-        // ...while the timestamp mode records when the tree was checked
-        // out. Distinguishing these is the whole reason the value has to
-        // be reachable.
         assert!(matches!(
             mode("timestamp"),
             Conformance::Conditional { .. }
@@ -154,7 +125,6 @@ mod tests {
             resolution.synonym(),
             Some(&rules_python("tools/precompiler/precompiler")),
         );
-        // The verdict travels with the name, conditions and all.
         let (_, spec) = resolution.spec.clone().expect("a spec");
         assert!(matches!(
             spec.assess(resolution.args),
@@ -164,9 +134,6 @@ mod tests {
 
     #[test]
     fn writing_build_data_is_vouched_for() {
-        // What it writes comes from the target's own attributes. Stamping
-        // adds Bazel's status files to the action's inputs, which is the
-        // workspace status check's business rather than this spec's.
         assert_eq!(
             assess(
                 rules_python("python/private/build_data_writer.sh"),

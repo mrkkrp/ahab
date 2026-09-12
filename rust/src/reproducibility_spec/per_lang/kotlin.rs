@@ -10,18 +10,13 @@ fn kotlin_tool(path: &str) -> ProgramId {
 pub(in crate::reproducibility_spec) fn entries() -> Vec<(ProgramId, Entry)>
 {
     vec![
-        // As in Go, one program stands behind every action: rules_kotlin
-        // builds a launcher and tells it what to do, so compiling Kotlin and
+        // One launcher stands behind every action: compiling Kotlin and
         // running annotation processors over it are the same binary given
-        // different arguments. Sources, classpath, output, the language and
-        // JVM target versions are all named on the command line, and none of
-        // the paths are absolute—the only argument that starts with a slash
-        // is a Bazel label. Two runs with those arguments have nothing left
-        // to differ about.
+        // different arguments. Sources, classpath, output and target
+        // versions are all named, and nothing is left to differ about.
         (kotlin_tool("src/main/kotlin/build"), Entry::Spec(always())),
         // Merges the dependency files a Kotlin and a Java compilation each
-        // produced for the same target into one. It reads the files named by
-        // `--inputs` and writes the one named by `--output`.
+        // produced for one target: reads `--inputs`, writes `--output`.
         (
             kotlin_tool("src/main/kotlin/jdeps_merger"),
             Entry::Spec(always()),
@@ -37,8 +32,6 @@ mod tests {
 
     #[test]
     fn the_builder_is_reproducible_compiling_and_processing_alike() {
-        // `KotlinCompile` and `KotlinKapt` are the same program; what tells
-        // them apart is an argument, and neither carries a condition.
         let compiling = vec![
             "--target_label",
             "//x:x",
@@ -79,8 +72,6 @@ mod tests {
 
     #[test]
     fn the_tools_are_reached_through_the_module_that_builds_them() {
-        // rules_kotlin compiles these itself, so they arrive under its own
-        // name rather than through an extension.
         assert_eq!(
             ProgramId::of(
                 "bazel-out/k8-opt-exec-ST-d57f/bin/external/rules_kotlin+\

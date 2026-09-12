@@ -1,29 +1,22 @@
 //! A little literary flourish: lines from Herman Melville's *Moby-Dick*
 //! (1851) appended to Ahab's error output when violations are found.
 //!
-//! These are not the captain's abstract musings aimed at the whale, but
-//! lines aimed at people—commands, rebukes, and expressions of
-//! displeasure—so they read as dissatisfaction with the offending,
-//! non-reproducible build. We don't track who originally spoke each line
-//! (Ahab, Peleg, …): we take a little artistic license and just use the
-//! words.
+//! Lines aimed at people rather than at the whale—commands, rebukes,
+//! displeasure—so they read as dissatisfaction with the offending build.
+//! Who originally spoke each one is not tracked; we take the words.
 //!
-//! Which line is chosen is decided deterministically from a hash of the
-//! violations, so the same set of problems always yields the same quote.
+//! The line is chosen from a hash of the violations, so the same set of
+//! problems always yields the same quote.
 
 use std::collections::BTreeMap;
 use std::hash::{Hash, Hasher};
 
 use crate::checks::Violation;
 
-/// Crew- and person-directed lines of command, impatience, and displeasure,
-/// drawn from the novel. Suitable as an expression of the captain's
-/// dissatisfaction.
-///
-/// Each is paired with the words in it that name what he is cross about, or
-/// `None` where he is simply cross. The named fragment includes its
-/// article, so that whatever replaces it can bring its own—"the nix store"
-/// reads correctly where a bare program name would not.
+/// Lines of command, impatience and displeasure, each paired with the words
+/// in it that name what the captain is cross about, or `None` where he is
+/// simply cross. The fragment includes its article so that whatever
+/// replaces it can bring its own.
 const QUOTES: &[(&str, Option<&str>)] = &[
     (
         "Hard down out of that! Mind what I said about the marchant service—don't aggravate me—I won't have it.",
@@ -101,12 +94,8 @@ const FAMILIAR_PLACES: &[(&str, &str)] = &[
 ];
 
 /// What the report is mostly about, phrased so that it can stand where a
-/// whale used to.
-///
-/// Three questions in turn, the first that answers winning: is the build
-/// reaching into somewhere recognizable, is there a program it keeps
-/// running, and failing both, what sort of trouble is this? Ties are
-/// broken by name so that the same report always names the same offender.
+/// whale used to: a recognizable place, else a program it keeps running,
+/// else the kind of trouble.
 fn subject(violations: &BTreeMap<Violation, usize>) -> String {
     let mut places: BTreeMap<&str, usize> = BTreeMap::new();
     let mut programs: BTreeMap<&str, usize> = BTreeMap::new();
@@ -169,9 +158,8 @@ fn render(quote: (&str, Option<&str>), subject: &str) -> String {
         return text.to_owned();
     };
 
-    // A phrase opening a sentence takes a capital; a program name is left
-    // spelled the way its author spelled it, which is what the space tells
-    // us apart—`the nix store` has one, `cc_wrapper.sh` does not.
+    // A phrase opening a sentence takes a capital, but a program name keeps
+    // its author's spelling—the space is what tells them apart.
     let subject = if at == 0 && subject.contains(' ') {
         let mut chars = subject.chars();
         match chars.next() {
@@ -240,15 +228,11 @@ mod tests {
 
     #[test]
     fn every_quote_is_non_empty() {
-        // That the collection itself is non-empty is guaranteed at compile
-        // time by the `const` assertion above.
         assert!(QUOTES.iter().all(|(text, _)| !text.is_empty()));
     }
 
     #[test]
     fn every_named_fragment_occurs_in_its_line() {
-        // A fragment that has drifted out of its line would silently stop
-        // being replaced, leaving the captain shouting about whaling.
         for (text, fragment) in QUOTES {
             if let Some(fragment) = fragment {
                 assert!(
@@ -273,7 +257,6 @@ mod tests {
         let report = report(vec![unknown_program(
             "external/rules_cc+x+local_config_cc/cc_wrapper.sh",
         )]);
-        // Its file name only: the path it sits at is nobody's business.
         assert_eq!(subject(&report), "cc_wrapper.sh");
     }
 
@@ -291,7 +274,6 @@ mod tests {
             render(named, "cc_wrapper.sh"),
             "Talk not of cc_wrapper.sh.",
         );
-        // A line that names nothing is left alone.
         let unnamed = ("Down, dog, and kennel!", None);
         assert_eq!(
             render(unnamed, "the nix store"),
@@ -307,7 +289,6 @@ mod tests {
             render(opener, "the nix store"),
             "The nix store be damned.",
         );
-        // But a program name keeps the spelling it was given.
         assert_eq!(
             render(opener, "cc_wrapper.sh"),
             "cc_wrapper.sh be damned.",

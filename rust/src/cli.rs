@@ -30,8 +30,8 @@ use crate::terminal_color::Palette;
     max_term_width = 76
 )]
 pub struct Cli {
-    /// A `--config=<name>` to forward to `bazel aquery`. May be repeated
-    /// zero or more times; each value is passed through verbatim.
+    /// A `--config=<name>` to forward to `bazel aquery`, verbatim. May be
+    /// repeated.
     #[arg(long = "config", value_name = "NAME")]
     pub configs: Vec<String>,
 
@@ -46,8 +46,8 @@ pub struct Cli {
     #[arg(value_name = "LABEL", required_unless_present = "explain_json")]
     pub label: Option<String>,
 
-    /// Print every action we analyze (useful for debugging). Other parts of
-    /// the parsed action graph are omitted, as the checks don't use them.
+    /// Print every action we analyze. The rest of the action graph is
+    /// omitted, the checks not using it.
     #[arg(short, long)]
     pub verbose: bool,
 
@@ -57,10 +57,9 @@ pub struct Cli {
 
     /// Report the violations as usual, but exit 0 even when there are some.
     ///
-    /// For recording rather than judging: writing a baseline with
-    /// `--write-json` is not a failure just because the build it describes
-    /// has violations in it. Refused together with `--expect-json`, whose
-    /// entire purpose is the exit code.
+    /// For recording rather than judging: a baseline written with
+    /// `--write-json` is not a failure just for describing violations.
+    /// Refused with `--expect-json`, whose whole purpose is the exit code.
     #[arg(long = "no-fail", conflicts_with = "expect_json")]
     pub no_fail: bool,
 
@@ -88,9 +87,8 @@ pub struct Cli {
     /// Load additional reproducibility specs from a JSON file. May be
     /// repeated.
     ///
-    /// These take precedence over Ahab's built-in knowledge, so a project
-    /// can describe its own tools and correct what Ahab believes about
-    /// anyone else's. A file given later overrides one given earlier.
+    /// These take precedence over Ahab's built-in knowledge, and a file
+    /// given later overrides one given earlier.
     #[arg(long = "repro-specs", value_name = "FILENAME")]
     pub repro_specs: Vec<PathBuf>,
 
@@ -111,9 +109,8 @@ pub struct Cli {
 }
 
 impl Cli {
-    /// Run Ahab end to end: query the action graph under a controlled
-    /// environment, run the pure hermeticity checks over it, and turn any
-    /// violations into a non-zero exit.
+    /// Query the action graph under a controlled environment, run the
+    /// checks over it, and turn any violations into a non-zero exit.
     pub fn run(&self) -> Result<ExitCode> {
         if let Some(path) = &self.explain_json {
             let path = resolve_against_invocation_dir(path);
@@ -133,9 +130,6 @@ impl Cli {
             self.output_base.as_deref(),
         )?;
 
-        // For debugging, dump every action we're about to analyze. We print
-        // only the actions; the other parts of the container aren't used by
-        // the checks.
         if self.verbose {
             println!("analyzing {} action(s):", container.actions.len());
             for (i, action) in container.actions.iter().enumerate() {
@@ -143,8 +137,6 @@ impl Cli {
             }
         }
 
-        // The checks are pure: they return every violation they find, in a
-        // deterministic order regardless of how Bazel ordered the actions.
         let mut library = Library::builtin();
         for path in &self.repro_specs {
             let path = resolve_against_invocation_dir(path);
@@ -240,11 +232,8 @@ impl Cli {
     }
 }
 
-/// The directory the user ran Ahab from, when Bazel told us.
-///
-/// Under `bazel run` the process starts in the runfiles tree inside the
-/// output base, not where the command was typed. Bazel exports the real
-/// invocation directory for exactly this reason.
+/// The directory the user ran Ahab from, when Bazel told us. Under `bazel
+/// run` the process starts in the runfiles tree instead.
 fn invocation_dir() -> Option<PathBuf> {
     std::env::var_os("BUILD_WORKING_DIRECTORY").map(PathBuf::from)
 }
@@ -262,21 +251,15 @@ fn resolve_against_invocation_dir(path: &Path) -> PathBuf {
     resolve_output_path(path, invocation_dir().as_deref())
 }
 
-/// One violation as it appears in the JSON report: the violation's own
-/// fields, plus how many times it occurred.
+/// One violation as it appears in the JSON report.
 #[derive(Debug, Serialize, Deserialize)]
 struct CountedViolation {
-    /// How many times this exact violation occurred.
     count: usize,
-    /// The violation itself.
     violation: Violation,
 }
 
-/// The whole JSON document.
-///
-/// An object with a named field rather than a bare array, so that later
-/// additions—a schema version, the label queried, a summary—do not change
-/// the type of the top-level value and break every consumer.
+/// The whole JSON document. An object rather than a bare array, so later
+/// additions do not change the type of the top-level value.
 #[derive(Debug, Serialize, Deserialize)]
 struct JsonReport {
     /// Distinct violations, in the same order as the printed report.
@@ -317,8 +300,8 @@ fn read_json(path: &Path) -> Result<BTreeMap<Violation, usize>> {
 
     let mut violations = BTreeMap::new();
     for counted in report.violations {
-        // Summed rather than overwritten: a hand-edited file listing the
-        // same violation twice should report the total, not the last one.
+        // Summed: a hand-edited file listing one violation twice means
+        // the total, not the last.
         *violations.entry(counted.violation).or_insert(0) += counted.count;
     }
     Ok(violations)
@@ -404,8 +387,6 @@ fn report_violations(
     let mut report = palette.heading(&heading);
 
     for (i, (violation, count)) in violations.iter().enumerate() {
-        // The number is framing, so it recedes; the multiplicity is a
-        // quantity worth noticing, so it does not.
         let number = palette.faint(&format!("{}.", i + 1));
         let multiplicity = if *count == 1 {
             String::new()
@@ -426,9 +407,8 @@ fn report_violations(
     }
 
     if quote {
-        // Wrapped, unlike the findings above: a finding is one fact and
-        // carries paths that must not be broken across lines, whereas the
-        // sign-off is prose and only has to be read.
+        // Wrapped, unlike the findings, which carry paths that must not
+        // be broken across lines.
         report.push('\n');
         for line in wrap(&melville::quote_for(violations), REPORT_WIDTH - 2)
         {
@@ -438,16 +418,12 @@ fn report_violations(
     report
 }
 
-/// How wide the report is allowed to be, matching what the rest of the
-/// project wraps to.
+/// How wide the report may be, matching the rest of the project.
 const REPORT_WIDTH: usize = 76;
 
 /// Break `text` into lines of at most `width` columns, splitting only
-/// between words.
-///
-/// A word wider than `width` is left whole and overruns: breaking it would
-/// make it unsearchable, and the words that get that long here are the
-/// ones a reader most wants to copy.
+/// between words. A word wider than `width` overruns rather than being
+/// broken, which would make it unsearchable.
 fn wrap(text: &str, width: usize) -> Vec<String> {
     let mut lines = Vec::new();
     let mut line = String::new();
@@ -502,7 +478,6 @@ mod tests {
         }
     }
 
-    /// A scratch file path, under the directory Bazel gives the test.
     fn scratch(name: &str) -> PathBuf {
         let dir = std::env::var("TEST_TMPDIR")
             .map(PathBuf::from)
@@ -510,7 +485,6 @@ mod tests {
         dir.join(name)
     }
 
-    /// Write `violations` to a scratch file and parse it back.
     fn round_trip(
         name: &str,
         violations: &BTreeMap<Violation, usize>,
@@ -524,8 +498,6 @@ mod tests {
 
     #[test]
     fn a_relative_output_path_lands_where_the_user_ran_ahab() {
-        // Under `bazel run` the working directory is the runfiles tree, so
-        // a relative path would otherwise be written somewhere nobody looks.
         assert_eq!(
             resolve_output_path(
                 Path::new("out.json"),
@@ -548,17 +520,12 @@ mod tests {
 
     #[test]
     fn without_an_invocation_directory_the_path_is_used_as_given() {
-        // Not launched by `bazel run`, so the working directory is already
-        // the user's own and resolving against anything would be wrong.
         assert_eq!(
             resolve_output_path(Path::new("out.json"), None),
             PathBuf::from("out.json"),
         );
     }
 
-    /// The changed lines of `diff` carrying this sign, joined. Hunk headers
-    /// (`---`, `+++`) are skipped: they start with the same characters but
-    /// are not content.
     fn signed(diff: &str, sign: char) -> String {
         let header: String = std::iter::repeat_n(sign, 3).collect();
         diff.lines()
@@ -569,7 +536,6 @@ mod tests {
             .join("\n")
     }
 
-    /// The diff between two sets of violations, uncolored.
     fn diff(
         expected: &BTreeMap<Violation, usize>,
         found: &BTreeMap<Violation, usize>,
@@ -595,8 +561,6 @@ mod tests {
 
     #[test]
     fn a_changed_count_shows_both_sides() {
-        // The reason counts are compared at all: the same violation on one
-        // action and on three is not the same result.
         let violation = bad_path("CppCompile", 1, "/bin");
         let expected: BTreeMap<Violation, usize> =
             [(violation.clone(), 3)].into_iter().collect();
@@ -605,7 +569,6 @@ mod tests {
         let d = diff(&expected, &found);
         assert!(signed(&d, '-').contains("\"count\": 3"), "{d}");
         assert!(signed(&d, '+').contains("\"count\": 5"), "{d}");
-        // Only the count line changed, so the violation itself is context.
         assert!(!signed(&d, '-').contains("bad_path"), "{d}");
     }
 
@@ -619,7 +582,6 @@ mod tests {
 
         let d = diff(&expected, &found);
         assert!(signed(&d, '+').contains("/new"), "{d}");
-        // The unchanged one may appear as context, but never as a change.
         assert!(!signed(&d, '+').contains("/same"), "{d}");
         assert!(!signed(&d, '-').contains("/same"), "{d}");
     }
@@ -635,7 +597,6 @@ mod tests {
         let colored = render_diff(&expected, &found, Palette::color());
         assert!(colored.contains("\x1b[31m-"), "{colored:?}");
         assert!(colored.contains("\x1b[32m+"), "{colored:?}");
-        // Every tinted line resets, so the terminal is not left colored.
         for line in colored.lines() {
             let tinted = line.starts_with('\x1b');
             assert_eq!(tinted, line.ends_with("\x1b[0m"), "{line:?}");
@@ -644,9 +605,6 @@ mod tests {
 
     #[test]
     fn the_diff_is_the_same_bytes_every_time() {
-        // Both documents are serialized in the report's own order, so the
-        // diff of a given difference is reproducible—without which a diff
-        // between two runs would be worthless.
         let expected = once([
             bad_path("Genrule", 2, "/b"),
             bad_path("CppCompile", 1, "/a"),
@@ -658,9 +616,6 @@ mod tests {
 
     #[test]
     fn one_changed_field_diffs_as_one_line() {
-        // The reason this is a line diff and not an entry diff: an entry-wise
-        // comparison keys on the whole violation, so any edit deletes and
-        // re-inserts the lot—60 lines of noise for a one-word change.
         let program = |module: &str| Violation::UnknownProgram {
             action: ActionRef {
                 mnemonic: "Rustc".to_owned(),
@@ -680,7 +635,6 @@ mod tests {
         assert!(signed(&d, '+').contains("rules_rust"), "{d}");
     }
 
-    /// Write `text` to a scratch file and read library entries from it.
     fn specs_from(
         name: &str,
         text: &str,
@@ -692,9 +646,6 @@ mod tests {
 
     #[test]
     fn a_file_may_write_its_conditions_out_in_full() {
-        // The shape the README documents under "When a rule only sometimes
-        // applies", kept here so the two cannot drift apart: a guard with
-        // an `off` set, and a requirement met by any one of its patterns.
         let specs = specs_from(
             "conditions.json",
             r#"{"programs": {
@@ -730,15 +681,12 @@ mod tests {
         };
         assert_eq!(spec.requirements.len(), 2);
 
-        // Compiling without the define is caught...
         assert!(matches!(
             spec.assess(["-c", "x.c"]),
             Conformance::Conditional { .. }
         ));
-        // ...and the same arguments without `-c` are not its business.
         assert_eq!(spec.assess(["x.c"]), Conformance::Reproducible);
 
-        // The guard reads last-wins, and either alternative satisfies it.
         assert_eq!(
             spec.assess(["-g", "-g0", "-c", "-D__DATE__=\"redacted\""]),
             Conformance::Reproducible,
@@ -760,8 +708,6 @@ mod tests {
 
     #[test]
     fn a_file_may_say_which_options_describe_what_is_produced() {
-        // The shape the README documents under "Writing one", kept here so
-        // the two cannot drift apart.
         let specs = specs_from(
             "declared.json",
             r#"{"programs": {
@@ -783,8 +729,6 @@ mod tests {
             panic!("expected a spec");
         };
 
-        // Both spellings reach the same answer, and it is the argument
-        // holding the path that gets passed over either way.
         assert_eq!(
             spec.declared_path_args(&["--working-dir", "/app"]),
             ["--working-dir", "/app"],
@@ -793,8 +737,6 @@ mod tests {
             spec.declared_path_args(&["--entrypoint=/app/bin/server"]),
             ["--entrypoint=/app/bin/server"],
         );
-        // An option the file did not name is nobody's business but the
-        // absolute-path check's.
         assert!(
             spec.declared_path_args(&["--output", "/tmp/out.tar"])
                 .is_empty()
@@ -851,10 +793,6 @@ mod tests {
 
     #[test]
     fn a_file_can_declare_a_program_host_derived() {
-        // A project's own autoconfigured toolchain is the same shape of
-        // fact as Bazel's, so it is sayable in a file rather than only in
-        // Ahab's own library—and it needs no new syntax, because it is a
-        // disposition like any other.
         let specs = specs_from(
             "host.json",
             r#"{"programs": {
@@ -899,8 +837,6 @@ mod tests {
 
     #[test]
     fn a_user_declared_wrapper_unwraps_like_a_built_in_one() {
-        // The point of letting a file say this: a project's own wrapper is
-        // invisible to Ahab until someone can describe it.
         let mut library = Library::default();
         library.extend(
             specs_from(
@@ -948,7 +884,6 @@ mod tests {
         };
         assert!(spec.requirements.is_empty());
         assert!(spec.prohibitions.is_empty());
-        // No translations means every argument stands for itself.
         assert_eq!(
             spec.recognize("--anything"),
             Some("--anything".to_owned())
@@ -957,8 +892,6 @@ mod tests {
 
     #[test]
     fn a_user_entry_takes_precedence_over_a_built_in_one() {
-        // The built-in library treats process_wrapper as a wrapper; a
-        // project may know better about its own build.
         let pw = ProgramId::module(
             "rules_rust",
             "util/process_wrapper/process_wrapper",
@@ -1031,9 +964,6 @@ mod tests {
 
     #[test]
     fn a_misspelled_spec_field_is_rejected() {
-        // Every field but `reproducibility` is optional, so a typo would
-        // otherwise be dropped in silence—leaving a specification that
-        // demands less than its author wrote.
         let message = specs_from(
             "typo.json",
             r#"{"programs": {
@@ -1046,7 +976,6 @@ mod tests {
         .unwrap_err()
         .to_string();
         assert!(message.contains("required_flag"), "{message}");
-        // And it says what was expected instead.
         assert!(message.contains("required_flags"), "{message}");
     }
 
@@ -1060,8 +989,6 @@ mod tests {
 
     #[test]
     fn a_written_report_reads_back_unchanged() {
-        // The property `--explain-json` rests on: what comes back is the
-        // same value that was written, so it renders identically.
         let violations: BTreeMap<Violation, usize> = [
             (bad_path("CppCompile", 1, "/bin"), 342),
             (
@@ -1073,8 +1000,6 @@ mod tests {
                     path: "/usr/include".to_owned(),
                     site: LeakSite::ParamFile {
                         exec_path: "out/foo.params".to_owned(),
-                        // Quotes and newlines: the round trip has to
-                        // survive the arguments real actions carry.
                         value: "-I/usr/include -D__X__=\"y\"\nnext"
                             .to_owned(),
                     },
@@ -1098,7 +1023,6 @@ mod tests {
 
     #[test]
     fn every_violation_kind_survives_the_round_trip() {
-        // Each variant is tagged separately, so each can break separately.
         let program = ProgramId::of("external/llvm+/bin/clang");
         let wrappers = vec![ProgramId::module(
             "rules_rust",
@@ -1207,8 +1131,6 @@ mod tests {
 
     #[test]
     fn a_leak_site_names_its_kind_without_repeating_the_field() {
-        // The field is already `site`, so the tag inside says which kind of
-        // location it is; `"site": {"site": ...}` reads as a mistake.
         let violations = once([Violation::AbsolutePath {
             action: ActionRef {
                 mnemonic: "CppCompile".to_owned(),
@@ -1229,8 +1151,6 @@ mod tests {
 
     #[test]
     fn json_report_preserves_the_order_of_the_printed_report() {
-        // Same order as the text report, so the two can be read together
-        // and a diff between runs means a real change.
         let violations = once([
             bad_path("Genrule", 2, "/usr/bin"),
             bad_path("CppCompile", 1, "/bin"),
@@ -1254,8 +1174,6 @@ mod tests {
 
     #[test]
     fn json_report_is_written_even_when_nothing_was_found() {
-        // A consumer must be able to tell "ran, found nothing" from "never
-        // ran", so the file is written either way.
         let json = round_trip("empty.json", &BTreeMap::new());
         assert_eq!(json["violations"].as_array().unwrap().len(), 0);
     }
@@ -1314,9 +1232,6 @@ mod tests {
             report.starts_with("found 2 hermeticity violations:\n"),
             "{report}"
         );
-        // Each violation appears on its own numbered line, then a blank
-        // line, then the sign-off—which wraps, so its length is its own
-        // test rather than part of this count.
         let lines: Vec<&str> = report.lines().collect();
         assert!(lines[1].starts_with("  1. "), "{report}");
         assert!(lines[2].starts_with("  2. "), "{report}");
@@ -1337,8 +1252,6 @@ mod tests {
         let colored =
             report_violations(&violations, false, Palette::color());
         assert!(colored.contains('\x1b'), "{colored:?}");
-        // Stripping the escapes gets the plain report back, so color adds
-        // nothing to what the text says.
         assert_eq!(strip_ansi(&colored), plain);
     }
 
@@ -1353,9 +1266,6 @@ mod tests {
             wrappers: Vec::new(),
         }]);
         let r = report_violations(&violations, false, Palette::color());
-        // Caution for a finding Ahab cannot vouch for either way, cyan for
-        // whose action it is, bold for the program itself.
-        // The kind opens the line, so it carries no color of its own.
         assert!(r.contains("reproducibility unknown"), "{r}");
         assert!(!r.contains("\x1b[33mreproducibility"), "{r}");
         assert!(r.contains("\x1b[35mRustc action for target"), "{r}");
@@ -1363,12 +1273,9 @@ mod tests {
             r.contains("\x1b[36m\"@rules_rust//bin/tool\"\x1b[0m"),
             "{r}"
         );
-        // Bold means heading and nothing else, so it must not appear on a
-        // finding.
         assert!(!r.contains("\x1b[1m\"@rules_rust//bin/tool\""), "{r}");
     }
 
-    /// Remove ANSI escapes, to compare colored output against plain.
     fn strip_ansi(text: &str) -> String {
         let mut out = String::with_capacity(text.len());
         let mut chars = text.chars();
@@ -1394,7 +1301,6 @@ mod tests {
             Palette::plain(),
         );
         assert!(!report.contains('×'), "{report}");
-        // With no repeats the occurrence count would only be noise.
         assert!(!report.contains("occurrences"), "{report}");
     }
 
@@ -1407,7 +1313,6 @@ mod tests {
         let report =
             report_violations(&violations, false, Palette::plain());
 
-        // One numbered line, carrying the multiplicity.
         assert!(
             report.starts_with("found 1 distinct hermeticity violation (342 occurrences):\n"),
             "{report}",
@@ -1439,17 +1344,12 @@ mod tests {
 
     #[test]
     fn the_command_line_definition_is_well_formed() {
-        // clap's own audit of the option definitions: duplicate names,
-        // conflicts naming arguments that do not exist, and so on.
         use clap::CommandFactory;
         Cli::command().debug_assert();
     }
 
     #[test]
     fn no_fail_is_refused_together_with_expect_json() {
-        // `--expect-json` exists to produce an exit code, so asking for it
-        // and then asking not to fail is a contradiction rather than a
-        // preference.
         let both = Cli::try_parse_from([
             "ahab",
             "//...",
@@ -1459,7 +1359,6 @@ mod tests {
         ]);
         assert!(both.is_err(), "{both:?}");
 
-        // Each on its own is fine.
         assert!(
             Cli::try_parse_from(["ahab", "//...", "--no-fail"]).is_ok()
         );
@@ -1476,16 +1375,12 @@ mod tests {
 
     #[test]
     fn a_compilation_mode_is_optional_and_kept_verbatim() {
-        // Absent is the ordinary case: whatever the project's own
-        // configuration chooses.
         assert_eq!(
             Cli::try_parse_from(["ahab", "//..."])
                 .unwrap()
                 .compilation_mode,
             None,
         );
-        // Passed through as written, so that a mode Bazel grows later
-        // needs no change here.
         assert_eq!(
             Cli::try_parse_from([
                 "ahab",
@@ -1502,8 +1397,6 @@ mod tests {
 
     #[test]
     fn an_output_base_is_optional_and_kept_verbatim() {
-        // Absent is the ordinary case: Ahab asks Bazel where the project
-        // keeps its state. A harness that would rather say gets to.
         let discovered = Cli::try_parse_from(["ahab", "//..."]).unwrap();
         assert_eq!(discovered.output_base, None);
 
@@ -1539,7 +1432,6 @@ mod tests {
             false,
             Palette::plain(),
         );
-        // The finding still leads; the note is a footnote under it.
         assert!(
             report.starts_with("found 1 hermeticity violation:\n"),
             "{report}"
@@ -1564,8 +1456,6 @@ mod tests {
 
     #[test]
     fn the_sign_off_is_wrapped_to_the_report_width() {
-        // Only the sign-off. The findings above it are left long on
-        // purpose: they carry paths a reader will want to copy whole.
         let report = super::report_violations(
             &once([bad_path("CppCompile", 1, "/bin")]),
             Suppressed::default(),
@@ -1592,7 +1482,6 @@ mod tests {
 
     #[test]
     fn a_word_wider_than_the_line_is_left_whole() {
-        // Overrunning is better than making it unsearchable.
         let long = "external/rules_cc++cc_configure/cc_wrapper.sh";
         let lines = wrap(&format!("of {long} again"), 20);
         assert!(lines.contains(&long.to_owned()), "{lines:?}");
@@ -1618,13 +1507,11 @@ mod tests {
         let violations = once([bad_path("CppCompile", 1, "/bin")]);
         let report =
             report_violations(&violations, false, Palette::plain());
-        // The violations are still reported...
         assert!(
             report.starts_with("found 1 hermeticity violation:\n"),
             "{report}"
         );
         assert!(report.contains("\n  1. "), "{report}");
-        // ...but no quote and no sign-off separator are appended.
         assert!(!report.contains("  — "), "{report}");
         let quote = melville::quote_for(&violations);
         assert!(!report.contains(&quote), "{report}");

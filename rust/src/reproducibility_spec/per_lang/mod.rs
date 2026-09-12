@@ -18,11 +18,8 @@ pub(super) mod testing {
     use super::super::program_id::ProgramId;
     use std::collections::BTreeSet;
 
-    /// The built-in library's verdict on this invocation.
-    ///
-    /// Panics when the program has no spec at all: a test that meant to ask
-    /// about an unknown program should say so directly rather than read it
-    /// out of a verdict that was never reached.
+    /// The built-in library's verdict on this invocation. Panics when the
+    /// program has no spec at all.
     pub(in crate::reproducibility_spec::per_lang) fn assess(
         program: ProgramId,
         args: Vec<&str>,
@@ -32,8 +29,7 @@ pub(super) mod testing {
         spec.assess(resolution.args)
     }
 
-    /// Assert that the given lookup returns a conditional conformance
-    /// verdict, then return what would satisfy it.
+    /// Assert a conditional verdict, then return what would satisfy it.
     pub(in crate::reproducibility_spec::per_lang) fn missing(
         program: ProgramId,
         args: Vec<&str>,

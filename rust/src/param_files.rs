@@ -1,66 +1,35 @@
 //! Reconstructing what an action's command line actually contains.
 //!
-//! Bazel spills long command lines into *param files*: the action's
-//! `arguments` keep only a short reference such as
-//! `@bazel-out/k8-fastbuild/bin/foo-2.params` and the real arguments live
-//! in that file. A check that reads only `arguments` therefore sees a
-//! truncated command line and silently misses whatever the param file
-//! holds—an absolute path, a leaked user name, a flag that breaks
-//! reproducibility. Worse, it misses it *quietly*: the action looks clean
-//! precisely because it is the large, interesting one.
+//! Bazel spills long command lines into *param files*, leaving `arguments`
+//! holding only a reference such as `@bazel-out/…/foo-2.params`. A check
+//! reading only `arguments` misses whatever the file holds, and misses it
+//! quietly: the action looks clean precisely because it is the large one.
+//! So param files are first-class here, every string tagged with
+//! [`ArgSource`] so a violation can say where it came from.
 //!
-//! So param files are treated as first-class sources of information, on equal
-//! footing with `arguments`, and every string they contribute is tagged with
-//! [`ArgSource`] so a violation can say where it really came from.
-//!
-//! # They must be requested
-//!
-//! `analysis_v2.proto` notes that `param_files` "will be only set if
-//! explicitly requested". Without `--include_param_files` the field is
-//! silently empty and everything here is dead code, so
-//! [`crate::aquery::run_aquery`] always passes that flag.
+//! `param_files` "will be only set if explicitly requested", per
+//! `analysis_v2.proto`, so [`crate::aquery::run_aquery`] always passes
+//! `--include_param_files`.
 //!
 //! # Two kinds of param file
 //!
-//! `param_files` mixes two things that look alike but are not:
-//!
 //! * **Argument files** — referenced from the command line, holding
-//!   arguments the program parses. These belong spliced into the command
-//!   line.
-//! * **Content files**—attached to the action but never referenced as an
-//!   argument, holding data the program reads as a *file*. C++ module maps
-//!   are the common case: a `.cppmap` is passed by path via
-//!   `-fmodule-map-file=`, and its contents are a module graph, not a list
-//!   of flags. In this project's own build every single param file is of
-//!   this kind.
+//!   arguments the program parses. These belong spliced into it.
+//! * **Content files** — attached but never referenced, holding data the
+//!   program reads as a *file*. C++ module maps are the common case.
 //!
-//! Hence the two views below. [`expanded_command_line`] is what the program
-//! receives as `argv` and is what a reproducibility spec should judge;
-//! feeding it module-map text would invite a recognizer to mistake a line
-//! of a module graph for a flag. [`analyzable_strings`] is everything worth
-//! scanning for leaked paths and sentinels, where content files matter just
-//! as much.
+//! Hence the two views below. [`expanded_command_line`] is `argv`, and what
+//! a reproducibility spec should judge; feeding it module-map text would
+//! invite a recognizer to read a module graph as flags. [`analyzable_strings`]
+//! is everything worth scanning for leaked paths, content files included.
 //!
-//! # Recognizing a reference
+//! There is no single spelling of a reference: the format comes from the
+//! rule's `param_file_arg`, `@%s` for native C++ and Java actions and
+//! `--flagfile=%s` elsewhere. [`references`] keys off the one invariant part
+//! and documents which legal formats it still rejects.
 //!
-
-//! There is no single spelling to match. The reference format is chosen by
-//! whoever wrote the rule, via the `param_file_arg` argument of Starlark's
-//! `Args.use_param_file`, which is a format string: native C++ and Java
-//! actions use `@%s`, while others use `--flagfile=%s` and similar.
-//! [`references`] therefore keys off the one part that cannot vary—the exec
-//! path itself must appear verbatim at the end of the argument—and accepts
-//! only the separators those formats can put in front of it.
-//!
-//! Some legal formats are still rejected, because the two kinds of param
-//! file above are not always distinguishable by shape:
-//! `-fmodule-map-file=out/m.cppmap` names a content file but is spelled
-//! exactly like `--flagfile=out/x.params`. [`references`] documents where
-//! that line is drawn and why it errs towards not splicing.
-//!
-//! Expansion is deliberately not recursive: Bazel does not nest param
-//! files, and refusing to follow references found *inside* a param file
-//! means a malformed or hostile graph cannot send us into a cycle.
+//! Expansion is not recursive: Bazel does not nest param files, and
+//! refusing to follow a reference found inside one rules out a cycle.
 
 use analysis_v2_proto::analysis::Action;
 
@@ -76,35 +45,22 @@ pub(crate) enum ArgSource<'a> {
 /// One analyzed string together with its provenance.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub(crate) struct Sourced<'a> {
-    /// The string itself: a command-line argument or one line of a param file.
     pub value: &'a str,
-    /// Where it came from.
     pub source: ArgSource<'a>,
 }
 
-/// Whether `arg` is a reference to the param file at `exec_path`.
+/// Whether `arg` is a reference to the param file at `exec_path`: the path
+/// verbatim at the end, preceded by something ending in `@` (`@path`,
+/// `@@path`, `-Wl,@path`) or in `flagfile=`.
 ///
-/// The exec path must appear verbatim at the end of `arg`, preceded by either:
+/// A bare path and a general `<flag>=<path>` are legal `param_file_arg`
+/// formats and still rejected, neither being distinguishable by shape from
+/// an ordinary path-valued argument: `-fmodule-map-file=out/m.cppmap` is
+/// spelled exactly like `--flagfile=out/x.params`.
 ///
-/// * something ending in `@`—covering `@path`, `@@path` and `-Wl,@path`; or
-/// * a flag ending in `flagfile=`—covering `--flagfile=path` and
-///   `-flagfile=path`.
-///
-/// Deliberately *not* accepted are a bare path and a general
-/// `<flag>=<path>`, even though both are legal `param_file_arg` formats,
-/// because neither can be told apart by shape from an ordinary path-valued
-/// argument. `-Xclang out/m.cppmap` looks exactly like a bare reference,
-/// and `-fmodule-map-file=out/m.cppmap` looks exactly like
-/// `--flagfile=out/x.params` — and both of those are real arguments naming
-/// C++ module maps, which this project's own build attaches to
-/// `param_files` as content.
-///
-/// The asymmetry is deliberate: mistaking a content file for a reference
-/// splices module-graph text into the command line *and* drops the real
-/// argument, corrupting what a reproducibility spec judges, whereas failing
-/// to recognize a reference only means those arguments are not assessed
-/// against a spec—[`analyzable_strings`] still scans them for leaked paths
-/// and sentinels either way. So when in doubt, do not splice.
+/// The asymmetry is deliberate. Splicing a content file corrupts what a
+/// spec judges; missing a reference only leaves those arguments unassessed,
+/// since [`analyzable_strings`] scans them either way.
 ///
 /// An empty `exec_path` never matches, so a param file with no path cannot
 /// swallow every argument.
@@ -118,9 +74,8 @@ fn references(arg: &str, exec_path: &str) -> bool {
     prefix.ends_with('@') || prefix.ends_with("flagfile=")
 }
 
-/// The action's command line as the program actually receives it: `arguments`,
-/// with every reference to a param file replaced, in place, by that file's
-/// lines.
+/// The command line as the program receives it: `arguments`, with every
+/// reference to a param file replaced in place by that file's lines.
 pub(crate) fn expanded_command_line(action: &Action) -> Vec<Sourced<'_>> {
     let mut expanded = Vec::with_capacity(action.arguments.len());
 
@@ -149,12 +104,10 @@ pub(crate) fn expanded_command_line(action: &Action) -> Vec<Sourced<'_>> {
     expanded
 }
 
-/// Every string in the action worth scanning for leaked sentinels and
-/// absolute paths: the raw command line followed by the contents of *every*
-/// param file, referenced or not.
-///
-/// The command line is taken raw rather than expanded, so each param file's
-/// lines appear exactly once however many arguments reference the file.
+/// Every string worth scanning for leaked sentinels and absolute paths: the
+/// raw command line followed by *every* param file, referenced or not. Raw
+/// rather than expanded, so each file's lines appear exactly once however
+/// many arguments reference it.
 pub(crate) fn analyzable_strings(action: &Action) -> Vec<Sourced<'_>> {
     let command_line = action.arguments.iter().map(|arg| Sourced {
         value: arg,
@@ -200,12 +153,9 @@ mod tests {
         }
     }
 
-    /// The values of a sourced list, dropping provenance.
     fn values<'a>(sourced: &[Sourced<'a>]) -> Vec<&'a str> {
         sourced.iter().map(|s| s.value).collect()
     }
-
-    // ---- references ----
 
     #[test]
     fn the_at_prefix_is_a_reference() {
@@ -217,23 +167,18 @@ mod tests {
 
     #[test]
     fn a_flagfile_prefix_is_a_reference() {
-        // Rules choose their own `param_file_arg` format string.
         assert!(references("--flagfile=out/foo.params", "out/foo.params"));
         assert!(references("-flagfile=out/foo.params", "out/foo.params"));
     }
 
     #[test]
     fn an_embedded_at_is_a_reference() {
-        // Linker-style pass-through, e.g. `-Wl,@file`, and the doubled `@@`.
         assert!(references("-Wl,@out/foo.params", "out/foo.params"));
         assert!(references("@@out/foo.params", "out/foo.params"));
     }
 
     #[test]
     fn a_path_valued_flag_is_not_a_reference() {
-        // The motivating false positive: a C++ module map is named by a flag that
-        // has exactly the shape of `--flagfile=`, but its contents are a module
-        // graph, not arguments. Splicing it would corrupt the command line.
         assert!(!references(
             "-fmodule-map-file=out/m.cppmap",
             "out/m.cppmap"
@@ -242,9 +187,6 @@ mod tests {
 
     #[test]
     fn a_bare_path_is_not_a_reference() {
-        // Legal as a `param_file_arg` format, but indistinguishable from an
-        // ordinary path argument such as the operand of `-Xclang`. Not splicing
-        // costs only spec assessment; `analyzable_strings` still scans the file.
         assert!(!references("out/foo.params", "out/foo.params"));
     }
 
@@ -252,21 +194,15 @@ mod tests {
     fn an_unrelated_argument_is_not_a_reference() {
         assert!(!references("-c", "out/foo.params"));
         assert!(!references("@out/other.params", "out/foo.params"));
-        // The path must end the argument, not merely appear in it.
         assert!(!references("@out/foo.params.bak", "out/foo.params"));
-        // A path that merely shares a suffix is not a reference: `xout/foo.params`
-        // ends with the path but `x` is not a separator.
         assert!(!references("xout/foo.params", "out/foo.params"));
     }
 
     #[test]
     fn an_empty_exec_path_never_matches() {
-        // Otherwise every argument would strip an empty suffix and "reference" it.
         assert!(!references("-c", ""));
         assert!(!references("", ""));
     }
-
-    // ---- expanded_command_line ----
 
     #[test]
     fn a_command_line_without_param_files_is_unchanged() {
@@ -284,7 +220,6 @@ mod tests {
             &["gcc", "@out/foo.params", "-o", "foo.o"],
             &[("out/foo.params", &["-O2", "-DNDEBUG"])],
         );
-        // The reference is replaced by its lines, in position.
         assert_eq!(
             values(&expanded_command_line(&a)),
             ["gcc", "-O2", "-DNDEBUG", "-o", "foo.o"]
@@ -307,8 +242,6 @@ mod tests {
 
     #[test]
     fn an_unreferenced_param_file_is_not_spliced() {
-        // C++ module maps: attached to the action, read as a file, never an
-        // argument. Splicing them would feed module-graph text to a recognizer.
         let a = action(
             &["clang", "-fmodule-map-file=out/m.cppmap"],
             &[("out/m.cppmap", &["module \"crosstool\" [system] {"])],
@@ -340,8 +273,6 @@ mod tests {
 
     #[test]
     fn expansion_does_not_recurse() {
-        // A reference *inside* a param file is left as a plain string, so a
-        // self-referential graph cannot loop.
         let a = action(
             &["gcc", "@out/a.params"],
             &[
@@ -355,8 +286,6 @@ mod tests {
         );
     }
 
-    // ---- analyzable_strings ----
-
     #[test]
     fn analyzable_strings_cover_the_command_line_and_every_param_file() {
         let a = action(
@@ -366,8 +295,6 @@ mod tests {
                 ("out/m.cppmap", &["module \"crosstool\" {"]),
             ],
         );
-        // Referenced and unreferenced param files alike are scanned, and the raw
-        // command line is kept so nothing is dropped.
         assert_eq!(
             values(&analyzable_strings(&a)),
             [
@@ -382,8 +309,6 @@ mod tests {
 
     #[test]
     fn a_param_file_referenced_twice_is_scanned_once() {
-        // The command line is taken raw, so the number of references does not
-        // multiply the file's lines into duplicate violations.
         let a = action(
             &["gcc", "@out/foo.params", "@out/foo.params"],
             &[("out/foo.params", &["-O2"])],

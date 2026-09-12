@@ -5,12 +5,9 @@ use std::fmt;
 /// A glob: a pattern of literal text, `*` (any run of characters, `/`
 /// included) and `?` (exactly one character).
 ///
-/// `*` spans `/` on purpose. The alternative—`*` stopping at a separator,
-/// with `**` to cross one—is more expressive, but the expressiveness buys
-/// little here and the failure mode is bad: `//third_party/*` would quietly
-/// match nothing rather than the subtree the author plainly meant. One
-/// wildcard that always does the obvious thing is worth more than two that
-/// need a rule to tell apart.
+/// `*` spans `/` on purpose: with a separator-stopping `*`,
+/// `//third_party/*` would quietly match nothing rather than the subtree
+/// the author plainly meant.
 ///
 /// There is no escape syntax, so a pattern cannot match a literal `*` or
 /// `?`. Neither occurs in a Bazel label, a mnemonic, or any path we have
@@ -18,19 +15,16 @@ use std::fmt;
 #[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord)]
 pub struct Glob {
     /// The pattern as written. First field, so the derived ordering is the
-    /// ordering of the pattern—everything after it is a function of it.
+    /// ordering of the pattern.
     pattern: String,
-    /// What the pattern turned out to be, decided once.
     shape: Shape,
 }
 
 /// The shape of a pattern, worked out when it is compiled.
 ///
-/// Matching is on the hot path—every argument of every action, against
-/// every pattern of every clause—and the general algorithm has to index
-/// both sides, which means walking the characters of each. Almost every
-/// pattern anyone writes is one of the first four shapes, and those are
-/// answerable by a substring test that touches no memory at all.
+/// Matching is on the hot path and the general algorithm has to index both
+/// sides. Almost every pattern anyone writes is one of the first four
+/// shapes, which a substring test answers.
 #[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord)]
 enum Shape {
     /// No wildcards: the text must equal the pattern.
@@ -41,14 +35,12 @@ enum Shape {
     Suffix(String),
     /// `*abc*`: the text must contain this.
     Contains(String),
-    /// Anything else, matched by the general algorithm over these
-    /// characters.
+    /// Anything else, matched by the general algorithm.
     General(Vec<char>),
 }
 
 impl Glob {
-    /// Compile a pattern. Every string is a valid glob—there is no syntax
-    /// to get wrong—so this cannot fail.
+    /// Compile a pattern. Every string is a valid glob.
     pub fn new(pattern: &str) -> Glob {
         let stars = pattern.matches('*').count();
         let inner = pattern.trim_start_matches('*').trim_end_matches('*');
@@ -110,8 +102,6 @@ impl Glob {
             }
         }
 
-        // Trailing `*`s may still match the empty remainder; anything else
-        // left over is text the pattern demanded and did not get.
         pattern[p..].iter().all(|c| *c == '*')
     }
 }
@@ -175,8 +165,6 @@ mod tests {
 
     #[test]
     fn a_glob_backtracks_past_a_false_start() {
-        // The first `ab` is a dead end: the pattern only fits if the star
-        // gives it back and consumes further.
         assert!(Glob::new("*abc").matches("abxabc"));
         assert!(Glob::new("a*b*c").matches("axxbxxc"));
         assert!(!Glob::new("*abc").matches("abxab"));
@@ -184,7 +172,6 @@ mod tests {
 
     #[test]
     fn a_glob_compares_whole_characters() {
-        // Multi-byte input must not be sliced mid-character.
         assert!(Glob::new("caf?").matches("café"));
         assert!(Glob::new("*é").matches("café"));
     }

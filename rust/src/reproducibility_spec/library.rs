@@ -9,21 +9,16 @@ use super::program_id::{Origin, ProgramId};
 use super::{Clause, Guard, Reproducibility, ReproducibilitySpec};
 use crate::glob::Glob;
 
-/// What the library knows about one program.
-///
-/// An entry either answers the reproducibility question for that program or
-/// says where to ask it instead—of another program, or of the command this
-/// one turns out to run.
+/// What the library knows about one program: either the answer, or where to
+/// ask it instead.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum Entry {
     /// The program's own reproducibility.
     Spec(ReproducibilitySpec),
     /// The program is reproducible under exactly the conditions of this
-    /// other one.
-    ///
-    /// A claim about behavior, not identity: `clang++` may be declared the
-    /// same as `clang` without being the same binary. What the action
-    /// actually ran is still what gets reported.
+    /// other one. A claim about behavior, not identity: `clang++` may be
+    /// declared the same as `clang` without being the same binary, and what
+    /// the action ran is still what gets reported.
     SameAs(ProgramId),
     /// The program runs another, named in its own arguments, and is as
     /// reproducible as whatever that turns out to be.
@@ -38,22 +33,15 @@ pub enum Transition {
     /// are its arguments.
     AfterSeparator { separator: String },
     /// The wrapped command is the first argument: an interpreter handed a
-    /// script to run, as `python3 precompiler --src …`.
-    ///
-    /// Does not fire when the first argument is an option, because
-    /// `python3 -c` and `python3 -m` name no program the action can be
-    /// judged by—and a transition that does not fire leaves the
-    /// interpreter itself unvouched for, which is the safe direction.
+    /// script, as `python3 precompiler --src …`. Does not fire on an option,
+    /// `python3 -c` and `python3 -m` naming no program to judge.
     FirstArgument,
 }
 
 impl Transition {
-    /// Extract the wrapped command from `args`, the wrapper's `argv[1..]`.
-    ///
-    /// `None` when the arguments do not match the rule—a wrapper invoked
-    /// without its separator, or with nothing following it. A transition
-    /// that does not fire leaves the wrapper itself as the program, which
-    /// then has no spec and is reported as unknown rather than passed.
+    /// Extract the wrapped command from the wrapper's `argv[1..]`. `None`
+    /// when the arguments do not match the rule, which leaves the wrapper
+    /// itself as the program—reported unknown rather than passed.
     fn apply<'a>(
         &self,
         args: &[&'a str],
@@ -81,11 +69,9 @@ impl Transition {
 /// wrapper transitions alike. Bounds a library that accidentally loops.
 const MAX_RESOLUTION_STEPS: usize = 16;
 
-/// Whether a path names one program or a set of them.
-///
-/// The same test the exception files use, and safe for the same reason:
-/// [`Glob`] has no escape syntax, and neither character occurs in a path
-/// we have seen an action run.
+/// Whether a path names one program or a set of them. Safe because [`Glob`]
+/// has no escape syntax and neither character occurs in a path we have seen
+/// an action run.
 fn is_pattern(path: &str) -> bool {
     path.contains(['*', '?'])
 }
@@ -137,24 +123,18 @@ fn entries() -> Vec<(ProgramId, Entry)> {
 }
 
 /// The `coreutils` subcommands that answer with something about the machine
-/// rather than about the inputs, as its own `--help` lists them.
-///
-/// Matched against whole arguments, so a file that happens to be named
-/// `date` is reported too. That is the safe direction, and the alternative
-/// is nothing: the subcommand is the first argument rather than a flag, and
-/// a clause cannot ask about position.
+/// rather than about the inputs. Matched against whole arguments, so a file
+/// named `date` is reported too: a clause cannot ask about position, and
+/// that is the safe direction.
 const HOST_SUBCOMMANDS: [&str; 20] = [
     "arch", "date", "df", "env", "groups", "hostid", "hostname", "id",
     "logname", "mktemp", "nproc", "printenv", "pwd", "shuf", "stat",
     "stty", "touch", "tty", "uname", "whoami",
 ];
 
-/// A tool from a toolchain the bazel_lib module registers.
-///
-/// The module was called `aspect_bazel_lib` up to its 2.x releases and
-/// `bazel_lib` from 3.0 on, and both are in the wild—a single build can
-/// depend on one directly and reach the other through a rule set. So each
-/// tool answers to both names, with the newer one carrying the claim.
+/// A tool from a toolchain the bazel_lib module registers. The module was
+/// `aspect_bazel_lib` up to 2.x and `bazel_lib` from 3.0, and both are in
+/// the wild, so each tool answers to both names.
 pub(super) fn bazel_lib(tool: &str) -> ProgramId {
     ProgramId::extension("bazel_lib", "toolchains", tool)
 }
@@ -168,13 +148,9 @@ pub(super) fn aspect_bazel_lib(tool: &str) -> ProgramId {
 fn language_agnostic() -> Vec<(ProgramId, Entry)> {
     vec![
         // One binary standing in for the whole of coreutils, which the
-        // bazel_lib rules use wherever they would otherwise need a shell:
-        // copying a file, making a directory, writing a symlink. Those are
-        // functions of their inputs.
-        //
-        // It also carries `date`, `hostname` and `uname`, and a verdict of
-        // `always` would be vouching for those too—so the disposition is
-        // conditional and the clause names them.
+        // bazel_lib rules use wherever they would need a shell. It also
+        // carries `date`, `hostname` and `uname`, which `always` would be
+        // vouching for, so the clause names them instead.
         (
             bazel_lib("coreutils"),
             Entry::Spec(
@@ -203,19 +179,15 @@ fn language_agnostic() -> Vec<(ProgramId, Entry)> {
             aspect_bazel_lib("coreutils"),
             Entry::SameAs(bazel_lib("coreutils")),
         ),
-        // The two copiers from the same toolchain, which every rule set
-        // built on bazel_lib uses to assemble a directory. Both walk what
-        // they are given and write the same bytes out, cloning or
-        // hardlinking where the filesystem allows it; neither has a clock
-        // and neither reads anything it was not handed.
+        // The two copiers every rule set built on bazel_lib uses to
+        // assemble a directory. Both write the same bytes out, with no
+        // clock and nothing read that was not handed to them.
         //
-        // What they leave behind is a tree whose modification times are
-        // not a function of anything—the moment of copying, or with
-        // `--preserve-mtime` the source's own. That is deliberately not
-        // stated as a condition here: Bazel compares a tree by the digests
-        // of the files in it, so those times reach an artifact only if
-        // something downstream turns them into content, and the tool that
-        // would do that answers for it where it happens.
+        // The tree they leave has modification times that are a function of
+        // nothing, deliberately not stated as a condition: Bazel compares a
+        // tree by digests, so those times reach an artifact only if
+        // something downstream turns them into content—and that tool
+        // answers for it where it happens.
         (bazel_lib("copy_to_directory"), Entry::Spec(always())),
         (
             aspect_bazel_lib("copy_to_directory"),
@@ -226,10 +198,8 @@ fn language_agnostic() -> Vec<(ProgramId, Entry)> {
             aspect_bazel_lib("copy_directory"),
             Entry::SameAs(bazel_lib("copy_directory")),
         ),
-        // protoc is a pure function of the descriptors it is given, and
-        // arrives two ways: prebuilt from the module extension that
-        // downloads one, or as protobuf's own `cc_binary` when a project
-        // builds it from source.
+        // A pure function of the descriptors it is given, arriving either
+        // prebuilt from the extension or as protobuf's own `cc_binary`.
         (
             ProgramId::extension("protobuf", "protoc", "bin/protoc"),
             Entry::Spec(always()),
@@ -242,9 +212,8 @@ fn language_agnostic() -> Vec<(ProgramId, Entry)> {
                 "bin/protoc",
             )),
         ),
-        // And a third way: the build protobuf's own BUILD file calls "the
-        // protobuf compiler without code generators", which is what the
-        // proto rules run when all they need is a descriptor set.
+        // A third way: "the protobuf compiler without code generators",
+        // which the proto rules run for a descriptor set.
         (
             ProgramId::module(
                 "protobuf",
@@ -256,21 +225,15 @@ fn language_agnostic() -> Vec<(ProgramId, Entry)> {
                 "bin/protoc",
             )),
         ),
-        // Bazel's own zip tool, which every rule set reaches for when it
-        // has to put a tree in an archive. A zip normally records the
-        // moment each entry was added, which would make the archive a
-        // function of when it was built; zipper writes one constant into
-        // every entry instead—2010-01-01, observed across all 2237 entries
-        // of a real archive—so what comes out depends on the contents and
-        // the order it was handed them, both of which the action states.
+        // Bazel's own zip tool. Where a zip normally records the moment
+        // each entry was added, zipper writes one constant—2010-01-01,
+        // observed across all 2237 entries of a real archive.
         (
             ProgramId::module("bazel_tools", "tools/zip/zipper/zipper"),
             Entry::Spec(always()),
         ),
-        // The same binary under the path it is built at. `//tools/zip:zipper`
-        // is an alias for `//third_party/ijar:zipper`, and an action running
-        // it records where the `cc_binary` put it rather than where the
-        // alias stands.
+        // The same binary under the path it is built at: `//tools/zip:zipper`
+        // is an alias for `//third_party/ijar:zipper`.
         (
             ProgramId::module("bazel_tools", "third_party/ijar/zipper"),
             Entry::SameAs(ProgramId::module(
@@ -278,11 +241,9 @@ fn language_agnostic() -> Vec<(ProgramId, Entry)> {
                 "tools/zip/zipper/zipper",
             )),
         ),
-        // Bazel's test shim. Its outputs—the log and the JUnit XML—carry
-        // timings and so are never byte-identical, but they are terminal:
-        // no other action consumes them, so that variation cannot reach a
-        // build artifact. What the shim does to the build is run a binary
-        // the build already produced.
+        // Bazel's test shim. Its log and JUnit XML carry timings and are
+        // never byte-identical, but they are terminal: no other action
+        // consumes them, so that variation cannot reach an artifact.
         (
             ProgramId::module("bazel_tools", "tools/test/test-setup.sh"),
             Entry::Spec(always()),
@@ -304,17 +265,14 @@ pub struct Resolution<'a> {
     /// the action ran the program directly.
     pub wrappers: Vec<ProgramId>,
     /// The spec answering for [`program`](Self::program), with the program
-    /// that carried it—the same one unless a synonym was followed. `None`
-    /// when the library knows nothing about it.
+    /// that carried it—the same one unless a synonym was followed.
     pub spec: Option<(ProgramId, ReproducibilitySpec)>,
 }
 
 impl Resolution<'_> {
-    /// The program whose spec judged [`program`](Self::program), when that
-    /// is a different one—i.e. when a synonym was followed, or when a
-    /// pattern entry answered and so names a set the program falls in.
-    /// `None` when the program answered for itself, or when there is no
-    /// spec at all.
+    /// The program whose spec judged [`program`](Self::program), when a
+    /// synonym was followed or a pattern entry answered. `None` when the
+    /// program answered for itself.
     pub fn synonym(&self) -> Option<&ProgramId> {
         self.spec
             .as_ref()
@@ -335,10 +293,8 @@ struct PatternEntry {
 }
 
 /// What Ahab knows about programs: the built-in entries, plus whatever a
-/// project has added.
-///
-/// A key's path may be a glob, for the rule sets that put something
-/// unstable in the path itself.
+/// project has added. A key's path may be a glob, for the rule sets that put
+/// something unstable in the path itself.
 #[derive(Debug, Clone, Default)]
 pub struct Library {
     /// Entries whose path is literal, which is nearly all of them.
@@ -356,12 +312,8 @@ impl Library {
     }
 
     /// Add entries, replacing any already present for the same program.
-    ///
-    /// Later entries win, so a project can override what Ahab believes
-    /// about a program, and a file given later on the command line
-    /// overrides one given earlier. A pattern added again moves to the end,
-    /// so that "later wins" holds for patterns the same way it does for
-    /// exact keys.
+    /// Later entries win, and a pattern added again moves to the end so
+    /// that holds for patterns too.
     pub fn extend(
         &mut self,
         entries: impl IntoIterator<Item = (ProgramId, Entry)>,
@@ -380,12 +332,8 @@ impl Library {
         }
     }
 
-    /// The entry answering for `key`, with the key that carried it.
-    ///
-    /// An exact key wins over any pattern, so naming a program outright is
-    /// always how to say something about that program in particular.
-    /// Between patterns the last one added wins, which is what makes a
-    /// pattern overridable by another pattern.
+    /// The entry answering for `key`, with the key that carried it. An
+    /// exact key beats any pattern; between patterns, the last added wins.
     fn lookup(&self, key: &ProgramId) -> Option<(&ProgramId, &Entry)> {
         if let Some((found, entry)) = self.exact.get_key_value(key) {
             return Some((found, entry));
@@ -400,12 +348,9 @@ impl Library {
             .map(|held| (&held.key, &held.entry))
     }
 
-    /// Resolve what an action really runs, from its program and `argv[1..]`.
-    ///
-    /// Follows [`Entry::Wraps`] transitions through wrappers and
-    /// [`Entry::SameAs`] links through synonyms until reaching a program
-    /// that carries a spec, is unknown, or comes from outside the build.
-    /// Always yields a [`Resolution`]: an unknown program is a verdict for
+    /// Resolve what an action really runs, following [`Entry::Wraps`] and
+    /// [`Entry::SameAs`] until a program carries a spec, is unknown, or
+    /// comes from outside the build. An unknown program is a verdict for
     /// the caller to report, not a failure here.
     pub fn resolve<'a>(
         &self,
@@ -418,8 +363,7 @@ impl Library {
         let mut wrappers = Vec::new();
 
         for _ in 0..MAX_RESOLUTION_STEPS {
-            // A program from outside the build is a verdict in itself, and
-            // unwrapping it would be pretending we know what it does:
+            // Unwrapping one would be pretending we know what it does:
             // `bash -c` runs a whole script, not a single command.
             if program.origin == Origin::System {
                 break;
@@ -442,8 +386,6 @@ impl Library {
                 Entry::Wraps(transition) => {
                     let Some((wrapped, rest)) = transition.apply(&args)
                     else {
-                        // The rule did not fire, so we cannot say what ran.
-                        // Leaving the wrapper in place reports it unknown.
                         break;
                     };
                     wrappers.push(program);
@@ -470,12 +412,9 @@ struct SpecFile {
     programs: BTreeMap<String, EntryFile>,
 }
 
-/// The JSON form of an [`Entry`].
-///
-/// A separate type from `Entry` so the file format is not hostage to the
-/// internal representation, and so it can be spelled the way a person would
-/// write it: `{"same_as": "@llvm+t//bin/clang"}` rather than the nesting a
-/// derived encoding of `Entry` would produce.
+/// The JSON form of an [`Entry`]. Separate from `Entry` so the format is
+/// not hostage to the internal representation, and can be spelled the way a
+/// person would write it.
 #[derive(Debug, Deserialize)]
 #[serde(rename_all = "snake_case")]
 enum EntryFile {
@@ -569,10 +508,8 @@ enum TransitionFile {
     FirstArgument,
 }
 
-/// Parse the entries a `--repro-specs` file declares.
-///
-/// Errors name the program at fault, since a file may declare many and the
-/// serde error alone would only give a position.
+/// Parse the entries a `--repro-specs` file declares. Errors name the
+/// program at fault, a serde error alone giving only a position.
 pub fn parse_entries(
     json: &str,
 ) -> Result<Vec<(ProgramId, Entry)>, String> {
@@ -588,8 +525,6 @@ pub fn parse_entries(
             };
             let id = named("program", &program)?;
             let entry = match entry {
-                // The short forms desugar into clauses and join the ones
-                // written out in full.
                 EntryFile::Spec(fields) => Entry::Spec(
                     ReproducibilitySpec::new(
                         fields.reproducibility,
@@ -628,10 +563,6 @@ mod tests {
 
     #[test]
     fn the_zip_tool_is_vouched_for_however_it_is_asked_to_pack() {
-        // `cC` is create-and-compress, and the entries that follow are
-        // `name=source` pairs. None of it says anything about time, because
-        // zipper does not offer the choice: it writes one fixed timestamp
-        // into every entry whatever it is told.
         let resolution = Library::builtin().resolve(
             ProgramId::module("bazel_tools", "tools/zip/zipper/zipper"),
             vec![
@@ -655,7 +586,6 @@ mod tests {
         library
     }
 
-    /// Resolve with no arguments, for tests that only care about programs.
     fn resolve_bare<'a>(
         library: &Library,
         program: &ProgramId,
@@ -663,7 +593,6 @@ mod tests {
         library.resolve(program.clone(), Vec::new())
     }
 
-    /// The spec a synthetic library gives `program`, if any.
     fn spec_for(
         library: &Library,
         program: &ProgramId,
@@ -671,7 +600,6 @@ mod tests {
         resolve_bare(library, program).spec.map(|(_, spec)| spec)
     }
 
-    // Stand-in programs for the resolution tests.
     fn a() -> ProgramId {
         ProgramId::module("a", "bin/a")
     }
@@ -684,14 +612,11 @@ mod tests {
         ProgramId::module("c", "bin/c")
     }
 
-    /// A `--`-separated wrapper, the shape Bazel's own wrappers use.
     fn wraps_after_dashdash() -> Entry {
         Entry::Wraps(Transition::AfterSeparator {
             separator: "--".to_owned(),
         })
     }
-
-    // ---- the real library ----
 
     #[test]
     fn a_program_the_library_does_not_name_has_no_spec() {
@@ -711,12 +636,6 @@ mod tests {
 
     #[test]
     fn every_synonym_in_the_library_points_at_a_real_entry() {
-        // Guards the library as it grows: a dangling or cyclic synonym would
-        // make a program silently unknown rather than fail loudly.
-        //
-        // Only synonyms can be checked this way. Where a wrapper resolves to
-        // depends on the arguments it was handed, so a `Wraps` entry has no
-        // static destination to validate.
         let library = Library::builtin();
         for (program, _) in entries() {
             let mut seen = vec![program.clone()];
@@ -747,8 +666,6 @@ mod tests {
         }
     }
 
-    /// A library holding just the entries given, as a project's own file
-    /// would produce.
     fn library_of(
         entries: impl IntoIterator<Item = (ProgramId, Entry)>,
     ) -> Library {
@@ -777,9 +694,6 @@ mod tests {
 
     #[test]
     fn a_pattern_does_not_reach_across_repositories() {
-        // Only the path is a pattern. The origin is the part normalization
-        // already made stable, and letting it wildcard would make a spec
-        // about one rule set answer for another's program of the same name.
         let library = library_of([(
             ProgramId::extension("r", "toolchains", "*/bin/rustc"),
             Entry::Spec(always()),
@@ -791,9 +705,6 @@ mod tests {
 
     #[test]
     fn naming_a_program_outright_beats_a_pattern_that_covers_it() {
-        // The pattern is added second, so this is not first-wins by
-        // accident: an exact key is what one writes to say something about
-        // one program in particular, and it has to hold.
         let exact = ProgramId::extension("r", "toolchains", "x/bin/rustc");
         let library = library_of([
             (exact.clone(), Entry::Spec(never())),
@@ -810,8 +721,6 @@ mod tests {
 
     #[test]
     fn a_later_pattern_wins_over_an_earlier_one() {
-        // What lets a project correct a built-in pattern, the way a later
-        // exact entry corrects a built-in exact one.
         let library = library_of([
             (
                 ProgramId::extension("r", "toolchains", "*/bin/rustc"),
@@ -831,9 +740,6 @@ mod tests {
 
     #[test]
     fn a_pattern_reports_the_key_that_answered() {
-        // The program is still what the action ran; the pattern is how the
-        // library found something to say about it, which is what a reader
-        // needs in order to go and check the claim.
         let pattern =
             ProgramId::extension("r", "toolchains", "*/bin/rustc");
         let library =
@@ -847,8 +753,6 @@ mod tests {
 
     #[test]
     fn a_pattern_can_stand_in_for_a_synonym() {
-        // The shape the built-in library uses for rules_rs: a set of
-        // programs judged by the one program another rule set ships.
         let target = ProgramId::module("rules_rust", "bin/rustc");
         let library = library_of([
             (target.clone(), Entry::Spec(always())),
@@ -861,8 +765,6 @@ mod tests {
             ProgramId::of("external/r++toolchains+tc/x/bin/rustc"),
             vec![],
         );
-        // Reported as judged by the concrete program, not by the pattern:
-        // resolution followed the synonym through to what carries the spec.
         assert_eq!(resolved.synonym(), Some(&target));
     }
 
@@ -870,29 +772,23 @@ mod tests {
     fn a_program_outside_the_execution_root_is_the_machines() {
         let resolved = Library::builtin()
             .resolve(ProgramId::of("/usr/bin/gcc"), vec![]);
-        // Nothing in the library says so; the identity does.
         assert_eq!(resolved.program.origin, Origin::System);
         assert!(resolved.spec.is_none());
     }
 
     #[test]
     fn a_declared_program_is_the_machines_wherever_it_sits() {
-        // Inside the execution root, in an ordinary-looking repository,
-        // and still the host's—which only the library can know.
         let wrapper = ProgramId::extension(
             "rules_cc",
             "cc_configure_extension",
             "cc_wrapper.sh",
         );
         let resolved = Library::builtin().resolve(wrapper.clone(), vec![]);
-        // Distinct from a system program: this one is inside the
-        // execution root, and only the library knows what it really is.
         assert_ne!(resolved.program.origin, Origin::System);
         assert_eq!(
             resolved.spec.map(|(_, spec)| spec.reproducibility),
             Some(Reproducibility::HostDerived),
         );
-        // And the report can still say where it was found.
         assert_eq!(
             resolved.program.to_string(),
             "@rules_cc+cc_configure_extension//cc_wrapper.sh",
@@ -901,10 +797,6 @@ mod tests {
 
     #[test]
     fn its_neighbours_in_the_same_repository_are_not() {
-        // The point of listing programs rather than repositories:
-        // `local_config_cc` also holds files that came from nobody's
-        // machine, and a rule about the repository would have swept them
-        // in. They are simply unknown, which is the safe answer.
         let static_file = ProgramId::extension(
             "rules_cc",
             "cc_configure_extension",
@@ -928,8 +820,6 @@ mod tests {
 
     #[test]
     fn no_key_appears_twice_in_the_library() {
-        // Indexing keeps the last of a repeated key and drops the rest, so a
-        // duplicate would silently discard an entry someone wrote.
         let authored = entries();
         let indexed: HashMap<_, _> = entries().into_iter().collect();
         assert_eq!(
@@ -938,8 +828,6 @@ mod tests {
             "the library contains a duplicate key",
         );
     }
-
-    // ---- synonyms ----
 
     #[test]
     fn a_program_with_its_own_spec_resolves_to_it() {
@@ -960,7 +848,6 @@ mod tests {
             (b(), Entry::SameAs(a())),
         ]);
         assert_eq!(spec_for(&library, &b()), Some(never()));
-        // And the alias did not disturb the program it points at.
         assert_eq!(spec_for(&library, &a()), Some(never()));
     }
 
@@ -997,8 +884,6 @@ mod tests {
 
     #[test]
     fn a_chain_longer_than_the_step_limit_gives_up() {
-        // Pins where the bound is, which the cycle tests cannot: they only
-        // show that *some* bound stops them.
         let chain = |links: usize| {
             let hop =
                 |i: usize| ProgramId::module("m", &format!("bin/{i}"));
@@ -1018,10 +903,6 @@ mod tests {
 
     #[test]
     fn a_synonym_does_not_change_the_program_the_action_ran() {
-        // A synonym says "judge it by these rules", not "it ran something
-        // else". Reporting the target as the program would misname what the
-        // action actually invoked, and would hide that a synonym was used
-        // at all, since the carrier would then always equal the program.
         let library = index(vec![
             (a(), Entry::Spec(always())),
             (b(), Entry::SameAs(a())),
@@ -1044,12 +925,8 @@ mod tests {
         assert_eq!(resolve_bare(&library, &b()).synonym(), None);
     }
 
-    // ---- wrappers ----
-
     #[test]
     fn a_wrapper_resolves_to_the_command_it_runs() {
-        // The motivating case: process_wrapper's own flags say nothing about
-        // reproducibility, so the question is re-asked of what follows `--`.
         let library = index(vec![
             (a(), wraps_after_dashdash()),
             (b(), Entry::Spec(never())),
@@ -1066,8 +943,6 @@ mod tests {
 
     #[test]
     fn a_wrappers_own_flags_are_not_assessed() {
-        // Everything before the separator belongs to the wrapper, and must
-        // not be mistaken for a flag of the wrapped program.
         let library = index(vec![(a(), wraps_after_dashdash())]);
         let resolved = library.resolve(
             a(),
@@ -1078,7 +953,6 @@ mod tests {
 
     #[test]
     fn wrappers_may_nest() {
-        // bootstrap_process_wrapper runs process_wrapper runs the real tool.
         let library = index(vec![
             (a(), wraps_after_dashdash()),
             (b(), wraps_after_dashdash()),
@@ -1101,8 +975,6 @@ mod tests {
 
     #[test]
     fn a_wrapper_can_unwrap_onto_a_system_program() {
-        // The reason this matters: without unwrapping, a wrapper hides the
-        // fact that the action ultimately shells out to a host tool.
         let library = index(vec![(a(), wraps_after_dashdash())]);
         let resolved = library.resolve(a(), vec!["--", "/usr/bin/gcc"]);
         assert_eq!(resolved.program.origin, Origin::System);
@@ -1112,8 +984,6 @@ mod tests {
 
     #[test]
     fn a_transition_that_does_not_fire_leaves_the_wrapper_in_place() {
-        // No separator: we cannot say what ran, so the wrapper stays and is
-        // reported as unknown rather than waved through.
         let library = index(vec![(a(), wraps_after_dashdash())]);
         let resolved = library.resolve(a(), vec!["--arg-file", "x"]);
         assert_eq!(resolved.program, a());
@@ -1131,7 +1001,6 @@ mod tests {
 
     #[test]
     fn only_the_first_separator_splits_the_command() {
-        // A `--` among the wrapped program's own arguments is its business.
         let library = index(vec![
             (a(), wraps_after_dashdash()),
             (b(), Entry::Spec(always())),
@@ -1144,8 +1013,6 @@ mod tests {
 
     #[test]
     fn a_wrapper_cycle_terminates() {
-        // Each hop consumes a separator, so a self-wrapping entry runs out
-        // of arguments; the step bound catches the case where it does not.
         let library = index(vec![(a(), wraps_after_dashdash())]);
         let args: Vec<&str> =
             std::iter::repeat_n(["--", "external/a+/bin/a"], 40)

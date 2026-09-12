@@ -48,14 +48,10 @@ pub(in crate::reproducibility_spec) fn entries() -> Vec<(ProgramId, Entry)>
                 separator: "--".to_owned(),
             }),
         ),
-        // The same two programs again, reached the other way. rules_rs
-        // does not depend on the rules_rust module: it fetches a patched
-        // copy through an extension of its own, which lands under a
-        // repository named for rules_rs and leaves the tools where
-        // rules_rust puts them. The patches are to Windows linking and
-        // rust-analyzer integration, so what the wrapper does with its
-        // arguments is unchanged—and `SameAs` is a claim about behavior,
-        // which is the claim being made.
+        // The same two programs reached the other way: rules_rs fetches a
+        // patched copy through an extension of its own. The patches are to
+        // Windows linking and rust-analyzer integration, so what the wrapper
+        // does with its arguments—the claim `SameAs` makes—is unchanged.
         (
             ProgramId::extension(
                 "rules_rs",
@@ -78,16 +74,11 @@ pub(in crate::reproducibility_spec) fn entries() -> Vec<(ProgramId, Entry)>
                 "util/process_wrapper/bootstrap_process_wrapper.sh",
             )),
         ),
-        // rustc compiles deterministically from the same sources and flags,
-        // with one standing exception: it bakes the paths it was given into
-        // debug info and panic messages, and those paths are absolute at
-        // execution time even when the action recorded no absolute path.
-        // `--remap-path-prefix` is what rewrites them back to something
-        // machine-independent, so it is not optional.
-        //
-        // Incremental compilation reuses cached fragments and is not
-        // expected to yield byte-identical output, so it breaks the deal
-        // however the flag is spelled or wherever its cache is pointed.
+        // rustc bakes the paths it was given into debug info and panic
+        // messages, and those are absolute at execution time even when the
+        // action recorded no absolute path, so `--remap-path-prefix` is not
+        // optional. Incremental compilation reuses cached fragments and
+        // breaks the deal however the flag is spelled.
         (
             rust_tool("rustc"),
             Entry::Spec(
@@ -99,35 +90,25 @@ pub(in crate::reproducibility_spec) fn entries() -> Vec<(ProgramId, Entry)>
                 .with_recognizer(rustc_option),
             ),
         ),
-        // clippy-driver is rustc with extra lints: it takes the same flags,
-        // compiles through the same code, and is reproducible on the same
-        // terms. Declared a synonym rather than copied so the two cannot
-        // drift apart.
+        // rustc with extra lints: same flags, same code, same terms.
         (
             rust_tool("clippy-driver"),
             Entry::SameAs(rust_tool("rustc")),
         ),
-        // The prost wrapper is not a plain wrapper: it drives protoc, the
-        // prost and tonic codegen plugins, and rustfmt over the result.
-        // Modelling it as `Wraps` would answer for protoc alone and quietly
+        // Not a plain wrapper: it drives protoc, the prost and tonic codegen
+        // plugins, and rustfmt. `Wraps` would answer for protoc alone and
         // drop the three tools that also shape the output, so it carries a
-        // spec of its own—which holds because every one of those steps is
-        // itself deterministic.
+        // spec of its own—which holds, each of those steps being
+        // deterministic.
         (
             ProgramId::module("rules_rust_prost", "private/protoc_wrapper"),
             Entry::Spec(always()),
         ),
-        // The Rust toolchain as rules_rs registers it. Where rules_rust
-        // puts the version and the platform in the repository name—which
-        // normalization drops, leaving `rust_toolchain/bin/rustc`—rules_rs
-        // puts them in the path: `rustc/default_linux_x86_64_1_86_0_rust_
-        // toolchain/bin/rustc`. So the path is written as a pattern, and
-        // what it deliberately does not name is exactly what an exact key
-        // would have got wrong: which machine, and which release of Rust.
-        //
-        // These are the same compilers the entries above answer for. rustc
-        // is the one that has to be told to remap its paths, and that is
-        // as true of the copy rules_rs downloads as of any other.
+        // The same toolchain as rules_rs registers it. rules_rust puts the
+        // version and platform in the repository name, which normalization
+        // drops; rules_rs puts them in the path
+        // (`rustc/default_linux_x86_64_1_86_0_rust_toolchain/bin/rustc`),
+        // so the path is a pattern and does not name them.
         (
             ProgramId::extension("rules_rs", "toolchains", "*/bin/rustc"),
             Entry::SameAs(rust_tool("rustc")),
@@ -140,8 +121,8 @@ pub(in crate::reproducibility_spec) fn entries() -> Vec<(ProgramId, Entry)>
             ),
             Entry::SameAs(rust_tool("clippy-driver")),
         ),
-        // rustfmt needs no pattern: rules_rs keeps it outside the
-        // toolchain directory, as rules_rust does and for the same reason.
+        // rustfmt needs no pattern: rules_rs, like rules_rust, keeps it
+        // outside the toolchain directory.
         (
             ProgramId::extension("rules_rs", "toolchains", "bin/rustfmt"),
             Entry::SameAs(ProgramId::extension(
@@ -150,10 +131,8 @@ pub(in crate::reproducibility_spec) fn entries() -> Vec<(ProgramId, Entry)>
                 "bin/rustfmt",
             )),
         ),
-        // rules_rs builds its prost wrapper from rules_rust's source file
-        // —`srcs = ["@rules_rust//extensions/prost/private:protoc_wrapper.rs"]`
-        // in `rs/private/prost/BUILD.bazel`—compiled in a package of its
-        // own against its own crates. Same program, different address.
+        // rules_rs builds its prost wrapper from rules_rust's own source
+        // file, in a package of its own: same program, different address.
         (
             ProgramId::module(
                 "rules_rs",
@@ -164,42 +143,29 @@ pub(in crate::reproducibility_spec) fn entries() -> Vec<(ProgramId, Entry)>
                 "private/protoc_wrapper",
             )),
         ),
-        // rustdoc, which takes rustc's flags and is emphatically *not*
-        // declared its synonym. rustc needs `--remap-path-prefix` because
-        // it bakes the execution-time path into debug info; rustdoc cannot
-        // be given it at all on a stable toolchain—rules_rust passes
-        // `remap_path_prefix = None` and says why: "rustdoc only supports
-        // `--remap-path-prefix` behind `-Zunstable-options`". A spec
-        // requiring the remaps would demand something no user could
-        // provide.
-        //
-        // It does not need them. Measured on the 1.93.1 rustdoc analyzed
-        // here: documenting the same crate from two different working
-        // directories, two seconds apart, produced 55 byte-identical
-        // files—source-view pages included, which is where a path would
-        // show up—and nothing in the output names the directory it ran in.
+        // rustdoc takes rustc's flags and is emphatically *not* its synonym:
+        // a stable rustdoc cannot be given `--remap-path-prefix` at all
+        // ("only supports `--remap-path-prefix` behind `-Zunstable-options`",
+        // per rules_rust), so requiring the remaps would demand something no
+        // user could provide. Nor does it need them—measured on 1.93.1,
+        // documenting a crate from two working directories produced 55
+        // byte-identical files, source-view pages included.
         (rust_tool("rustdoc"), Entry::Spec(always())),
-        // rustfmt, which rules_rust runs only in `--check` mode: it writes
-        // nothing and reports by exit status. The action's sole declared
-        // output is the empty file `process_wrapper --touch-file` creates,
-        // so what it produces is a constant.
+        // rules_rust runs rustfmt only in `--check` mode, where it writes
+        // nothing and reports by exit status; the action's sole output is
+        // the empty file `process_wrapper --touch-file` creates.
         //
-        // Not under `rust_toolchain/bin` like the rest: rustfmt comes from
-        // a repository of its own, which can be pinned to a different
-        // channel from the toolchain it formats for.
+        // Not under `rust_toolchain/bin` like the rest: rustfmt has a
+        // repository of its own, pinnable to another channel.
         (
             ProgramId::extension("rules_rust", "rust", "bin/rustfmt"),
             Entry::Spec(always()),
         ),
-        // Packs a rustdoc output directory into a zip, stripping a prefix
-        // from each name. It runs no zip logic of its own—the first
-        // argument is the zip tool, which it spawns—so it is exactly as
-        // reproducible as whatever it was handed, which is what `Wraps`
-        // says. In practice that is Bazel's zipper, already vouched for.
-        //
-        // The arguments carried across are not literally the ones it will
-        // pass on (it rewrites them into `name=path` pairs), but they are
-        // not consulted: what matters is which program answers.
+        // Packs a rustdoc directory into a zip, running no zip logic of its
+        // own: the first argument is the tool it spawns, in practice
+        // Bazel's zipper. The arguments carried across are not literally
+        // the ones it passes on, but they are not consulted—what matters is
+        // which program answers.
         (
             ProgramId::module(
                 "rules_rust",
@@ -217,8 +183,7 @@ mod tests {
     use crate::reproducibility_spec::library::Library;
     use crate::reproducibility_spec::per_lang::testing::{assess, missing};
 
-    /// The flags rules_rust actually hands rustc, trimmed to the ones that
-    /// bear on reproducibility.
+    /// The flags rules_rust hands rustc.
     fn rules_rust_flags() -> Vec<&'static str> {
         vec![
             "--crate-name=ahab",
@@ -234,17 +199,10 @@ mod tests {
 
     #[test]
     fn rustdoc_is_not_held_to_rustcs_remapping() {
-        // rules_rust gives rustdoc the same flags as rustc but none of the
-        // remaps, because a stable rustdoc will not take them. Judging it
-        // by rustc's spec would report every documented crate for missing
-        // something nobody can pass.
         assert_eq!(
             assess(rust_tool("rustdoc"), without_remappings()),
             Conformance::Reproducible,
         );
-        // And the same arguments still fail for rustc, so the two really
-        // are being held to different standards rather than the
-        // requirement having quietly gone away.
         assert!(matches!(
             assess(rust_tool("rustc"), without_remappings()),
             Conformance::Conditional { .. }
@@ -273,10 +231,6 @@ mod tests {
 
     #[test]
     fn the_rustdoc_zipper_answers_for_the_tool_it_is_handed() {
-        // Its first argument is the zip tool it spawns, so the verdict
-        // belongs to that—Bazel's zipper, which writes a fixed timestamp
-        // into every entry—and the report still names dir_zipper as the
-        // wrapper that led there.
         let zipper =
             ProgramId::module("bazel_tools", "tools/zip/zipper/zipper");
         let resolution = Library::builtin().resolve(
@@ -305,7 +259,6 @@ mod tests {
         );
     }
 
-    /// `rules_rust_flags` with every path remapping stripped out.
     fn without_remappings() -> Vec<&'static str> {
         rules_rust_flags()
             .into_iter()
@@ -315,9 +268,6 @@ mod tests {
 
     #[test]
     fn rustc_without_path_remapping_is_not() {
-        // A requirement that went unmet is named by its pattern: there is
-        // no argument to point at. With none of them supplied, all three
-        // are reported rather than just the first.
         let missing = missing(rust_tool("rustc"), without_remappings());
         for required in REQUIRED_REMAPS {
             assert!(missing.contains(required), "{missing:?}");
@@ -326,13 +276,10 @@ mod tests {
 
     #[test]
     fn each_required_remapping_is_load_bearing() {
-        // Drop exactly one at a time. Each covers a different family of
-        // path, so none of the three is implied by the other two.
         for dropped in REQUIRED_REMAPS {
             let kept: Vec<String> = REQUIRED_REMAPS
                 .iter()
                 .filter(|required| **required != dropped)
-                // The patterns end in `*`; a real invocation remaps to `.`.
                 .map(|required| required.replace('*', "."))
                 .collect();
             let mut flags = without_remappings();
@@ -349,10 +296,6 @@ mod tests {
 
     #[test]
     fn remapping_some_other_prefix_does_not_satisfy_the_requirement() {
-        // The point of matching values rather than flag names. Remapping
-        // is present, and under a name-only rule that would have been
-        // enough—but none of the prefixes that vary by machine is what
-        // gets rewritten.
         let mut flags = without_remappings();
         flags.push("--remap-path-prefix=/nowhere=.");
         let missing = missing(rust_tool("rustc"), flags);
@@ -363,9 +306,6 @@ mod tests {
 
     #[test]
     fn incremental_compilation_breaks_rustc_however_it_is_written() {
-        // Both spellings. There is no valueless form to test: rustc
-        // rejects `-Cincremental` outright, since the option names the
-        // cache directory.
         for spelling in
             ["-Cincremental=/tmp/inc", "--codegen=incremental=x"]
         {
@@ -375,8 +315,6 @@ mod tests {
             match &verdict {
                 Conformance::Conditional { .. } => {
                     let present_breaking = verdict.present_breaking();
-                    // Reported by the argument that matched, not by the
-                    // pattern: here there is something concrete to name.
                     assert_eq!(present_breaking.len(), 1, "{spelling}");
                     let reported =
                         present_breaking.iter().next().expect("one");
@@ -394,8 +332,6 @@ mod tests {
 
     #[test]
     fn a_merely_similar_option_does_not_break_rustc() {
-        // The pattern is anchored at the `=`, so it names one option
-        // rather than everything that starts with its name.
         let mut flags = rules_rust_flags();
         flags.push("-Cincrementalish=1");
         assert_eq!(
@@ -408,9 +344,7 @@ mod tests {
     fn clippy_driver_is_judged_by_rustcs_spec() {
         let resolution = Library::builtin()
             .resolve(rust_tool("clippy-driver"), rules_rust_flags());
-        // The action still reports what it ran...
         assert_eq!(resolution.program, rust_tool("clippy-driver"));
-        // ...while the verdict is credited to rustc.
         assert_eq!(resolution.synonym(), Some(&rust_tool("rustc")));
         let (_, spec) = resolution.spec.clone().expect("a spec");
         assert_eq!(spec.assess(resolution.args), Conformance::Reproducible);
@@ -418,24 +352,18 @@ mod tests {
 
     #[test]
     fn the_rustc_recognizer_folds_both_codegen_spellings() {
-        // The two spellings agree...
         assert_eq!(
             rustc_option("--codegen=debuginfo=0"),
             rustc_option("-Cdebuginfo=0"),
         );
-        // ...on the short one, value intact. Keeping the value is what
-        // lets a pattern constrain it.
         assert_eq!(
             rustc_option("-Cdebuginfo=0"),
             Some("-Cdebuginfo=0".into()),
         );
-        // Anything that is not a codegen option passes through whole,
-        // however many `=` its value contains.
         assert_eq!(
             rustc_option("--remap-path-prefix=${pwd}=."),
             Some("--remap-path-prefix=${pwd}=.".into()),
         );
-        // A bare flag stands for itself.
         assert_eq!(rustc_option("--test"), Some("--test".into()));
     }
 }

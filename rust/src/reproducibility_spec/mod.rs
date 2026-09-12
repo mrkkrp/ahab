@@ -14,10 +14,8 @@ pub mod library;
 pub mod per_lang;
 pub mod program_id;
 
-/// When a program behaves reproducibly.
-///
-/// This is the baseline disposition of the program, before considering
-/// the specific flags it was invoked with (see [`ReproducibilitySpec`]).
+/// A program's baseline disposition, before the flags it was invoked with
+/// (see [`ReproducibilitySpec`]).
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "snake_case")]
 pub enum Reproducibility {
@@ -25,23 +23,19 @@ pub enum Reproducibility {
     Always,
     /// The program is never reproducible; no set of flags can make it so.
     Never,
-    /// The program does its work with what the machine has rather than
-    /// with what the build declares—either because Bazel wrote it by
-    /// inspecting the machine, or because it reaches for a tool installed
-    /// there when it runs.
+    /// The program works with what the machine has rather than what the
+    /// build declares: Bazel wrote it by inspecting the machine, or it
+    /// reaches for a tool installed there.
     HostDerived,
-    /// The program is reproducible only under some conditions—see the
-    /// requirements and prohibitions of the [`ReproducibilitySpec`].
+    /// Reproducible only under the spec's requirements and prohibitions.
     Sometimes,
 }
 
 /// How a program's raw arguments are read as canonical options.
 pub type Recognize = Arc<dyn Fn(&str) -> Option<String> + Send + Sync>;
 
-/// A condition on an invocation, by which a [`Clause`] applies or does not.
-///
-/// Written as a family of flags that turn something on and the flags of the
-/// same family that turn it back off.
+/// A condition on an invocation, by which a [`Clause`] applies or does not:
+/// a family of flags that turn something on, and those that turn it off.
 #[derive(Debug, Clone, PartialEq, Eq, Default)]
 pub struct Guard {
     /// Flags that turn the condition on.
@@ -52,12 +46,8 @@ pub struct Guard {
 
 impl Guard {
     /// Whether the condition holds, decided by the last argument that
-    /// speaks to it.
-    ///
-    /// Compilers read their flags last-wins: `-g -g0` leaves debugging off
-    /// and `-g0 -g` leaves it on, and a rule that only asked whether `-g0`
-    /// appeared anywhere would get the second one wrong. Arguments that
-    /// belong to neither set say nothing and are passed over.
+    /// speaks to it: compilers read their flags last-wins, so `-g -g0`
+    /// leaves debugging off and `-g0 -g` leaves it on.
     fn holds(&self, args: &[String]) -> bool {
         args.iter()
             .rev()
@@ -74,11 +64,9 @@ impl Guard {
     }
 }
 
-/// One thing that has to be true of an invocation, and why.
-///
-/// A requirement is met and a prohibition is breached when any one of
-/// `any_of` matches. Either way the clause only speaks when its guard
-/// holds, so a rule about compiling says nothing about linking.
+/// One thing that has to be true of an invocation, and why. A requirement
+/// is met and a prohibition breached when any one of `any_of` matches, and
+/// either way only when the guard holds.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Clause {
     /// The condition under which this clause applies. `None` is always.
@@ -163,7 +151,6 @@ pub struct ReproducibilitySpec {
 }
 
 impl fmt::Debug for ReproducibilitySpec {
-    /// A function cannot be shown, so it is named rather than printed.
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         f.debug_struct("ReproducibilitySpec")
             .field("reproducibility", &self.reproducibility)
@@ -177,13 +164,9 @@ impl fmt::Debug for ReproducibilitySpec {
 }
 
 impl PartialEq for ReproducibilitySpec {
-    /// Compares what a spec says, not how it reads arguments.
-    ///
-    /// Two functions cannot be compared, and comparing them by identity
-    /// would make every independently-built spec unequal to every other,
-    /// which is useless. So the recognizer is excluded: specs that agree on
-    /// disposition and clauses are equal even if they read arguments
-    /// differently.
+    /// Compares what a spec says, not how it reads arguments: the
+    /// recognizer is excluded, comparing functions by identity making every
+    /// independently-built spec unequal to every other.
     fn eq(&self, other: &Self) -> bool {
         self.reproducibility == other.reproducibility
             && self.requirements == other.requirements
@@ -197,14 +180,9 @@ impl Eq for ReproducibilitySpec {}
 
 impl ReproducibilitySpec {
     /// Construct a spec from a baseline disposition and the unconditional
-    /// flags, taking any iterables of strings.
-    ///
-    /// The short way to say the common thing: each flag becomes a clause of
-    /// its own that always applies. A condition or a choice of alternatives
-    /// needs a [`Clause`], which [`Self::with_clauses`] adds.
-    ///
-    /// The recognizer defaults to the identity—every argument stands for
-    /// itself.
+    /// flags, each becoming a clause of its own that always applies. A
+    /// condition or a choice needs [`Self::with_clauses`]. The recognizer
+    /// defaults to the identity.
     pub fn new<R, B>(
         reproducibility: Reproducibility,
         required_flags: R,
@@ -257,10 +235,8 @@ impl ReproducibilitySpec {
     }
 
     /// Declare the options in which an absolute path is part of what the
-    /// program was asked to produce, returning the updated spec.
-    ///
-    /// Patterns are matched against whole options, with a flag's value
-    /// folded onto it, so one pattern covers both spellings.
+    /// program was asked to produce, returning the updated spec. Patterns
+    /// match whole options, value folded on, so one covers both spellings.
     pub fn with_declared_paths<P>(mut self, patterns: P) -> Self
     where
         P: IntoIterator,
@@ -274,11 +250,9 @@ impl ReproducibilitySpec {
     }
 
     /// Fold each declared flag together with the argument after it, keeping
-    /// the number of arguments each option was written as.
-    ///
-    /// A flag at the very end has nothing to take, and is left alone. A
-    /// flag followed by another flag still takes it, because that is what
-    /// the tool would do.
+    /// the number of arguments each option was written as. A flag at the
+    /// very end is left alone; one followed by another flag still takes it,
+    /// because that is what the tool would do.
     fn join_values(&self, args: &[&str]) -> Vec<(String, usize)> {
         let mut joined = Vec::with_capacity(args.len());
         let mut at = 0;
@@ -298,11 +272,9 @@ impl ReproducibilitySpec {
     }
 
     /// The arguments in which this program declares a path inside the
-    /// artifact it produces, rather than naming one it reads.
-    ///
-    /// A flag and the value it took are both returned, so that a caller
-    /// scanning the raw command line passes over the option however it was
-    /// spelled.
+    /// artifact it produces, rather than naming one it reads. Flag and value
+    /// are both returned, so a caller scanning the raw command line passes
+    /// over the option however it was spelled.
     pub fn declared_path_args<'a>(&self, args: &[&'a str]) -> Vec<&'a str> {
         if self.declared_paths.is_empty() {
             return Vec::new();
@@ -323,12 +295,8 @@ impl ReproducibilitySpec {
         declared
     }
 
-    /// Add clauses that say more than a bare flag can, returning the
-    /// updated spec.
-    ///
-    /// The counterpart to the flag lists [`Self::new`] takes: those become
-    /// clauses that always apply and are met by one pattern each, and these
-    /// are the ones that carry a condition or a choice.
+    /// Add clauses that say more than a bare flag can: the ones carrying a
+    /// condition or a choice. Counterpart to [`Self::new`]'s flag lists.
     pub fn with_clauses<R, P>(
         mut self,
         requirements: R,
@@ -385,14 +353,11 @@ impl ReproducibilitySpec {
             Reproducibility::Never => Conformance::NeverReproducible,
             Reproducibility::HostDerived => Conformance::HostDerived,
             Reproducibility::Sometimes => {
-                // In order, and with duplicates: a guard decides by the
-                // last argument that speaks to it, so neither position nor
-                // repetition can be thrown away here.
-                //
-                // Values are folded onto their flags first, so that the
-                // recognizer and every pattern see whole options; a spec
-                // that declares none keeps the shorter path, since this
-                // runs over every argument of every action.
+                // In order and with duplicates: a guard decides by the
+                // last argument that speaks to it. Values are folded onto
+                // their flags so every pattern sees whole options; a spec
+                // declaring none keeps the shorter path, this running over
+                // every argument of every action.
                 let present: Vec<String> = if self.takes_value.is_empty() {
                     args.into_iter()
                         .filter_map(|arg| self.recognize(arg))
@@ -452,8 +417,7 @@ pub enum Conformance {
     Reproducible,
     /// The program is never reproducible, whatever the flags.
     NeverReproducible,
-    /// The program was written by inspecting the machine in ways that make
-    /// it non-hermetic.
+    /// The program was written by inspecting the machine.
     HostDerived,
     /// The program is conditionally reproducible and this invocation does
     /// not meet the conditions. Never empty.
@@ -463,15 +427,11 @@ pub enum Conformance {
     },
 }
 
-/// Ways of asking a verdict what went wrong, flattened across clauses.
-///
-/// The report reads the clauses themselves, because it has room to say why
-/// each one mattered; these are for tests, which mostly want to know which
-/// patterns went unmet and which arguments offended.
+/// Ways of asking a verdict what went wrong, flattened across clauses. The
+/// report reads the clauses themselves; these are for tests.
 #[cfg(test)]
 impl Conformance {
     /// Every pattern that would have satisfied a requirement left unmet.
-    ///
     pub fn missing_required(&self) -> BTreeSet<String> {
         match self {
             Conformance::Conditional { unmet } => unmet
@@ -499,10 +459,6 @@ mod tests {
     use super::*;
 
     /// Assert a verdict is conditional, and on exactly these grounds.
-    ///
-    /// Stated through the accessors rather than by rebuilding the clauses:
-    /// what a test of `assess` cares about is which patterns went unmet and
-    /// which arguments offended, not the sentence attached to each.
     #[track_caller]
     fn assert_conditional(
         verdict: Conformance,
@@ -525,7 +481,6 @@ mod tests {
             ["--timestamp"],
         );
         assert_eq!(spec.reproducibility, Reproducibility::Sometimes);
-        // A clause per pattern, deduplicated on the way in.
         let patterns: BTreeSet<String> = spec
             .requirements
             .iter()
@@ -550,12 +505,10 @@ mod tests {
         )
         .with_valued_flags(["--mode"]);
 
-        // Separated, as the tool is actually invoked...
         assert_eq!(
             spec.assess(["--mode", "unchecked_hash", "--src", "x.py"]),
             Conformance::Reproducible,
         );
-        // ...and the value is now constrainable, which was the point.
         assert_conditional(
             spec.assess(["--mode", "timestamp"]),
             set(&["--mode=*hash*"]),
@@ -565,8 +518,6 @@ mod tests {
 
     #[test]
     fn both_spellings_of_a_value_come_out_the_same() {
-        // Folding with `=` is what makes one pattern cover a tool however
-        // it was invoked.
         let spec = ReproducibilitySpec::new(
             Reproducibility::Sometimes,
             ["-t=*"],
@@ -580,12 +531,6 @@ mod tests {
 
     #[test]
     fn a_value_already_joined_is_not_folded_again() {
-        // The declared flag is matched whole, so `--mode=x` is not the
-        // flag `--mode` and nothing is taken from after it. Were it
-        // otherwise, a tool invoked in the joined spelling would have its
-        // next argument swallowed.
-        // `--src` is required as a bare word: if the already-joined
-        // `--mode` had taken it, it would not be there to find.
         let spec = ReproducibilitySpec::new(
             Reproducibility::Sometimes,
             ["--mode=*hash*", "--src"],
@@ -606,8 +551,6 @@ mod tests {
             ["-t=*"],
         )
         .with_valued_flags(["-t"]);
-        // Nothing to take, so nothing is joined and the prohibition on a
-        // *valued* `-t` does not fire.
         assert_eq!(
             spec.assess(["-o", "out", "-t"]),
             Conformance::Reproducible
@@ -617,10 +560,6 @@ mod tests {
     #[test]
     fn a_valued_flag_takes_the_next_argument_even_if_it_looks_like_a_flag()
     {
-        // Faithful to the tool: `-t --verbose` really does consume
-        // `--verbose`. A spec that declares a boolean flag as valued gets
-        // this wrong, which is why the declaration is a claim about the
-        // tool.
         let spec = ReproducibilitySpec::new(
             Reproducibility::Sometimes,
             ["--verbose"],
@@ -659,15 +598,11 @@ mod tests {
             spec.recognize("--anything"),
             Some("--anything".to_owned())
         );
-        // Including arguments that are not options at all; they simply
-        // never match a flag set.
         assert_eq!(spec.recognize("input.c"), Some("input.c".to_owned()));
     }
 
     #[test]
     fn the_default_recognizer_matches_flag_sets_literally() {
-        // The point of the default: a spec whose options are plain words
-        // needs no recognizer of its own.
         let spec = ReproducibilitySpec::new(
             Reproducibility::Sometimes,
             ["--deterministic"],
@@ -691,7 +626,6 @@ mod tests {
 
     #[test]
     fn a_translation_maps_an_argument_to_another_option() {
-        // A compiler whose optimization levels all count as one option.
         let spec = ReproducibilitySpec::new(
             Reproducibility::Sometimes,
             [] as [&str; 0],
@@ -704,7 +638,6 @@ mod tests {
         ]));
 
         assert_eq!(spec.recognize("-O2"), Some("-O".to_owned()));
-        // Anything untranslated still stands for itself.
         assert_eq!(spec.recognize("input.c"), Some("input.c".to_owned()));
     }
 
@@ -717,13 +650,11 @@ mod tests {
         )
         .with_translations(translations([("-O2", "-O")]));
 
-        // `-O2` is the breaking flag `-O` under another name.
         assert_conditional(
             spec.assess(["-O2", "input.c"]),
             set(&[]),
             set(&["-O"]),
         );
-        // `-O9` was not translated, so it is not `-O`.
         assert_eq!(spec.assess(["-O9"]), Conformance::Reproducible);
     }
 
@@ -742,7 +673,6 @@ mod tests {
         assert_eq!(a, b);
     }
 
-    /// Build a translation map from string pairs, for terse assertions.
     fn translations<const N: usize>(
         pairs: [(&str, &str); N],
     ) -> BTreeMap<String, String> {
@@ -752,7 +682,6 @@ mod tests {
             .collect()
     }
 
-    /// Build a set from string literals, for terse assertions.
     fn set(items: &[&str]) -> BTreeSet<String> {
         items.iter().map(|s| (*s).to_owned()).collect()
     }
@@ -788,7 +717,6 @@ mod tests {
             ["--deterministic"],
             ["-O"],
         );
-        // Required flag present, breaking flag absent.
         assert_eq!(
             spec.assess(["--deterministic", "input.c"]),
             Conformance::Reproducible
@@ -817,8 +745,6 @@ mod tests {
             ["-O", "--timestamp"],
         )
         .with_translations(translations([("-O2", "-O")]));
-        // -O2 translates to -O, a breaking flag; --timestamp is absent, so
-        // only the one that is present is reported.
         assert_conditional(
             spec.assess(["-O2", "input.c"]),
             set(&[]),

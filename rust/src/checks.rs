@@ -19,10 +19,10 @@ use crate::terminal_color::Palette;
 
 mod absolute_paths;
 
-/// The exact value of `PATH` that every action is required to use.
+/// The `PATH` every action is required to use.
 const EXPECTED_PATH: &str = "/bin:/usr/bin:/usr/local/bin";
 
-/// The identity of the action responsible for a violation.
+/// The action responsible for a violation.
 #[derive(
     Debug,
     Clone,
@@ -35,16 +35,15 @@ const EXPECTED_PATH: &str = "/bin:/usr/bin:/usr/local/bin";
     Deserialize,
 )]
 pub(crate) struct ActionRef {
-    /// The action's mnemonic (e.g. `CppCompile`). May be empty.
+    /// E.g. `CppCompile`; may be empty.
     pub mnemonic: String,
-    /// The label of the target responsible for the action, e.g. `//foo:bar`.
+    /// E.g. `//foo:bar`.
     pub target: String,
 }
 
 impl ActionRef {
-    /// Capture the action's identity, resolving its `target_id` through
-    /// `targets`. An id the dump does not describe yields a placeholder
-    /// rather than a number that would be meaningless outside this run.
+    /// An id the dump does not describe yields a placeholder rather than a
+    /// meaningless number.
     fn of(action: &Action, targets: &HashMap<u32, &str>) -> Self {
         ActionRef {
             mnemonic: action.mnemonic.clone(),
@@ -57,8 +56,6 @@ impl ActionRef {
 }
 
 impl std::fmt::Display for ActionRef {
-    /// Render the action using its mnemonic when present, falling back to
-    /// just the target otherwise.
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         if self.mnemonic.is_empty() {
             write!(f, "action for target {}", self.target)
@@ -68,10 +65,8 @@ impl std::fmt::Display for ActionRef {
     }
 }
 
-/// Index a container's targets by the id its actions refer to them by.
-///
-/// The mapping is valid only for this container, which is the whole reason
-/// it has to be applied before a violation leaves the analysis.
+/// Index a container's targets by id. Valid only for this container, so it
+/// must be applied before a violation leaves the analysis.
 fn target_labels(container: &ActionGraphContainer) -> HashMap<u32, &str> {
     container
         .targets
@@ -100,7 +95,6 @@ pub(crate) enum EnvSource {
 }
 
 impl EnvSource {
-    /// The environment variable name this source corresponds to.
     fn as_str(self) -> &'static str {
         match self {
             EnvSource::User => "USER",
@@ -123,24 +117,24 @@ impl EnvSource {
 )]
 #[serde(tag = "location", rename_all = "snake_case")]
 pub(crate) enum LeakSite {
-    /// Inside a command-line argument.
-    Argument { value: String },
-    /// Inside a line of one of the action's param files. Reported
-    /// separately from [`LeakSite::Argument`] because the argument the
-    /// action actually carries is only a reference to the file, so quoting
-    /// it would not show the offending text.
-    ParamFile {
-        /// The exec path of the param file.
-        exec_path: String,
-        /// The line of the file the finding was in.
+    Argument {
         value: String,
     },
-    /// Inside the value of an environment variable.
-    EnvVar { key: String, value: String },
+    /// Inside a param file line, reported separately because the argument
+    /// is only a reference and quoting it would not show the text.
+    ParamFile {
+        exec_path: String,
+        /// The line the finding was in.
+        value: String,
+    },
+    EnvVar {
+        key: String,
+        value: String,
+    },
 }
 
 impl LeakSite {
-    /// Build the site for a string the checks scanned, from its provenance.
+    /// The site for a scanned string, from its provenance.
     fn of(sourced: Sourced<'_>) -> LeakSite {
         match sourced.source {
             ArgSource::CommandLine => LeakSite::Argument {
@@ -153,8 +147,7 @@ impl LeakSite {
         }
     }
 
-    /// How a report names where something was found, and the text it was
-    /// found in.
+    /// How a report names the place, and the text found there.
     fn describe(&self) -> (String, &str) {
         match self {
             LeakSite::Argument { value } => {
@@ -170,15 +163,9 @@ impl LeakSite {
     }
 }
 
-/// A parenthetical describing how the analysis reached the program it
-/// judged: the wrappers it was found behind, outermost first, and the
-/// synonym whose spec answered for it. Empty when the action ran the
-/// program directly and it had a spec of its own.
-///
-/// Without the wrappers a verdict about a wrapped command would read as a
-/// claim about the action's own `argv[0]`, which is not what ran. Without
-/// the synonym a verdict would not say that it rests on two programs being
-/// declared alike.
+/// How the analysis reached the program it judged: the wrappers it sat
+/// behind, outermost first, and the synonym whose spec answered for it.
+/// Without them a verdict would read as a claim about `argv[0]`.
 fn provenance(
     wrappers: &[ProgramId],
     synonym: Option<&ProgramId>,
@@ -204,9 +191,8 @@ fn provenance(
     format!(" ({})", parts.join(", "))
 }
 
-/// A single hermeticity violation, as a structured value recording
-/// everything the check observed. Use [`Violation::render`] to pretty-print
-/// it.
+/// A single violation, recording everything the check observed. See
+/// [`Violation::render`].
 #[derive(
     Debug,
     Clone,
@@ -223,127 +209,75 @@ pub(crate) enum Violation {
     /// A sentinel leaked into an action.
     EnvironmentLeak {
         action: ActionRef,
-        /// Which environment source the sentinel stood in for.
         source: EnvSource,
-        /// The sentinel value that leaked.
         sentinel: String,
-        /// Where in the action it was found.
         site: LeakSite,
     },
     /// An action set `PATH` to something other than [`EXPECTED_PATH`].
-    BadPath {
-        action: ActionRef,
-        /// The `PATH` value the action actually set.
-        actual: String,
-    },
-    /// An action declares an execution requirement that says it cannot be
-    /// run like an ordinary hermetic action.
+    BadPath { action: ActionRef, actual: String },
+    /// An action declares it cannot run like an ordinary hermetic one.
     ExecutionRequirement {
         action: ActionRef,
-        /// The requirement, as the action declares it: `no-sandbox`,
-        /// `requires-network`, and so on.
+        /// As declared: `no-sandbox`, `requires-network`, and so on.
         requirement: String,
     },
-    /// An action referenced an absolute path (a `/`-rooted run) in one of
-    /// its arguments or environment-variable values.
+    /// An action referenced a `/`-rooted run.
     AbsolutePath {
         action: ActionRef,
-        /// The absolute path that was found (the extracted `/`-rooted run).
         path: String,
-        /// Where in the action it appeared, including the full surrounding
-        /// text.
+        /// Where it appeared, with the surrounding text.
         site: LeakSite,
     },
-    /// An action runs a program from outside the build: named by an
-    /// absolute path, or by a bare command name left to `PATH`. Either way
-    /// the tool is whatever the machine happens to have, so the action
-    /// cannot be hermetic and no reproducibility spec could redeem it.
+    /// An action runs a program from outside the build, named by an
+    /// absolute path or by a bare name left to `PATH`.
     SystemProgram {
         action: ActionRef,
-        /// The program the action runs.
         program: ProgramId,
-        /// Wrappers passed through to reach it, outermost first. Empty when
-        /// the action ran the program directly.
         wrappers: Vec<ProgramId>,
     },
-    /// An action runs a program that *is* part of the build—it sits inside
-    /// the execution root and Bazel produced it—but that Bazel produced by
-    /// inspecting the machine.
+    /// An action runs a program that is part of the build, but that Bazel
+    /// produced by inspecting the machine.
     HostDerivedProgram {
         action: ActionRef,
-        /// The program the action runs.
         program: ProgramId,
-        /// Wrappers passed through to reach it, outermost first. Empty when
-        /// the action ran the program directly.
         wrappers: Vec<ProgramId>,
     },
-    /// An action runs a program for which we have no reproducibility spec,
-    /// so we cannot vouch for the action's reproducibility. Reported
-    /// conservatively—an unknown program is treated as a problem, not a
-    /// pass.
+    /// An action runs a program with no reproducibility spec. Reported
+    /// rather than passed over: silence is not approval.
     UnknownProgram {
         action: ActionRef,
-        /// The program the action runs.
         program: ProgramId,
-        /// Wrappers passed through to reach it, outermost first. Empty when
-        /// the action ran the program directly.
         wrappers: Vec<ProgramId>,
     },
-    /// An action runs a program that is never reproducible, whatever its
-    /// flags.
+    /// An action runs a program that is never reproducible.
     NeverReproducible {
         action: ActionRef,
-        /// The program the action runs.
         program: ProgramId,
-        /// Wrappers passed through to reach it, outermost first. Empty when
-        /// the action ran the program directly.
         wrappers: Vec<ProgramId>,
-        /// The synonym whose spec produced this verdict, if it was not the
-        /// program's own.
         synonym: Option<ProgramId>,
     },
-    /// An action reads one of Bazel's workspace status files, so what it
-    /// produces depends on values gathered about the build rather than on
-    /// the action's declared inputs. What those values are is up to the
-    /// project's `--workspace_status_command`, so the violation names the
-    /// file and does not guess at its contents.
-    WorkspaceStatus {
-        action: ActionRef,
-        /// The status file the action reads.
-        path: String,
-    },
-    /// An action runs a conditionally-reproducible program, but this
-    /// invocation does not meet the conditions: required flags are missing
-    /// and/or breaking flags are present. At least one of the two lists is
-    /// non-empty.
+    /// An action reads one of Bazel's workspace status files, so its output
+    /// depends on values gathered about the build. The contents are up to
+    /// the project, so only the file is named.
+    WorkspaceStatus { action: ActionRef, path: String },
+    /// An action runs a conditionally-reproducible program, and this
+    /// invocation does not meet the conditions.
     ConditionalReproducibility {
         action: ActionRef,
-        /// The program the action runs.
         program: ProgramId,
-        /// Wrappers passed through to reach it, outermost first. Empty when
-        /// the action ran the program directly.
         wrappers: Vec<ProgramId>,
-        /// The synonym whose spec produced this verdict, if it was not the
-        /// program's own.
         synonym: Option<ProgramId>,
-        /// The clauses the invocation failed, with the spec's own words for
-        /// what each was about.
+        /// The clauses it failed, in the spec's own words.
         unmet: Vec<Unmet>,
     },
 }
 
-/// A violation flattened into the handful of dimensions something outside
-/// the checks might want to ask about, with the fields a given kind does
-/// not have left as `None`.
-///
-/// This exists so that [`crate::exceptions`] can match on a violation
-/// without restating the shape of every variant. Producing it is one
-/// exhaustive `match`, so a variant added later cannot be quietly left out
-/// of the answer—the compiler asks what its facets are.
+/// A violation flattened into the dimensions an exception can match, with
+/// absent fields left as `None`. Producing it is one exhaustive `match`, so
+/// a variant added later cannot be quietly left out.
 pub(crate) struct Facets<'a> {
     /// The variant's serialization tag, e.g. `absolute_path`.
     pub kind: &'static str,
-    /// The action responsible.
     pub action: &'a ActionRef,
     /// The program judged, for the variants that judge one.
     pub program: Option<&'a ProgramId>,
@@ -360,9 +294,7 @@ pub(crate) struct Facets<'a> {
 }
 
 impl Violation {
-    /// Flatten the violation into the dimensions an exception can match.
     pub(crate) fn facets(&self) -> Facets<'_> {
-        // A base value so each arm states only what makes it different.
         let bare = |kind, action| Facets {
             kind,
             action,
@@ -451,7 +383,7 @@ impl Violation {
         }
     }
 
-    /// Pretty-print the violation into a single human-readable line.
+    /// Render as one human-readable line.
     pub(crate) fn render(&self, palette: Palette) -> String {
         let hermeticity = "hermeticity violation";
         let reproducibility = "reproducibility violation";
@@ -509,9 +441,6 @@ impl Violation {
                     found(&format!("{path:?}")),
                 )
             }
-            // Programs render through their `Display`
-            // (`@rules_rust//util/…`) rather than their `Debug`, then quote
-            // that as a whole.
             Violation::SystemProgram {
                 action,
                 program,
@@ -604,9 +533,8 @@ impl std::fmt::Display for Violation {
     }
 }
 
-/// Run every check over `container` and return the distinct violations
-/// found, each with the number of times it occurred, in a deterministic
-/// order.
+/// Every distinct violation in `container` with its number of occurrences,
+/// in a deterministic order.
 pub(crate) fn check_all(
     container: &ActionGraphContainer,
     user: &str,
@@ -627,17 +555,13 @@ pub(crate) fn check_all(
     counted
 }
 
-/// The two files Bazel writes the workspace status into, relative to the
-/// output path.
+/// The workspace status files, relative to the output path.
 const STABLE_STATUS: &str = "stable-status.txt";
 const VOLATILE_STATUS: &str = "volatile-status.txt";
 
-/// Reconstruct an artifact's execution-root-relative path.
-///
-/// The proto stores paths as a tree of segments—each fragment naming one
-/// and pointing at its parent—so a path is read by walking up to the root
-/// and reversing. The walk is bounded by the number of fragments, since a
-/// malformed graph could otherwise describe a cycle.
+/// Reconstruct an artifact's execution-root-relative path. The proto stores
+/// paths as a tree of segments, so this walks up to the root and reverses,
+/// bounded by the fragment count in case the graph describes a cycle.
 fn artifact_path(
     id: u32,
     fragments: &HashMap<u32, &PathFragment>,
@@ -656,13 +580,9 @@ fn artifact_path(
     Some(segments.join("/"))
 }
 
-/// For every dep set, which of `wanted` it reaches—directly or through
-/// another set.
-///
-/// Answered once for the whole graph rather than once per action. Dep sets
-/// are shared, deeply nested and numerous, so walking each action's inputs
-/// separately re-treads the same ground thousands of times; this walks each
-/// set once and lets every action that names it read the answer off.
+/// For every dep set, which of `wanted` it reaches. Answered once for the
+/// whole graph: dep sets are shared and deeply nested, so walking them per
+/// action re-treads the same ground thousands of times.
 fn reachable_from_each(
     sets: &HashMap<u32, &DepSetOfFiles>,
     wanted: &HashMap<u32, String>,
@@ -714,7 +634,7 @@ fn reachable_from_each(
     found
 }
 
-/// Find every action that reads Bazel's workspace status files.
+/// Every action that reads Bazel's workspace status files.
 fn check_workspace_status(
     container: &ActionGraphContainer,
 ) -> Vec<Violation> {
@@ -776,7 +696,7 @@ fn check_workspace_status(
 }
 
 /// Execution requirements that say an action is not an ordinary hermetic
-/// one, with why each is worth reporting.
+/// one.
 const NON_HERMETIC_REQUIREMENTS: &[(&str, &str)] = &[
     (
         "requires-network",
@@ -802,9 +722,8 @@ fn is_non_hermetic_requirement(key: &str) -> bool {
         .any(|(requirement, _)| *requirement == key)
 }
 
-/// Find every action that declares an execution requirement meaning it
-/// cannot run like an ordinary hermetic action, and return one
-/// [`Violation`] per declaration.
+/// One [`Violation`] per execution requirement meaning an action cannot run
+/// like an ordinary hermetic one.
 fn check_execution_requirements(
     container: &ActionGraphContainer,
 ) -> Vec<Violation> {
@@ -825,9 +744,8 @@ fn check_execution_requirements(
     violations
 }
 
-/// Find every place where a sentinel leaks into an action's command line,
-/// into one of its param files, or into the value of any of its
-/// `environment_variables`, and return one [`Violation`] per leak.
+/// One [`Violation`] per sentinel leaked into an action's command line, its
+/// param files or its environment values.
 fn check_environment_leaks(
     container: &ActionGraphContainer,
     user: &str,
@@ -837,8 +755,6 @@ fn check_environment_leaks(
     let targets = target_labels(container);
 
     for action in &container.actions {
-        // Param files are scanned alongside the command line: a sentinel is
-        // just as leaked when it sits in a spilled argument list.
         let scanned = analyzable_strings(action);
 
         for (sentinel, source) in
@@ -874,8 +790,8 @@ fn check_environment_leaks(
     violations
 }
 
-/// Find every action that sets `PATH` to anything other than
-/// [`EXPECTED_PATH`], and return one [`Violation`] per deviation.
+/// One [`Violation`] per action setting `PATH` to anything but
+/// [`EXPECTED_PATH`].
 fn check_path(container: &ActionGraphContainer) -> Vec<Violation> {
     let mut violations = Vec::new();
     let targets = target_labels(container);
@@ -894,8 +810,7 @@ fn check_path(container: &ActionGraphContainer) -> Vec<Violation> {
     violations
 }
 
-/// Check each action's program against the library of reproducibility
-/// specs.
+/// Each action's program against the library of specs.
 fn check_reproducibility(
     container: &ActionGraphContainer,
     library: &Library,
@@ -916,9 +831,8 @@ fn check_reproducibility(
         let action_ref = || ActionRef::of(action, &targets);
         let wrappers = resolved.wrappers.clone();
 
-        // A tool from outside the build is a hermeticity failure outright,
-        // so it is reported as such rather than as a program we happen to
-        // lack a spec for. No spec could make it acceptable.
+        // Reported as a hermeticity failure rather than as a program we
+        // lack a spec for: no spec could make it acceptable.
         if resolved.program.origin == Origin::System {
             violations.push(Violation::SystemProgram {
                 action: action_ref(),
@@ -976,8 +890,6 @@ pub(crate) mod tests {
     use crate::reproducibility_spec::program_id::Origin;
     use analysis_v2_proto::analysis::KeyValuePair;
 
-    // Short, human-readable stand-ins for the values Ahab injects as USER
-    // and HOSTNAME.
     const USER_SENTINEL: &str = "ahab-user-SENTINEL";
     const HOST_SENTINEL: &str = "ahab-host-SENTINEL";
 
@@ -1068,8 +980,6 @@ pub(crate) mod tests {
     }
 
     pub(crate) fn container(actions: Vec<Action>) -> ActionGraphContainer {
-        // Describe every target the actions refer to, as a real dump would, so
-        // the fixtures exercise label resolution rather than sidestep it.
         let mut ids: Vec<u32> =
             actions.iter().map(|a| a.target_id).collect();
         ids.sort_unstable();
@@ -1099,8 +1009,6 @@ pub(crate) mod tests {
             Vec::new();
 
         for (index, path) in inputs.iter().enumerate() {
-            // Ids start at 1: the proto spells "no parent" as 0, so a
-            // fragment with that id could not be pointed at.
             let mut parent = 0;
             for segment in path.split('/') {
                 let id = fragments.len() as u32 + 1;
@@ -1162,16 +1070,12 @@ pub(crate) mod tests {
 
     #[test]
     fn an_action_that_reads_neither_is_not_reported() {
-        // The overwhelming majority: nothing stamped, nothing to say.
         let c = container_with_inputs(&["src/main.cc", "src/main.h"]);
         assert!(check_workspace_status(&c).is_empty());
     }
 
     #[test]
     fn the_two_status_files_are_told_apart_in_the_report() {
-        // What separates them is not what they hold—that is the project's
-        // to decide—but that Bazel refuses to invalidate on one of them.
-        // Only the volatile line should say so.
         let c = container_with_inputs(&[
             "bazel-out/stable-status.txt",
             "bazel-out/volatile-status.txt",
@@ -1180,7 +1084,6 @@ pub(crate) mod tests {
             .iter()
             .map(|violation| violation.render(Palette::plain()))
             .collect();
-        // Neither names a key, since neither can know one.
         for line in &rendered {
             for guess in ["BUILD_USER", "BUILD_HOST", "BUILD_TIMESTAMP"] {
                 assert!(!line.contains(guess), "{line}");
@@ -1198,8 +1101,6 @@ pub(crate) mod tests {
 
     #[test]
     fn a_status_file_reached_only_transitively_is_still_found() {
-        // Dep sets nest, and an input three sets deep is as much an input
-        // as a direct one.
         let mut c = container_with_inputs(&["bazel-out/stable-status.txt"]);
         c.dep_set_of_files = vec![
             DepSetOfFiles {
@@ -1223,8 +1124,6 @@ pub(crate) mod tests {
 
     #[test]
     fn a_cycle_among_dep_sets_does_not_hang_the_walk() {
-        // Nothing Bazel emits is cyclic, but a walk over ids from a file
-        // should not be the thing that finds out.
         let mut c = container_with_inputs(&["bazel-out/stable-status.txt"]);
         c.dep_set_of_files = vec![
             DepSetOfFiles {
@@ -1314,9 +1213,6 @@ pub(crate) mod tests {
 
     #[test]
     fn the_sample_covers_every_variant() {
-        // The list above is hand-written, so something has to notice when
-        // a variant is added and not listed. Kinds are unique per variant,
-        // so counting the distinct ones is enough.
         let kinds: BTreeSet<&str> = one_of_each_kind()
             .iter()
             .map(|violation| violation.facets().kind)
@@ -1430,9 +1326,6 @@ pub(crate) mod tests {
 
     #[test]
     fn sentinel_as_substring_still_trips() {
-        // The check uses `.contains()`, so a sentinel embedded in a larger
-        // string is still a leak — and the recorded value is the *whole*
-        // enclosing argument, not just the sentinel.
         let embedded = format!("--define=builder={USER_SENTINEL}-extra");
         let c =
             container(vec![action_with_args("Action", 1, &[&embedded])]);
@@ -1452,8 +1345,6 @@ pub(crate) mod tests {
 
     #[test]
     fn all_leaks_are_collected_not_just_the_first() {
-        // Two independent leaks across two actions: each carries its own
-        // structured detail.
         let c = container(vec![
             action_with_args("A", 1, &[USER_SENTINEL]),
             action_with_env("B", 2, &[("HOST", HOST_SENTINEL)]),
@@ -1489,8 +1380,6 @@ pub(crate) mod tests {
 
     #[test]
     fn sentinel_only_in_env_key_is_not_a_leak() {
-        // Only env-var *values* are checked, never keys. A sentinel appearing
-        // as a key is deliberately allowed.
         let c = container(vec![action_with_env(
             "CppCompile",
             1,
@@ -1501,7 +1390,6 @@ pub(crate) mod tests {
 
     #[test]
     fn each_sentinel_is_checked_independently() {
-        // Only USER leaks: passing a non-matching hostname must still catch it.
         let user_only =
             container(vec![action_with_args("A", 1, &[USER_SENTINEL])]);
         assert!(
@@ -1513,7 +1401,6 @@ pub(crate) mod tests {
             .is_empty()
         );
 
-        // Only HOSTNAME leaks: passing a non-matching user must still catch it.
         let host_only =
             container(vec![action_with_args("A", 1, &[HOST_SENTINEL])]);
         assert!(
@@ -1525,7 +1412,6 @@ pub(crate) mod tests {
             .is_empty()
         );
 
-        // Neither sentinel present -> no violations even with real sentinels.
         let clean = container(vec![action_with_args("A", 1, &["--ok"])]);
         assert!(
             check_environment_leaks(&clean, USER_SENTINEL, HOST_SENTINEL)
@@ -1562,12 +1448,8 @@ pub(crate) mod tests {
         }
     }
 
-    // ---- check_execution_requirements ----
-
     #[test]
     fn every_declared_non_hermetic_requirement_is_reported() {
-        // One violation each, so that an action declaring two problems is
-        // not reported as one.
         let c = container(vec![action_with_requirements(
             "Genrule",
             1,
@@ -1590,10 +1472,6 @@ pub(crate) mod tests {
 
     #[test]
     fn scheduling_advice_is_not_a_hermeticity_finding() {
-        // Everything here is a capability or a resource hint. A tag
-        // nobody has classified stays silent, which is the direction to
-        // fail in: a deny-list that misses something is quiet, an
-        // allow-list that misses something is noise.
         let c = container(vec![action_with_requirements(
             "Rustc",
             1,
@@ -1616,8 +1494,6 @@ pub(crate) mod tests {
 
     #[test]
     fn a_declared_requirement_says_so_in_the_report() {
-        // The wording matters: this is the one finding Ahab does not
-        // infer, and the message should say the build stated it.
         let c = container(vec![action_with_requirements(
             "Genrule",
             1,
@@ -1628,8 +1504,6 @@ pub(crate) mod tests {
         assert!(rendered.contains("\"requires-network\""), "{rendered}");
         assert!(rendered.contains("the build itself says"), "{rendered}");
     }
-
-    // ---- check_path: pathological cases (expect violations) ----
 
     #[test]
     fn arbitrary_wrong_path_is_a_violation() {
@@ -1650,7 +1524,6 @@ pub(crate) mod tests {
 
     #[test]
     fn render_pretty_prints_expected_path() {
-        // The pretty-printer names both the offending and the expected PATH.
         let v = Violation::BadPath {
             action: ActionRef {
                 mnemonic: "CppCompile".to_owned(),
@@ -1669,8 +1542,6 @@ pub(crate) mod tests {
 
     #[test]
     fn path_superstring_is_a_violation() {
-        // Exact match is required: EXPECTED_PATH plus a trailing dir must fail,
-        // and the recorded actual value is the full superstring.
         let too_long = format!("{EXPECTED_PATH}:/opt/bin");
         let c = container(vec![action_with_env(
             "A",
@@ -1681,8 +1552,6 @@ pub(crate) mod tests {
         assert_eq!(found.len(), 1);
         assert_bad_path(&found[0], "A", 1, &too_long);
     }
-
-    // ---- check_path: benign cases (expect no violations) ----
 
     #[test]
     fn exact_expected_path_passes() {
@@ -1703,8 +1572,6 @@ pub(crate) mod tests {
         )]);
         assert!(check_path(&c).is_empty());
     }
-
-    // ---- check_reproducibility ----
 
     /// Assert that `v` is a [`Violation::UnknownProgram`] for the given action
     /// and program. The program is compared structurally, not by its rendering.
@@ -1731,9 +1598,6 @@ pub(crate) mod tests {
 
     #[test]
     fn a_host_derived_program_reads_differently_from_a_system_one() {
-        // The two are both hermeticity failures and both about the host,
-        // but a reader has to be able to tell which: one was seen in
-        // argv[0], the other is Ahab's own claim about a generated file.
         let system = container(vec![action_with_args(
             "CppCompile",
             1,
@@ -1770,7 +1634,6 @@ pub(crate) mod tests {
             derived.contains("tools this machine provides"),
             "{derived}",
         );
-        // The generated one still says where in the build it sits.
         assert!(
             derived.contains(
                 "@rules_cc+cc_configure_extension//cc_wrapper.sh"
@@ -1781,8 +1644,6 @@ pub(crate) mod tests {
 
     #[test]
     fn unknown_program_is_flagged_by_its_normalized_identity() {
-        // With an empty spec library every program in the build is unknown,
-        // and the reported program is argv[0] as a rendered ProgramId.
         let c = container(vec![action_with_args(
             "CppCompile",
             1,
@@ -1800,7 +1661,6 @@ pub(crate) mod tests {
 
     #[test]
     fn a_program_named_by_an_absolute_path_is_a_system_program() {
-        // No spec could redeem it, so it is not reported as merely unknown.
         let c = container(vec![action_with_args(
             "Genrule",
             1,
@@ -1839,7 +1699,6 @@ pub(crate) mod tests {
             )],
         };
         let r = v.render(Palette::plain());
-        // The verdict is about the wrapped command, and says so.
         assert!(
             r.contains(
                 r#"program "@rules_rust+rust//rust_toolchain/bin/rustc""#
@@ -1856,12 +1715,6 @@ pub(crate) mod tests {
 
     #[test]
     fn a_sentinel_in_the_program_path_is_still_a_leak() {
-        // Why the argv[0] skip belongs to the absolute-path check and not
-        // to `analyzable_strings`: a toolchain configured under the invoking
-        // user's home bakes their name into argv[0], and that is exactly the
-        // leak Ahab hunts. Nothing else would report it — the accompanying
-        // SystemProgram violation says the tool is external, not that a
-        // username is embedded in its path.
         let program = format!("/home/{USER_SENTINEL}/toolchains/bin/gcc");
         let c =
             container(vec![action_with_args("CppCompile", 1, &[&program])]);
@@ -1883,9 +1736,6 @@ pub(crate) mod tests {
 
     #[test]
     fn the_program_itself_is_not_reported_as_an_absolute_path() {
-        // Reported once, by the check that can say what is actually wrong.
-        // Flagging it here too would only repeat it, less clearly: the
-        // extracted path and the argument holding it are the same string.
         let c = container(vec![action_with_args(
             "Genrule",
             1,
@@ -1897,7 +1747,6 @@ pub(crate) mod tests {
 
     #[test]
     fn skipping_the_program_does_not_hide_later_arguments() {
-        // Only argv[0] is exempt; an absolute path anywhere after it stands.
         let c = container(vec![action_with_args(
             "Genrule",
             1,
@@ -1918,8 +1767,6 @@ pub(crate) mod tests {
 
     #[test]
     fn a_bare_command_name_is_a_system_program() {
-        // Resolved through PATH, so it is whatever the machine has. This is
-        // the case the absolute-path check cannot see: there is no `/` in it.
         let c =
             container(vec![action_with_args("CppCompile", 1, &["gcc"])]);
         let found = check_reproducibility(&c, &Library::builtin());
@@ -1941,14 +1788,11 @@ pub(crate) mod tests {
         let r = v.render(Palette::plain());
         assert!(r.contains(r#"program "/bin/bash""#), "{r}");
         assert!(r.contains("outside the build"), "{r}");
-        // Not framed as a missing spec.
         assert!(!r.contains("spec"), "{r}");
     }
 
     #[test]
     fn violations_retain_the_programs_structure() {
-        // Violations keep a ProgramId, so later analysis can interrogate the
-        // origin instead of re-parsing a rendered string.
         let c = container(vec![action_with_args(
             "Rustc",
             1,
@@ -1974,7 +1818,6 @@ pub(crate) mod tests {
 
     #[test]
     fn actions_without_arguments_have_no_program_to_check() {
-        // No argv[0] -> nothing to attribute a program to -> skipped.
         let c =
             container(vec![action_with_env("A", 1, &[("HOME", "/tmp")])]);
         assert!(check_reproducibility(&c, &Library::builtin()).is_empty());
@@ -2001,8 +1844,6 @@ pub(crate) mod tests {
             &ProgramId::of("external/rules_rust+/util/x"),
         );
     }
-
-    // ---- deterministic ordering ----
 
     /// A container exercising every check at once, with enough actions for the
     /// order they arrive in to matter.
@@ -2033,7 +1874,6 @@ pub(crate) mod tests {
 
     #[test]
     fn violation_order_is_stable_across_every_rotation_of_the_actions() {
-        // Reversing alone could pass by luck; every rotation must agree too.
         let expected = check_all(
             &container(mixed_actions()),
             USER_SENTINEL,
@@ -2060,7 +1900,6 @@ pub(crate) mod tests {
 
     #[test]
     fn check_all_accounts_for_everything_the_individual_checks_find() {
-        // Collapsing must lose nothing: the counts have to add back up.
         let c = container(mixed_actions());
         let mut individually =
             check_environment_leaks(&c, USER_SENTINEL, HOST_SENTINEL);
@@ -2080,7 +1919,6 @@ pub(crate) mod tests {
             "occurrences do not add up to what the checks found",
         );
 
-        // And every distinct violation is present, exactly once as a key.
         individually.sort();
         individually.dedup();
         let keys: Vec<Violation> = combined.keys().cloned().collect();
@@ -2118,15 +1956,12 @@ pub(crate) mod tests {
             &Library::builtin(),
         );
 
-        // `-I/opt/include` is byte-identical across the three actions, and an
-        // ActionRef names a target and mnemonic, not an individual action.
         let absolute = violations
             .iter()
             .find(|(v, _)| matches!(v, Violation::AbsolutePath { .. }))
             .expect("the fixture must produce an absolute-path violation");
         assert_eq!(*absolute.1, 3);
 
-        // Same for the program, which all three actions share.
         let unknown = violations
             .iter()
             .find(|(v, _)| matches!(v, Violation::UnknownProgram { .. }))
@@ -2135,15 +1970,12 @@ pub(crate) mod tests {
             );
         assert_eq!(*unknown.1, 3);
 
-        // Three actions, three violations each, but only two distinct ones.
         assert_eq!(violations.len(), 2);
         assert_eq!(violations.values().sum::<usize>(), 6);
     }
 
     #[test]
     fn counts_distinguish_otherwise_identical_results() {
-        // The reason multiplicity is kept: the same flaw on one action and on
-        // three is not the same finding, and the results must not compare equal.
         let one = check_all(
             &container(sibling_actions()[..1].to_vec()),
             USER_SENTINEL,
@@ -2165,12 +1997,8 @@ pub(crate) mod tests {
         assert_ne!(one, three);
     }
 
-    // ---- param files as first-class sources ----
-
     #[test]
     fn sentinels_leaking_into_a_param_file_are_found() {
-        // The command line holds only a reference, so a check reading `arguments`
-        // alone would see nothing wrong here.
         let c = container(vec![action_with_param_files(
             "CppLink",
             1,
@@ -2224,8 +2052,6 @@ pub(crate) mod tests {
 
     #[test]
     fn unreferenced_param_files_are_still_scanned() {
-        // A C++ module map is never spliced into the command line, but an
-        // absolute path inside it is still a leak.
         let c = container(vec![action_with_param_files(
             "CppCompile",
             1,
@@ -2238,7 +2064,6 @@ pub(crate) mod tests {
 
     #[test]
     fn a_param_file_is_scanned_once_per_action() {
-        // Two references to one file must not double-report its contents.
         let c = container(vec![action_with_param_files(
             "CppLink",
             1,
@@ -2250,8 +2075,6 @@ pub(crate) mod tests {
 
     #[test]
     fn the_program_is_identified_through_an_expanded_command_line() {
-        // argv[0] is never itself a param file reference, but expansion must not
-        // disturb it.
         let c = container(vec![action_with_param_files(
             "CppLink",
             1,
@@ -2283,8 +2106,6 @@ pub(crate) mod tests {
         };
         let r = v.render(Palette::plain());
         assert!(r.contains(r#"param file "out/foo.params""#), "{r}");
-        // The line itself ends the report and is quoted by nothing: it is
-        // the thing to look at, not a parenthetical about it.
         assert!(r.ends_with(": -L/opt/lib"), "{r}");
     }
 
@@ -2303,7 +2124,6 @@ pub(crate) mod tests {
         assert!(r.contains("Genrule action for target //test:t4"), "{r}");
         assert!(r.contains(r#"program "date""#), "{r}");
         assert!(r.contains("never"), "{r}");
-        // A program judged by its own spec says nothing about synonyms.
         assert!(!r.contains("synonym"), "{r}");
     }
 
@@ -2328,7 +2148,6 @@ pub(crate) mod tests {
             synonym: Some(clang),
         };
         let r = v.render(Palette::plain());
-        // Both the program that ran and the one whose spec judged it.
         assert!(
             r.contains(
                 r#"program "@llvm+llvm_toolchain_minimal//bin/clang++""#
@@ -2343,8 +2162,6 @@ pub(crate) mod tests {
 
     #[test]
     fn renders_the_program_through_display_not_debug() {
-        // The variants hold a structured ProgramId; rendering must go through
-        // its Display, not dump the struct.
         let v = Violation::UnknownProgram {
             action: ActionRef {
                 mnemonic: "Rustc".to_owned(),
@@ -2390,8 +2207,6 @@ pub(crate) mod tests {
         };
         let r = v.render(Palette::plain());
         assert!(r.contains(r#"program "gcc""#), "{r}");
-        // Each clause speaks in the words its spec gave it, and shows the
-        // patterns that would have met it or the arguments that broke it.
         assert!(r.contains("it needs an option it was not given"), "{r}");
         assert!(
             r.contains("but none of --deterministic was passed"),
@@ -2420,12 +2235,8 @@ pub(crate) mod tests {
         let r = v.render(Palette::plain());
         assert!(r.contains("it needs an option it was not given"), "{r}");
         assert!(r.contains("but none of --sorted was passed"), "{r}");
-        // Plainly: the options are bare, with no brackets or quotes of
-        // their own. The program name is quoted; that is a different
-        // thing and stays.
         assert!(!r.contains('['), "{r}");
         assert!(!r.contains(r#"""--sorted"#), "{r}");
-        // Nothing is said about a clause the invocation did not fail.
         assert!(!r.contains("breaks it"), "{r}");
     }
 }

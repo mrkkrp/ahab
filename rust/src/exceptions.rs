@@ -132,9 +132,8 @@ impl Location {
 /// The sources an exception file may name, for [`parse_one_of`].
 const SOURCES: [EnvSource; 2] = [EnvSource::User, EnvSource::Hostname];
 
-/// How an exception file spells a source. Its own function rather than
-/// [`EnvSource`]'s, whose `as_str` answers a different question—the name of
-/// the environment variable, not the word the file uses for it.
+/// How an exception file spells a source—not [`EnvSource::as_str`], which
+/// answers with the environment variable's name.
 fn source_name(source: EnvSource) -> &'static str {
     match source {
         EnvSource::User => "user",
@@ -147,9 +146,8 @@ fn source_name(source: EnvSource) -> &'static str {
 /// predicate and constrains nothing.
 #[derive(Debug, Clone)]
 pub(crate) struct Exception {
-    /// Why this exception exists. Never matched against anything—it is here
-    /// so that the report can name an exception the way its author would,
-    /// and so that a stale one can be recognized years later.
+    /// Why this exception exists. Never matched against anything: it is
+    /// how the report names an exception its author would recognize.
     pub(crate) reason: Option<String>,
     /// The file this came from, for the same reason.
     pub(crate) origin: String,
@@ -170,9 +168,8 @@ impl Exception {
     pub(crate) fn matches(&self, violation: &Violation) -> bool {
         let facets = violation.facets();
 
-        // A predicate over a facet the violation does not have fails rather
-        // than passes vacuously: asking about a program is asking for a
-        // violation that has one.
+        // A predicate over a facet the violation lacks fails rather than
+        // passing vacuously: asking about a program asks for one.
         let glob = |pattern: &Option<Glob>, text: Option<&str>| match (
             pattern, text,
         ) {
@@ -190,8 +187,7 @@ impl Exception {
         if !glob(&self.target, Some(&facets.action.target)) {
             return false;
         }
-        // Rendered rather than compared field by field so that a person
-        // writes the label form they already read in the report.
+        // Rendered, so a person writes the label form the report shows.
         let program = facets.program.map(ToString::to_string);
         if !glob(&self.program, program.as_deref()) {
             return false;
@@ -226,10 +222,8 @@ impl Exception {
 }
 
 impl fmt::Display for Exception {
-    /// Name the exception by its reason when it has one, and by the
-    /// predicates it is made of when it does not. The second is uglier, but
-    /// an exception with no reason still has to be findable in the file
-    /// once we report it as stale.
+    /// Name the exception by its reason, or by its predicates when it has
+    /// none—a stale exception still has to be findable in the file.
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         if let Some(reason) = &self.reason {
             return write!(f, "{reason:?} ({})", self.origin);
@@ -267,8 +261,7 @@ pub(crate) struct Exceptions {
 
 impl Exceptions {
     /// Collect exceptions from however many files supplied them. Files
-    /// compose by union: a filter cannot be un-said by a later file, so
-    /// there is nothing for a later one to override.
+    /// compose by union: a filter cannot be un-said by a later one.
     pub(crate) fn new(
         exceptions: impl IntoIterator<Item = Exception>,
     ) -> Exceptions {
@@ -288,9 +281,8 @@ impl Exceptions {
         let mut summary = Suppressed::default();
 
         for (violation, count) in violations {
-            // Every exception is consulted, not just the first to match, so
-            // that overlapping ones are not reported stale by accident of
-            // ordering.
+            // All of them, not just the first to match, so overlapping
+            // ones are not reported stale by accident of ordering.
             let mut excused = false;
             for (i, exception) in self.exceptions.iter().enumerate() {
                 if exception.matches(&violation) {
@@ -342,7 +334,7 @@ impl Suppressed {
 
     /// The parenthetical appended to the report. Suppression is never
     /// silent: an exception file that quietly grew to cover half the build
-    /// is exactly the failure this tool exists to prevent.
+    /// is the failure this tool exists to prevent.
     pub(crate) fn note(self) -> String {
         let violations = if self.occurrences == 1 {
             "violation"
@@ -368,10 +360,8 @@ pub(crate) struct Filtered {
     pub(crate) kept: BTreeMap<Violation, usize>,
     /// What was excused.
     pub(crate) suppressed: Suppressed,
-    /// Exceptions that matched nothing at all. Warned about rather than
-    /// rejected: an exception outliving the problem it excused is good
-    /// news, and turning good news into a failed build teaches people to
-    /// stop fixing things.
+    /// Exceptions that matched nothing. Warned about rather than rejected:
+    /// one outliving the problem it excused is good news.
     pub(crate) unused: Vec<Exception>,
 }
 
@@ -410,11 +400,9 @@ struct ExceptionEntry {
     env_var: Option<String>,
 }
 
-/// Whether `field` is a predicate a violation of `kind` could satisfy.
-///
-/// Only used to reject contradictions at load time: a predicate about a
-/// facet the stated kind never carries cannot match, and saying so now is
-/// kinder than a stale-exception warning that does not explain itself.
+/// Whether `field` is a predicate a violation of `kind` could satisfy. Used
+/// to reject contradictions at load time, which is kinder than a
+/// stale-exception warning that does not explain itself.
 fn applies_to(field: &str, kind: Kind) -> bool {
     match field {
         "program" => kind.has_program(),
@@ -429,10 +417,9 @@ fn applies_to(field: &str, kind: Kind) -> bool {
     }
 }
 
-/// Parse the exceptions a `--exceptions-json` file declares.
-///
-/// `origin` names the file, and is carried into every exception so that a
-/// warning about a stale one can say where to go and delete it.
+/// Parse the exceptions a `--exceptions-json` file declares. `origin` is
+/// carried into every one, so a stale-exception warning can say where to go
+/// and delete it.
 pub(crate) fn parse_exceptions(
     json: &str,
     origin: &str,
@@ -454,8 +441,8 @@ fn compile(
     index: usize,
     origin: &str,
 ) -> Result<Exception, String> {
-    // Errors are positional because an exception need not have a reason and
-    // often has no field unique enough to name it by.
+    // Positional because an exception need not have a reason, and often
+    // has no field unique enough to name it by.
     let at = |why: String| format!("exception {}: {why}", index + 1);
 
     let kind = entry
@@ -479,10 +466,9 @@ fn compile(
         .transpose()
         .map_err(at)?;
 
-    // A predicate that no violation of the stated kind could ever carry is
-    // a mistake worth naming now. It would otherwise match nothing, and the
-    // author would learn only from a stale-exception warning that does not
-    // say why.
+    // A predicate no violation of the stated kind could carry would match
+    // nothing, and the author would learn only from a stale-exception
+    // warning that does not say why.
     if let Some(kind) = kind {
         let stated = [
             ("program", entry.program.is_some()),
@@ -503,8 +489,7 @@ fn compile(
         }
     }
 
-    // `env_var` is itself a claim about the location, so a contradicting
-    // `location` cannot be what the author meant.
+    // `env_var` is itself a claim about the location.
     if entry.env_var.is_some()
         && location.is_some_and(|l| l != Location::EnvVar)
     {
@@ -556,10 +541,8 @@ impl Exception {
     }
 }
 
-/// Render the warning for exceptions that matched nothing.
-///
-/// Returns `None` when there is nothing to say, so the caller does not have
-/// to know how the sentence is built to decide whether to print it.
+/// Render the warning for exceptions that matched nothing, or `None` when
+/// there is nothing to say.
 pub(crate) fn stale_warning(unused: &[Exception]) -> Option<String> {
     if unused.is_empty() {
         return None;
@@ -587,12 +570,6 @@ mod tests {
 
     #[test]
     fn every_field_applies_to_exactly_the_kinds_that_carry_it() {
-        // `applies_to` restates, in another place and another form, which
-        // facets a violation carries. Restatements drift: this one said
-        // `path` belonged to absolute-path findings alone, and stayed
-        // saying it after a second kind started carrying one, so the
-        // documented way to excuse that kind was refused at load. The
-        // invariant is that the two agree for every kind and every field.
         for violation in one_of_each_kind() {
             let facets = violation.facets();
             let kind =
@@ -664,7 +641,6 @@ mod tests {
         }
     }
 
-    /// Compile a single exception from the JSON body of one entry.
     fn one(entry: &str) -> Result<Exception, String> {
         let json = format!("{{\"exceptions\": [{entry}]}}");
         parse_exceptions(&json, "test.json").map(|mut all| {
@@ -673,12 +649,9 @@ mod tests {
         })
     }
 
-    /// Compile an exception that is expected to be well-formed.
     fn good(entry: &str) -> Exception {
         one(entry).expect("a valid exception")
     }
-
-    // ---- conjunction ----
 
     #[test]
     fn a_lone_mnemonic_excuses_every_violation_of_that_action() {
@@ -708,13 +681,11 @@ mod tests {
             "//a:a",
             "/usr/include/stdio.h"
         )));
-        // Right action, wrong path.
         assert!(!exception.matches(&absolute_path(
             "CppCompile",
             "//a:a",
             "/opt/thing"
         )));
-        // Right path, wrong action.
         assert!(!exception.matches(&absolute_path(
             "Rustc",
             "//a:a",
@@ -724,8 +695,6 @@ mod tests {
 
     #[test]
     fn a_facet_the_violation_lacks_never_matches() {
-        // A path predicate is a claim that there is a path to look at, so
-        // it must not excuse violations that have none.
         let exception = good(r#"{"path": "*"}"#);
         assert!(exception.matches(&absolute_path(
             "CppCompile",
@@ -794,8 +763,6 @@ mod tests {
         );
     }
 
-    // ---- filtering ----
-
     #[test]
     fn filtering_keeps_what_no_exception_excuses() {
         let violations = BTreeMap::from([
@@ -811,7 +778,6 @@ mod tests {
         assert!(filtered.kept.keys().all(|v| {
             matches!(v.facets().action.mnemonic.as_str(), "Rustc")
         }));
-        // One distinct violation, but it stood for three occurrences.
         assert_eq!(filtered.suppressed.distinct, 1);
         assert_eq!(filtered.suppressed.occurrences, 3);
         assert_eq!(filtered.suppressed.exceptions, 1);
@@ -841,8 +807,6 @@ mod tests {
 
     #[test]
     fn overlapping_exceptions_are_all_credited() {
-        // Both match the only violation. Neither may be called stale just
-        // because the other was consulted first.
         let violations = BTreeMap::from([(
             absolute_path("CppCompile", "//a:a", "/usr/lib"),
             1,
@@ -890,8 +854,6 @@ mod tests {
         assert_eq!(one.note(), "(1 violation suppressed by 1 exception)");
     }
 
-    // ---- loading ----
-
     #[test]
     fn an_exception_with_no_conditions_is_rejected() {
         let why = one(r#"{"reason": "everything"}"#)
@@ -902,8 +864,6 @@ mod tests {
 
     #[test]
     fn an_unknown_field_is_rejected() {
-        // A misspelled predicate would otherwise be dropped, silently
-        // widening the exception.
         let why = one(r#"{"mnemonics": "CppCompile"}"#)
             .expect_err("an unknown field");
         assert!(why.contains("mnemonics"), "{why}");

@@ -7,10 +7,9 @@ fn stardoc(path: &str) -> ProgramId {
     ProgramId::module("stardoc", path)
 }
 
-/// A program the `toolchains` extension of rules_java brings in: the JDK
-/// itself, and the tools Bazel builds Java with. Which JDK and which
-/// platform are part of the repository name rather than this one, so the
-/// same entry answers for `remotejdk25_linux` and whatever succeeds it.
+/// A program the `toolchains` extension of rules_java brings in. Which JDK
+/// and which platform are part of the repository name rather than this one,
+/// so one entry answers for `remotejdk25_linux` and its successors.
 fn java_tool(path: &str) -> ProgramId {
     ProgramId::extension("rules_java", "toolchains", path)
 }
@@ -26,17 +25,10 @@ const TURBINE_JAR: &str = "java_tools/turbine_direct_binary_deploy.jar";
 pub(in crate::reproducibility_spec) fn entries() -> Vec<(ProgramId, Entry)>
 {
     vec![
-        // Every input the renderer has is named on the command line and
-        // built by the same build: `--input` is a serialized proto that an
-        // earlier action extracted from the Starlark, and the seven
-        // templates are Velocity files shipped inside Stardoc. It reads
-        // those, fills them in, and writes one markdown file. Nothing is
-        // read from the environment and no path is absolute, so two runs
-        // over the same proto have nothing to disagree about.
-        //
-        // The JVM underneath is not part of this claim, and does not need
-        // to be: filling in a template is not the sort of work whose answer
-        // depends on which Java is running it.
+        // Every input is named on the command line and built by the same
+        // build: `--input` is a proto an earlier action extracted from the
+        // Starlark, and the templates ship inside Stardoc. Filling them in
+        // and writing markdown reads nothing from the environment.
         (
             stardoc(
                 "src/main/java/com/google/devtools/build/stardoc/renderer\
@@ -44,23 +36,18 @@ pub(in crate::reproducibility_spec) fn entries() -> Vec<(ProgramId, Entry)>
             ),
             Entry::Spec(always()),
         ),
-        // The JVM is not a tool, it is how the tools are started. Every Java
-        // action in a Bazel build runs `java <options> -jar <tool>`, so what
-        // the action really runs is the jar, and answering for `java` would
-        // be answering for whatever anyone puts after it. Handing over at
-        // `-jar` puts the question where it can be decided: the jars below
-        // carry the verdicts, and a `java` invoked some other way—with a
-        // classpath and a main class—matches nothing here and is reported
-        // rather than waved through.
+        // Every Java action runs `java <options> -jar <tool>`, so what runs
+        // is the jar and answering for `java` would answer for whatever
+        // follows it. A `java` invoked otherwise—classpath and main
+        // class—matches nothing here and is reported rather than waved past.
         (
             java_tool("bin/java"),
             Entry::Wraps(Transition::AfterSeparator {
                 separator: "-jar".to_owned(),
             }),
         ),
-        // JavaBuilder is javac with Bazel's arguments around it. Compiling
-        // the same sources against the same classpath yields the same class
-        // files, and it writes them into a jar it normalizes itself.
+        // javac with Bazel's arguments around it, writing the class files
+        // into a jar it normalizes itself.
         (
             java_tool("java_tools/JavaBuilder_deploy.jar"),
             Entry::Spec(always()),
@@ -71,30 +58,21 @@ pub(in crate::reproducibility_spec) fn entries() -> Vec<(ProgramId, Entry)>
             java_tool("java_tools/GenClass_deploy.jar"),
             Entry::Spec(always()),
         ),
-        // Turbine reads sources and produces a header jar: the signatures
-        // alone, with no method bodies. It is a function of the sources and
-        // the classpath it is given, both named in the action.
+        // Produces a header jar—signatures alone—from the sources and
+        // classpath named in the action.
         (java_tool(TURBINE_JAR), Entry::Spec(always())),
-        // The same compiler ahead-of-time compiled into a native binary, so
-        // that a header compilation need not start a JVM. Declared a synonym
-        // rather than described again: it is the same program, and the two
-        // could not be allowed to disagree.
+        // The same compiler AOT-compiled into a native binary, so a header
+        // compilation need not start a JVM.
         (
             java_tool("java_tools/turbine_direct_graal"),
             Entry::SameAs(java_tool(TURBINE_JAR)),
         ),
-        // ijar strips a jar to its interface, dropping method bodies and
-        // the debugging information that would otherwise make a header jar
-        // change whenever an implementation did. It normalizes what it
-        // writes, which is the whole point of it.
+        // Strips a jar to its interface, normalizing what it writes.
         (java_tool("java_tools/ijar/ijar"), Entry::Spec(always())),
-        // singlejar merges jars, and the two ways a jar stops being a
-        // function of its contents are both things it is told not to do.
         // `--normalize` fixes the timestamp on every entry, which would
-        // otherwise be the moment the action ran. `--exclude_build_data`
+        // otherwise be the moment the action ran; `--exclude_build_data`
         // leaves out `build-data.properties`, which records the user and
-        // the machine that built it. rules_java passes both every time; a
-        // build that does not is not merging jars reproducibly.
+        // machine. rules_java passes both every time.
         (
             java_tool("java_tools/src/tools/singlejar/singlejar_local"),
             Entry::Spec(ReproducibilitySpec::new(
@@ -131,7 +109,6 @@ mod tests {
 
     #[test]
     fn java_hands_the_question_to_the_jar_it_runs() {
-        // The shape of every Java action: JVM options, `-jar`, the tool.
         let resolution = Library::builtin().resolve(
             java_tool("bin/java"),
             vec![
@@ -144,8 +121,6 @@ mod tests {
                 "libx.jar",
             ],
         );
-        // The verdict belongs to JavaBuilder, and the JVM's own options are
-        // not mistaken for the tool's.
         assert_eq!(
             resolution.program,
             java_tool("java_tools/JavaBuilder_deploy.jar"),
@@ -157,9 +132,6 @@ mod tests {
 
     #[test]
     fn a_java_invoked_without_a_jar_is_not_vouched_for() {
-        // A classpath and a main class instead. The transition does not
-        // fire, so the JVM stays the program—and the JVM has no spec, which
-        // is what makes this report rather than pass.
         let resolution = Library::builtin().resolve(
             java_tool("bin/java"),
             vec!["-cp", "x.jar:y.jar", "com.example.Main"],
@@ -178,8 +150,6 @@ mod tests {
 
     #[test]
     fn singlejar_without_its_normalizing_flags_is_not() {
-        // Each is load-bearing on its own: one silences the clock, the
-        // other the name of whoever ran it, and neither implies the other.
         for dropped in SINGLEJAR_REQUIRED {
             let kept: Vec<&str> = singlejar_args()
                 .into_iter()
@@ -204,19 +174,15 @@ mod tests {
             java_tool("java_tools/turbine_direct_graal"),
             vec!["--output", "libx-hjar.jar"],
         );
-        // The action still reports the binary it ran...
         assert_eq!(
             native.program,
             java_tool("java_tools/turbine_direct_graal"),
         );
-        // ...while the verdict is credited to the jar.
         assert_eq!(native.synonym(), Some(&java_tool(TURBINE_JAR)));
     }
 
     #[test]
     fn the_jdk_is_reached_without_naming_a_version_or_a_platform() {
-        // The repository is `remotejdk25_linux` today and something else
-        // tomorrow; the entry has to survive that.
         assert_eq!(
             ProgramId::of(
                 "external/rules_java++toolchains+remotejdk25_linux/bin/java",

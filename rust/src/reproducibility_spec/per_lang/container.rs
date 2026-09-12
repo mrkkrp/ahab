@@ -2,12 +2,9 @@ use super::super::ReproducibilitySpec;
 use super::super::library::{Entry, always};
 use super::super::program_id::ProgramId;
 
-/// The platforms rules_img cross-compiles its tool for, as its `BUILD`
-/// file lists them.
-///
-/// The tool is named after the platform it was built for, so a spec that
-/// knew only one of these would quietly stop recognizing the tool on a
-/// developer's machine that happens not to be the one it was written on.
+/// The platforms rules_img cross-compiles its tool for. The tool is named
+/// after the platform it was built for, so a spec knowing only one of these
+/// would stop recognizing it on everyone else's machine.
 const IMG_PLATFORMS: [(&str, &str); 7] = [
     ("linux", "amd64"),
     ("linux", "arm64"),
@@ -35,18 +32,10 @@ fn canonical_img() -> ProgramId {
 }
 
 /// The flags with which `img` is told where something sits *inside* the
-/// image it is assembling.
-///
-/// Not inferred from their names: the tool's own help says "inside the
-/// image" for each of them, and the ones with defaults default to
-/// `/etc/passwd`, `/etc/ssl/certs` and their like—places in a Linux
-/// filesystem the image is going to have, which the build machine merely
+/// image it is assembling. Not inferred from their names: the tool's own
+/// help says "inside the image" for each, and the defaults are `/etc/passwd`
+/// and the like—places the image will have, which the build machine merely
 /// happens to have too.
-///
-/// The last five are the image's configuration rather than its files: what
-/// it runs, from where, and with what environment. `--env` carries the
-/// image's own `PATH`, which is why one of these is unavoidable in every
-/// image built from a base.
 const IMAGE_PATH_FLAGS: [&str; 21] = [
     // Where a file, a directory or an executable lands.
     "--executable",
@@ -54,8 +43,7 @@ const IMAGE_PATH_FLAGS: [&str; 21] = [
     "--file-metadata",
     "--path",
     "--lib-dir",
-    // The files the `base` subcommand synthesizes, each of which has a
-    // conventional place in the image.
+    // The files `base` synthesizes, each with a conventional place.
     "--passwd-path",
     "--group-path",
     "--shadow-path",
@@ -67,7 +55,8 @@ const IMAGE_PATH_FLAGS: [&str; 21] = [
     "--lsb-release-path",
     "--ld-so-conf-path",
     "--ld-so-cache-path",
-    // What the image does when it is run.
+    // The image's configuration rather than its files: what it runs, from
+    // where, with what environment. `--env` carries the image's own `PATH`.
     "--env",
     "--user",
     "--entrypoint",
@@ -78,19 +67,10 @@ const IMAGE_PATH_FLAGS: [&str; 21] = [
 /// A record of a param file `img` was given, in which some field is an
 /// absolute path.
 ///
-/// The layer subcommand takes its file list through `--add-from-file`,
-/// `--symlinks-from-file` and `--symlink-pairs-from-file`, each a file of
-/// NUL-separated records naming where things go in the image. Bazel writes
-/// those files with `use_param_file(use_always = True)`, and an aquery
-/// hands us their lines with no flag attached, so the record has to be
-/// recognized by its shape: a NUL immediately followed by `/` is a field
-/// that is an absolute path, and every field of these records is an
-/// in-image one.
-///
-/// What this gives up: a record whose *first* field were absolute would not
-/// match, and a build path that ever appeared in one of these fields would
-/// be passed over. Both are the safe direction—narrower than the flags
-/// above, at the cost of a finding we would want.
+/// The layer subcommand's file lists are NUL-separated records naming where
+/// things go in the image, and aquery hands us their lines with no flag
+/// attached, so the record is recognized by its shape. A record whose
+/// *first* field were absolute would not match; that is the safe direction.
 const IMAGE_PATH_RECORD: &str = "*\0/*";
 
 /// What `img` is, plus which of its options describe the image rather than
@@ -106,39 +86,28 @@ fn img_spec() -> ReproducibilitySpec {
         )
 }
 
-/// One of the scripts rules_distroless runs to assemble a layer.
-///
-/// They share a shape: bsdtar, gawk and coreutils are handed in as
-/// arguments rather than found on the machine, an archive is taken apart
-/// and put back together, and the entry times are either carried over from
-/// the package or written out as a constant. None of them asks what time it
-/// is, and none reads a path it was not given.
+/// The scripts rules_distroless runs to assemble a layer. They share a
+/// shape: bsdtar, gawk and coreutils are handed in as arguments rather than
+/// found on the machine, and entry times are either carried over from the
+/// package or written out as a constant.
 fn distroless_tools() -> Vec<(ProgramId, Entry)> {
     [
-        // Concatenates the certificates out of a `ca-certificates` package
-        // into one file, in the order the shell glob yields them—which is
-        // a function of the names, since a sandboxed action carries no
-        // locale to collate them differently.
+        // Concatenates a `ca-certificates` package's certificates in glob
+        // order, which a sandboxed action carries no locale to vary.
         "distroless/private/cacerts.sh",
-        // Strips the mtree of its times and writes the one the rule was
-        // given back onto every entry, then compresses with
-        // `gzip:!timestamp`. The declared time is the whole point of it.
+        // Writes the rule's declared time onto every mtree entry, then
+        // compresses with `gzip:!timestamp`.
         "distroless/private/locale.sh",
-        // Merges archives, optionally keeping only the last entry for each
-        // path. What comes out is decided by what went in and the order it
-        // was named in.
+        // Merges archives, optionally keeping the last entry per path.
         "distroless/private/flatten.sh",
-        // Both write a `/var/lib/dpkg/status.d` entry out of a package's
-        // control file. `dpkg_status.sh` writes a hard-coded
-        // `time=1672560000` into its mtree; `dpkg_statusd.sh` carries the
-        // times over from the control archive.
+        // Both write a `/var/lib/dpkg/status.d` entry from a control file.
+        // `dpkg_status.sh` hard-codes `time=1672560000` into its mtree;
+        // `dpkg_statusd.sh` carries the control archive's times over.
         "apt/private/dpkg_status.sh",
         "apt/private/dpkg_statusd.sh",
-        // A reimplementation of `keytool` written to be reproducible: the
-        // stock one stamps each entry with the moment it was added, and
-        // this one writes the certificate's own `notBefore` instead. The
-        // password and salt it keys the digest with are constants in the
-        // source.
+        // A `keytool` reimplementation that writes each certificate's own
+        // `notBefore` where the stock one stamps the moment of addition.
+        // Its digest password and salt are constants in the source.
         "distroless/private/keystore_binary",
     ]
     .into_iter()
@@ -154,24 +123,17 @@ fn distroless_tools() -> Vec<(ProgramId, Entry)> {
 /// Everything Ahab knows about building container images, in source order.
 pub(in crate::reproducibility_spec) fn entries() -> Vec<(ProgramId, Entry)>
 {
-    // One binary behind every image action, dispatched by subcommand:
-    // `layer` and `mtree` to assemble a layer, `manifest` and `ocilayout`
-    // to describe the result, `push` and `pull` to move it. The same shape
-    // as the Go and Kotlin builders.
+    // One binary behind every image action, dispatched by subcommand.
+    // Its clock appears in serving, registry authentication and blob
+    // download, but nowhere on the path that builds a layer: a tar entry's
+    // time comes from an RFC3339 string in the action's own inputs.
     //
-    // It never asks what time it is. Its clock does appear—in serving,
-    // registry authentication and blob download—but nowhere on the path
-    // that builds a layer. What a tar entry records is taken from the
-    // metadata the build declares, an RFC3339 string parsed from the
-    // action's own inputs, so an image is a function of what went into it.
-    //
-    // Where it does name absolute paths is in describing the image, and
-    // those are not paths on this machine at all—see [`IMAGE_PATH_FLAGS`].
+    // The absolute paths it names describe the image rather than this
+    // machine—see [`IMAGE_PATH_FLAGS`].
     let mut entries = vec![(canonical_img(), Entry::Spec(img_spec()))];
 
-    // The cross-compiled copies are the same program under another name,
-    // so they defer rather than repeat: the report still says which one
-    // ran, and the claim is stated once.
+    // The cross-compiled copies defer so the claim is stated once, while
+    // the report still says which one ran.
     for (os, arch) in IMG_PLATFORMS {
         let name = format!("img_{os}_{arch}");
         entries.push((
@@ -189,11 +151,9 @@ pub(in crate::reproducibility_spec) fn entries() -> Vec<(ProgramId, Entry)>
 
     entries.extend(distroless_tools());
 
-    // rules_oci measures a layer: its digest, its uncompressed digest, its
-    // size and its compression, all read off the archive itself. The one
-    // field that could have come from a clock does not—the script writes
-    // `created: "1970-01-01T00:00:00Z"` literally, and takes `created_by`
-    // from the label it was told to describe.
+    // Measures a layer—digest, size, compression—off the archive itself.
+    // The one field that could have come from a clock does not: the script
+    // writes `created: "1970-01-01T00:00:00Z"` literally.
     entries.push((
         ProgramId::module("rules_oci", "oci/private/descriptor.sh"),
         Entry::Spec(always()),
@@ -211,9 +171,6 @@ mod tests {
 
     #[test]
     fn the_tool_is_vouched_for_on_every_platform_it_is_built_for() {
-        // The point of the list: a Mac developer runs `img_darwin_arm64`
-        // and must get the same answer as the Linux CI that recorded the
-        // expectation.
         for (os, arch) in IMG_PLATFORMS {
             let name = format!("img_{os}_{arch}");
             let program = img_tool(&go_binary("cmd/img", &name));
@@ -246,9 +203,6 @@ mod tests {
 
     #[test]
     fn the_name_the_fishery_saw_is_one_of_them() {
-        // The path rules_img actually produced, recorded here so that a
-        // change to the naming convention fails a test rather than
-        // quietly costing three hundred findings their spec.
         assert_eq!(
             ProgramId::of(
                 "bazel-out/k8-opt-exec/bin/external/rules_img_tool+/cmd/img\
@@ -260,8 +214,6 @@ mod tests {
 
     #[test]
     fn the_distroless_layer_tools_are_vouched_for() {
-        // Each is handed its bsdtar, gawk and coreutils as arguments, so
-        // what it runs is the build's rather than the machine's.
         let tools = [
             ("distroless/private/cacerts.sh", vec!["tar", "pkg.deb"]),
             (
@@ -299,8 +251,7 @@ mod tests {
         );
     }
 
-    /// What `declared_path_args` makes of a command line, as the strings it
-    /// passes over.
+    /// What `declared_path_args` passes over in a command line.
     fn declared(args: &[&str]) -> Vec<String> {
         img_spec()
             .declared_path_args(args)
@@ -311,11 +262,6 @@ mod tests {
 
     #[test]
     fn a_path_in_the_image_is_declared_however_the_flag_is_spelled() {
-        // rules_img writes the value as a separate argument; a person
-        // reading the report and trying it by hand would write it joined.
-        // Both have to reach the same answer or the list is a trap—and
-        // either way it is the argument holding `/app` that gets passed
-        // over, which is the one the scan would have reported.
         assert_eq!(
             declared(&["manifest", "--working-dir", "/app"]),
             vec!["--working-dir".to_owned(), "/app".to_owned()],
@@ -328,10 +274,6 @@ mod tests {
 
     #[test]
     fn a_path_on_the_build_machine_is_not_declared() {
-        // The flags that name real inputs and outputs are deliberately not
-        // in the list: a toolchain leaking `/usr/bin/gcc` into an `--output`
-        // must still be reported, and it is the same tool and the same
-        // action that would carry it.
         assert!(
             declared(&[
                 "layer",
@@ -346,8 +288,6 @@ mod tests {
 
     #[test]
     fn every_flag_in_the_list_declares_its_value() {
-        // Each entry is a claim about one flag, so each is exercised rather
-        // than trusting that the loop that builds the patterns is right.
         for flag in IMAGE_PATH_FLAGS {
             let args = vec!["base", flag, "/etc/somewhere"];
             assert_eq!(
@@ -360,8 +300,6 @@ mod tests {
 
     #[test]
     fn a_param_file_record_is_declared_by_its_shape() {
-        // A symlink record: where the link goes in the image, and what it
-        // points at there. Bazel hands us the line with no flag on it.
         assert_eq!(
             declared(&[
                 "layer",
@@ -369,8 +307,6 @@ mod tests {
             ]),
             vec!["etc/app/current.txt\0/etc/app/config.txt".to_owned()],
         );
-        // A record whose fields are all relative has nothing to excuse, and
-        // an ordinary argument is not a record at all.
         for ordinary in [
             "package_relative\0etc/app/config.txt\0_main/tests\0",
             "/usr/lib/x86_64-linux-gnu",
@@ -384,9 +320,6 @@ mod tests {
 
     #[test]
     fn declaring_paths_does_not_make_the_tool_conditional() {
-        // The flags are named so that `takes_value` can fold them, which is
-        // a statement about the tool's interface and must not be mistaken
-        // for a condition on its reproducibility.
         assert_eq!(
             assess(
                 canonical_img(),

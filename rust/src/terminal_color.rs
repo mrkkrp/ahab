@@ -1,23 +1,15 @@
 //! Terminal color for Ahab's output.
 //!
-//! Color is decided once, at the edge, and carried as a [`Palette`] rather
-//! than read from the environment wherever text is built. That keeps the
-//! rendering functions pure and testable: a test asks for
-//! [`Palette::plain`] and compares strings, without the result depending on
-//! whether the test runner happened to have a terminal attached.
-//!
-//! The vocabulary is deliberately about meaning rather than
-//! color—`action`, `finding`, `caution`—so the choice of magenta or cyan
-//! lives here alone, and the call sites say what a piece of text is.
+//! Color is decided once, at the edge, and carried as a [`Palette`], which
+//! keeps the rendering functions pure and testable. The vocabulary is about
+//! meaning rather than color—`action`, `finding`, `caution`—so the choice
+//! of magenta or cyan lives here alone.
 
 use std::io::IsTerminal;
 
-/// Whether output to `stream` should be colored.
-///
-/// Color only when the stream is a terminal, so redirected output stays
-/// plain text; and never when `NO_COLOR` is set, which is the convention
-/// for turning color off regardless. Each stream is asked separately,
-/// since a pipeline that captures one and not the other is ordinary.
+/// Whether output to `stream` should be colored. Each stream is asked
+/// separately, since a pipeline that captures one and not the other is
+/// ordinary.
 fn supports_color(stream: impl IsTerminal) -> bool {
     std::env::var_os("NO_COLOR").is_none() && stream.is_terminal()
 }
@@ -81,9 +73,7 @@ impl Palette {
         self.paint("35", text)
     }
 
-    /// The specific thing found: a path, a program, a flag. A hue rather
-    /// than bold, because hue catches the eye where weight does not, and
-    /// because bold is the one attribute terminals disagree about.
+    /// The specific thing found: a path, a program, a flag.
     pub(crate) fn finding(self, text: &str) -> String {
         self.paint("36", text)
     }
@@ -118,7 +108,6 @@ mod tests {
 
     #[test]
     fn a_color_palette_wraps_and_always_resets() {
-        // A missing reset leaves the terminal tinted for everything after.
         let color = Palette::color();
         for painted in [
             color.heading("x"),
@@ -139,7 +128,6 @@ mod tests {
         assert!(color.diff_line("-gone").starts_with("\x1b[31m"));
         assert!(color.diff_line("+new").starts_with("\x1b[32m"));
         assert!(color.diff_line("@@ -1 +1 @@").starts_with("\x1b[36m"));
-        // Context lines carry no marker and are left as they are.
         assert_eq!(color.diff_line(" same"), " same");
     }
 }
