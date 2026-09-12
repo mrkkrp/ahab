@@ -1,9 +1,6 @@
-use std::collections::BTreeSet;
-
 use super::super::library::{Entry, host_derived};
 use super::super::program_id::ProgramId;
 use super::super::{Clause, Guard, Reproducibility, ReproducibilitySpec};
-use crate::glob::Glob;
 
 /// A program in the repository `cc_configure` generates from the host.
 fn local_config_cc(path: &str) -> ProgramId {
@@ -28,54 +25,47 @@ const DATE_MACROS: [&str; 3] = ["__DATE__", "__TIME__", "__TIMESTAMP__"];
 /// compiles, links and preprocesses, so both are guarded: the first on `-c`,
 /// the second on the family of flags that emits debugging information.
 fn clang_clauses() -> Vec<Clause> {
+    let compiling = Guard::on(["-c"]);
+    let emits_debug_info = Guard::toggled(
+        [
+            "-g",
+            "-g1",
+            "-g2",
+            "-g3",
+            "-gdwarf*",
+            "-gline-tables-only",
+            "-gsplit-dwarf",
+            "-gz*",
+        ],
+        ["-g0"],
+    );
+
     let mut clauses: Vec<Clause> = DATE_MACROS
         .iter()
-        .map(|macro_name| Clause {
-            when: Some(Guard {
-                family: [Glob::new("-c")].into_iter().collect(),
-                off: BTreeSet::new(),
-            }),
-            any_of: [Glob::new(&format!("-D{macro_name}=*"))]
-                .into_iter()
-                .collect(),
-            because: format!(
-                "a source mentioning {macro_name} records when it was \
-                 compiled unless the macro is defined away",
-            ),
+        .map(|macro_name| {
+            Clause::new(
+                Some(compiling.clone()),
+                [format!("-D{macro_name}=*")],
+                &format!(
+                    "a source mentioning {macro_name} records when it was \
+                     compiled unless the macro is defined away",
+                ),
+            )
         })
         .collect();
 
-    clauses.push(Clause {
-        when: Some(Guard {
-            family: [
-                "-g",
-                "-g1",
-                "-g2",
-                "-g3",
-                "-gdwarf*",
-                "-gline-tables-only",
-                "-gsplit-dwarf",
-                "-gz*",
-            ]
-            .into_iter()
-            .map(Glob::new)
-            .collect(),
-            off: [Glob::new("-g0")].into_iter().collect(),
-        }),
-        // `-ffile-prefix-map` implies the debug mapping, and naming the
-        // compilation directory outright addresses the same field.
-        any_of: [
+    // `-ffile-prefix-map` implies the debug mapping, and naming the
+    // compilation directory outright addresses the same field.
+    clauses.push(Clause::new(
+        Some(emits_debug_info),
+        [
             "-ffile-prefix-map=*",
             "-fdebug-prefix-map=*",
             "-fdebug-compilation-dir=*",
-        ]
-        .into_iter()
-        .map(Glob::new)
-        .collect(),
-        because: "debugging information records the directory it was \
-                  compiled in, which is the execution root"
-            .to_owned(),
-    });
+        ],
+        "debugging information records the directory it was compiled in, \
+         which is the execution root",
+    ));
 
     clauses
 }
@@ -184,11 +174,7 @@ mod tests {
     #[test]
     fn each_clang_requirement_is_load_bearing() {
         for dropped in CLANG_REQUIRED {
-            let prefix = dropped.trim_end_matches('*');
-            let kept: Vec<&str> = clang_args()
-                .into_iter()
-                .filter(|arg| !arg.starts_with(prefix))
-                .collect();
+            let kept = clang_without(dropped.trim_end_matches('*'));
             assert_eq!(
                 missing(llvm_toolchain("bin/cc_wrapper.sh"), kept)
                     .iter()

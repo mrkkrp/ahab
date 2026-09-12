@@ -5,20 +5,13 @@
 //! function of its inputs. TypeScript shares this module because its
 //! compiler is an npm package reached the same way.
 
-use super::super::library::{Entry, always, never};
+use super::super::library::{Entry, always, never, under_both_names};
 use super::super::program_id::ProgramId;
 use super::super::{Reproducibility, ReproducibilitySpec};
 
-/// One of rules_js's own tools, under both names it answers to: from the
-/// module for a consumer, from the main repository when rules_js itself is
-/// analyzed. The second form matches on path alone—the same loose end as
-/// rules_pkg's.
+/// One of rules_js's own tools, under both names it answers to.
 fn rules_js_tool(path: &str) -> Vec<(ProgramId, Entry)> {
-    let module = ProgramId::module("aspect_rules_js", path);
-    vec![
-        (module.clone(), Entry::Spec(never())),
-        (ProgramId::main(path), Entry::SameAs(module)),
-    ]
+    under_both_names("aspect_rules_js", path, Entry::Spec(never()))
 }
 
 /// A program in the repository rules_ts's `typescript` extension builds.

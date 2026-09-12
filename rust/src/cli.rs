@@ -169,7 +169,8 @@ impl Cli {
         }
 
         if let Some(path) = &self.expect_json {
-            return self.expect(path, &violations);
+            let path = resolve_against_invocation_dir(path);
+            return self.expect(&path, &violations);
         }
 
         self.report(&violations, filtered.suppressed)?;
@@ -183,8 +184,7 @@ impl Cli {
         path: &Path,
         found: &BTreeMap<Violation, usize>,
     ) -> Result<ExitCode> {
-        let path = resolve_against_invocation_dir(path);
-        let expected = read_json(&path)?;
+        let expected = read_json(path)?;
 
         if *found == expected {
             return Ok(ExitCode::SUCCESS);
@@ -266,20 +266,24 @@ struct JsonReport {
     violations: Vec<CountedViolation>,
 }
 
+/// Slurp a file the user named, saying what we wanted it for when it is not
+/// there.
+fn read_file(path: &Path, what: &str) -> Result<String> {
+    std::fs::read_to_string(path).with_context(|| {
+        format!("failed to read {what} from {}", path.display())
+    })
+}
+
 /// Read user-defined library entries from `path`.
 fn read_specs(path: &Path) -> Result<Vec<(ProgramId, Entry)>> {
-    let text = std::fs::read_to_string(path).with_context(|| {
-        format!("failed to read specs from {}", path.display())
-    })?;
+    let text = read_file(path, "specs")?;
     parse_entries(&text)
         .map_err(|why| anyhow::anyhow!("{}: {why}", path.display()))
 }
 
 /// Read exceptions from `path`.
 fn read_exceptions(path: &Path) -> Result<Vec<Exception>> {
-    let text = std::fs::read_to_string(path).with_context(|| {
-        format!("failed to read exceptions from {}", path.display())
-    })?;
+    let text = read_file(path, "exceptions")?;
     let origin = path.file_name().map_or_else(
         || path.display().to_string(),
         |name| name.to_string_lossy().into_owned(),
@@ -290,9 +294,7 @@ fn read_exceptions(path: &Path) -> Result<Vec<Exception>> {
 
 /// Read a report written earlier by [`write_json`].
 fn read_json(path: &Path) -> Result<BTreeMap<Violation, usize>> {
-    let text = std::fs::read_to_string(path).with_context(|| {
-        format!("failed to read JSON report from {}", path.display())
-    })?;
+    let text = read_file(path, "JSON report")?;
     let report: JsonReport =
         serde_json::from_str(&text).with_context(|| {
             format!("{} is not a report Ahab wrote", path.display())

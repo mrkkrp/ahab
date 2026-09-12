@@ -79,30 +79,32 @@ fn is_pattern(path: &str) -> bool {
 /// A spec for a program whose output is a function of its inputs however it
 /// is invoked.
 pub(super) fn always() -> ReproducibilitySpec {
-    ReproducibilitySpec::new(
-        Reproducibility::Always,
-        [] as [&str; 0],
-        [] as [&str; 0],
-    )
+    ReproducibilitySpec::of(Reproducibility::Always)
 }
 
 /// A spec for a program no set of flags can make reproducible.
 pub(super) fn never() -> ReproducibilitySpec {
-    ReproducibilitySpec::new(
-        Reproducibility::Never,
-        [] as [&str; 0],
-        [] as [&str; 0],
-    )
+    ReproducibilitySpec::of(Reproducibility::Never)
 }
 
 /// A spec for a program that works from what the machine has: one Bazel
 /// wrote by inspecting it, or one that runs a tool installed on it.
 pub(super) fn host_derived() -> ReproducibilitySpec {
-    ReproducibilitySpec::new(
-        Reproducibility::HostDerived,
-        [] as [&str; 0],
-        [] as [&str; 0],
-    )
+    ReproducibilitySpec::of(Reproducibility::HostDerived)
+}
+
+/// An entry under both the name a consumer sees and the one the rule set's
+/// own build produces, the second deferring to the first.
+pub(super) fn under_both_names(
+    module: &str,
+    path: &str,
+    entry: Entry,
+) -> Vec<(ProgramId, Entry)> {
+    let from_module = ProgramId::module(module, path);
+    vec![
+        (from_module.clone(), entry),
+        (ProgramId::main(path), Entry::SameAs(from_module)),
+    ]
 }
 
 /// The library Ahab ships with.
@@ -144,102 +146,81 @@ pub(super) fn aspect_bazel_lib(tool: &str) -> ProgramId {
     ProgramId::extension("aspect_bazel_lib", "toolchains", tool)
 }
 
+/// A bazel_lib tool under both module names, the older deferring to the
+/// newer so the claim is stated once.
+fn bazel_lib_tool(
+    tool: &str,
+    spec: ReproducibilitySpec,
+) -> [(ProgramId, Entry); 2] {
+    [
+        (bazel_lib(tool), Entry::Spec(spec)),
+        (aspect_bazel_lib(tool), Entry::SameAs(bazel_lib(tool))),
+    ]
+}
+
 /// Entries for tools no one language owns.
 fn language_agnostic() -> Vec<(ProgramId, Entry)> {
-    vec![
-        // One binary standing in for the whole of coreutils, which the
-        // bazel_lib rules use wherever they would need a shell. It also
-        // carries `date`, `hostname` and `uname`, which `always` would be
-        // vouching for, so the clause names them instead.
-        (
-            bazel_lib("coreutils"),
-            Entry::Spec(
-                ReproducibilitySpec::new(
-                    Reproducibility::Sometimes,
-                    [] as [&str; 0],
-                    [] as [&str; 0],
-                )
-                .with_clauses(
-                    [] as [Clause; 0],
-                    [Clause {
-                        when: None,
-                        any_of: HOST_SUBCOMMANDS
-                            .into_iter()
-                            .map(Glob::new)
-                            .collect(),
-                        because: "it was asked for something the machine \
-                                  knows rather than something the build \
-                                  gave it"
-                            .to_owned(),
-                    }],
-                ),
-            ),
-        ),
-        (
-            aspect_bazel_lib("coreutils"),
-            Entry::SameAs(bazel_lib("coreutils")),
-        ),
-        // The two copiers every rule set built on bazel_lib uses to
-        // assemble a directory. Both write the same bytes out, with no
-        // clock and nothing read that was not handed to them.
-        //
-        // The tree they leave has modification times that are a function of
-        // nothing, deliberately not stated as a condition: Bazel compares a
-        // tree by digests, so those times reach an artifact only if
-        // something downstream turns them into content—and that tool
-        // answers for it where it happens.
-        (bazel_lib("copy_to_directory"), Entry::Spec(always())),
-        (
-            aspect_bazel_lib("copy_to_directory"),
-            Entry::SameAs(bazel_lib("copy_to_directory")),
-        ),
-        (bazel_lib("copy_directory"), Entry::Spec(always())),
-        (
-            aspect_bazel_lib("copy_directory"),
-            Entry::SameAs(bazel_lib("copy_directory")),
-        ),
+    // One binary standing in for the whole of coreutils, which the
+    // bazel_lib rules use wherever they would need a shell. It also carries
+    // `date`, `hostname` and `uname`, which `always` would be vouching for,
+    // so the clause names them instead.
+    let coreutils = ReproducibilitySpec::of(Reproducibility::Sometimes)
+        .with_clauses(
+            [] as [Clause; 0],
+            [Clause::new(
+                None,
+                HOST_SUBCOMMANDS,
+                "it was asked for something the machine knows rather than \
+                 something the build gave it",
+            )],
+        );
+
+    // The two copiers every rule set built on bazel_lib uses to assemble a
+    // directory. Both write the same bytes out, with no clock and nothing
+    // read that was not handed to them.
+    //
+    // The tree they leave has modification times that are a function of
+    // nothing, deliberately not stated as a condition: Bazel compares a
+    // tree by digests, so those times reach an artifact only if something
+    // downstream turns them into content—and that tool answers for it where
+    // it happens.
+    let mut entries: Vec<(ProgramId, Entry)> =
+        bazel_lib_tool("coreutils", coreutils)
+            .into_iter()
+            .chain(bazel_lib_tool("copy_to_directory", always()))
+            .chain(bazel_lib_tool("copy_directory", always()))
+            .collect();
+
+    let protoc = ProgramId::extension("protobuf", "protoc", "bin/protoc");
+    let zipper =
+        ProgramId::module("bazel_tools", "tools/zip/zipper/zipper");
+
+    entries.extend([
         // A pure function of the descriptors it is given, arriving either
-        // prebuilt from the extension or as protobuf's own `cc_binary`.
-        (
-            ProgramId::extension("protobuf", "protoc", "bin/protoc"),
-            Entry::Spec(always()),
-        ),
+        // prebuilt from the extension or as protobuf's own `cc_binary`—and
+        // a third way, "the protobuf compiler without code generators",
+        // which the proto rules run for a descriptor set.
+        (protoc.clone(), Entry::Spec(always())),
         (
             ProgramId::module("protobuf", "protoc"),
-            Entry::SameAs(ProgramId::extension(
-                "protobuf",
-                "protoc",
-                "bin/protoc",
-            )),
+            Entry::SameAs(protoc.clone()),
         ),
-        // A third way: "the protobuf compiler without code generators",
-        // which the proto rules run for a descriptor set.
         (
             ProgramId::module(
                 "protobuf",
                 "src/google/protobuf/compiler/protoc_minimal",
             ),
-            Entry::SameAs(ProgramId::extension(
-                "protobuf",
-                "protoc",
-                "bin/protoc",
-            )),
+            Entry::SameAs(protoc),
         ),
         // Bazel's own zip tool. Where a zip normally records the moment
         // each entry was added, zipper writes one constant—2010-01-01,
-        // observed across all 2237 entries of a real archive.
-        (
-            ProgramId::module("bazel_tools", "tools/zip/zipper/zipper"),
-            Entry::Spec(always()),
-        ),
-        // The same binary under the path it is built at: `//tools/zip:zipper`
-        // is an alias for `//third_party/ijar:zipper`.
+        // observed across all 2237 entries of a real archive. The second
+        // name is the path it is built at: `//tools/zip:zipper` is an alias
+        // for `//third_party/ijar:zipper`.
+        (zipper.clone(), Entry::Spec(always())),
         (
             ProgramId::module("bazel_tools", "third_party/ijar/zipper"),
-            Entry::SameAs(ProgramId::module(
-                "bazel_tools",
-                "tools/zip/zipper/zipper",
-            )),
+            Entry::SameAs(zipper),
         ),
         // Bazel's test shim. Its log and JUnit XML carry timings and are
         // never byte-identical, but they are terminal: no other action
@@ -248,7 +229,9 @@ fn language_agnostic() -> Vec<(ProgramId, Entry)> {
             ProgramId::module("bazel_tools", "tools/test/test-setup.sh"),
             Entry::Spec(always()),
         ),
-    ]
+    ]);
+
+    entries
 }
 
 /// What an action's command line turned out to be, once wrappers have been
@@ -580,7 +563,10 @@ mod tests {
     }
 
     /// A library holding exactly these entries and nothing built in.
-    fn index(entries: Vec<(ProgramId, Entry)>) -> Library {
+    /// A library holding exactly these entries and nothing built in.
+    fn index(
+        entries: impl IntoIterator<Item = (ProgramId, Entry)>,
+    ) -> Library {
         let mut library = Library::default();
         library.extend(entries);
         library
@@ -666,17 +652,9 @@ mod tests {
         }
     }
 
-    fn library_of(
-        entries: impl IntoIterator<Item = (ProgramId, Entry)>,
-    ) -> Library {
-        let mut library = Library::default();
-        library.extend(entries);
-        library
-    }
-
     #[test]
     fn a_pattern_answers_for_every_program_whose_path_it_matches() {
-        let library = library_of([(
+        let library = index([(
             ProgramId::extension("r", "toolchains", "*/bin/rustc"),
             Entry::Spec(always()),
         )]);
@@ -694,7 +672,7 @@ mod tests {
 
     #[test]
     fn a_pattern_does_not_reach_across_repositories() {
-        let library = library_of([(
+        let library = index([(
             ProgramId::extension("r", "toolchains", "*/bin/rustc"),
             Entry::Spec(always()),
         )]);
@@ -706,7 +684,7 @@ mod tests {
     #[test]
     fn naming_a_program_outright_beats_a_pattern_that_covers_it() {
         let exact = ProgramId::extension("r", "toolchains", "x/bin/rustc");
-        let library = library_of([
+        let library = index([
             (exact.clone(), Entry::Spec(never())),
             (
                 ProgramId::extension("r", "toolchains", "*/bin/rustc"),
@@ -721,7 +699,7 @@ mod tests {
 
     #[test]
     fn a_later_pattern_wins_over_an_earlier_one() {
-        let library = library_of([
+        let library = index([
             (
                 ProgramId::extension("r", "toolchains", "*/bin/rustc"),
                 Entry::Spec(always()),
@@ -742,8 +720,7 @@ mod tests {
     fn a_pattern_reports_the_key_that_answered() {
         let pattern =
             ProgramId::extension("r", "toolchains", "*/bin/rustc");
-        let library =
-            library_of([(pattern.clone(), Entry::Spec(always()))]);
+        let library = index([(pattern.clone(), Entry::Spec(always()))]);
         let resolved = library.resolve(
             ProgramId::of("external/r++toolchains+tc/x/bin/rustc"),
             vec![],
@@ -754,7 +731,7 @@ mod tests {
     #[test]
     fn a_pattern_can_stand_in_for_a_synonym() {
         let target = ProgramId::module("rules_rust", "bin/rustc");
-        let library = library_of([
+        let library = index([
             (target.clone(), Entry::Spec(always())),
             (
                 ProgramId::extension("r", "toolchains", "*/bin/rustc"),

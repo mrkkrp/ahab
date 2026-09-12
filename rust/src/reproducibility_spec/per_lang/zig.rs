@@ -1,7 +1,6 @@
 use super::super::library::Entry;
 use super::super::program_id::ProgramId;
 use super::super::{Clause, Guard, Reproducibility, ReproducibilitySpec};
-use crate::glob::Glob;
 
 /// The Zig compiler, as rules_zig's `zig` extension lays it out. The
 /// release and the platform are in the repository name, which normalization
@@ -16,13 +15,10 @@ fn zig() -> ProgramId {
 /// no object code and are unaffected—measured on 0.16.0, a documentation
 /// directory built from two working directories came out byte-identical.
 fn emits_machine_code() -> Guard {
-    Guard {
-        family: ["build-exe", "build-lib", "build-obj", "test"]
-            .into_iter()
-            .map(Glob::new)
-            .collect(),
-        off: [Glob::new("-fno-emit-bin")].into_iter().collect(),
-    }
+    Guard::toggled(
+        ["build-exe", "build-lib", "build-obj", "test"],
+        ["-fno-emit-bin"],
+    )
 }
 
 /// What a Zig compilation has to be told before its output is a function of
@@ -43,31 +39,24 @@ fn emits_machine_code() -> Guard {
 /// does not carry it is one that keeps no debugging information at all.
 fn zig_requirements() -> Vec<Clause> {
     vec![
-        Clause {
-            when: Some(emits_machine_code()),
-            any_of: [
+        Clause::new(
+            Some(emits_machine_code()),
+            [
                 "-fllvm",
                 "-O=ReleaseFast",
                 "-O=ReleaseSafe",
                 "-O=ReleaseSmall",
-            ]
-            .into_iter()
-            .map(Glob::new)
-            .collect(),
-            because: "Zig promises a reproducible build in its release \
-                      modes and disclaims one in Debug, whose code \
-                      generator emits from every core at once and writes \
-                      out whichever thread finished first"
-                .to_owned(),
-        },
-        Clause {
-            when: Some(emits_machine_code()),
-            any_of: [Glob::new("-fstrip")].into_iter().collect(),
-            because: "debugging information records the directory the \
-                      compilation ran in, which Zig has no option to \
-                      rewrite"
-                .to_owned(),
-        },
+            ],
+            "Zig promises a reproducible build in its release modes and \
+             disclaims one in Debug, whose code generator emits from every \
+             core at once and writes out whichever thread finished first",
+        ),
+        Clause::new(
+            Some(emits_machine_code()),
+            ["-fstrip"],
+            "debugging information records the directory the compilation \
+             ran in, which Zig has no option to rewrite",
+        ),
     ]
 }
 
@@ -88,24 +77,19 @@ fn zig_requirements() -> Vec<Clause> {
 /// all—`TODO implement saving linker state`.
 fn zig_prohibitions() -> Vec<Clause> {
     vec![
-        Clause {
-            when: None,
-            any_of: ["-femit-bin=*.a", "-femit-bin=*.lib"]
-                .into_iter()
-                .map(Glob::new)
-                .collect(),
-            because: "a static archive stores the name of the temporary \
-                      directory its object was assembled in, which is drawn \
-                      afresh for every invocation"
-                .to_owned(),
-        },
-        Clause {
-            when: None,
-            any_of: [Glob::new("--build-id=uuid")].into_iter().collect(),
-            because: "a uuid build id is a random number rather than a \
-                      function of the code"
-                .to_owned(),
-        },
+        Clause::new(
+            None,
+            ["-femit-bin=*.a", "-femit-bin=*.lib"],
+            "a static archive stores the name of the temporary directory \
+             its object was assembled in, which is drawn afresh for every \
+             invocation",
+        ),
+        Clause::new(
+            None,
+            ["--build-id=uuid"],
+            "a uuid build id is a random number rather than a function of \
+             the code",
+        ),
     ]
 }
 

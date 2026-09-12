@@ -1,15 +1,9 @@
-use super::super::library::{Entry, always};
+use super::super::library::{Entry, always, under_both_names};
 use super::super::program_id::ProgramId;
 
 /// A program the `go_sdk` extension downloads and unpacks.
 fn go_sdk(path: &str) -> ProgramId {
     ProgramId::extension("rules_go", "go_sdk", path)
-}
-
-/// A program inside Gazelle, which declares itself as the module `gazelle`
-/// however its dependents spell the repository.
-fn gazelle(path: &str) -> ProgramId {
-    ProgramId::module("gazelle", path)
 }
 
 /// The metadata merger shipped by rules_webtesting.
@@ -25,15 +19,9 @@ fn metadata_merger(platform: &str) -> ProgramId {
     )
 }
 
-/// One of Gazelle's own generators, under both names it answers to: from
-/// the module for a dependent, from the main repository when Gazelle itself
-/// is analyzed. The second form has only a path to go on, but the paths are
-/// long and particular enough to make a collision unlikely.
+/// One of Gazelle's own generators, under both names it answers to.
 fn gazelle_generator(path: &str) -> Vec<(ProgramId, Entry)> {
-    vec![
-        (gazelle(path), Entry::Spec(always())),
-        (ProgramId::main(path), Entry::SameAs(gazelle(path))),
-    ]
+    under_both_names("gazelle", path, Entry::Spec(always()))
 }
 
 /// Everything Ahab knows about Go builds, in source order.
@@ -118,6 +106,12 @@ mod tests {
     use crate::reproducibility_spec::Conformance;
     use crate::reproducibility_spec::library::Library;
     use crate::reproducibility_spec::per_lang::testing;
+
+    /// A program inside Gazelle, which declares itself as the module
+    /// `gazelle` however its dependents spell the repository.
+    fn gazelle(path: &str) -> ProgramId {
+        ProgramId::module("gazelle", path)
+    }
 
     /// The head of a `compilepkg` command line as rules_go writes it.
     fn compilepkg() -> Vec<&'static str> {

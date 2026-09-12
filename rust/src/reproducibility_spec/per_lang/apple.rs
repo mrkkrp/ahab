@@ -1,4 +1,6 @@
-use super::super::library::{Entry, always, host_derived};
+use super::super::library::{
+    Entry, always, host_derived, under_both_names,
+};
 use super::super::program_id::ProgramId;
 
 /// A program in `apple_support`'s crosstool. Every one ends up at
@@ -8,16 +10,9 @@ fn crosstool(path: &str) -> ProgramId {
     ProgramId::module("apple_support", &format!("crosstool/{path}"))
 }
 
-/// One of `rules_apple`'s tools, under both names it answers to: from the
-/// module for a consumer, from the main repository when `rules_apple`
-/// itself is analyzed. The same loose end as rules_pkg's packaging tools—
-/// the second form matches on path alone.
+/// One of `rules_apple`'s tools, under both names it answers to.
 fn apple_tool(path: &str, spec: Entry) -> Vec<(ProgramId, Entry)> {
-    let module = ProgramId::module("rules_apple", path);
-    vec![
-        (module.clone(), spec),
-        (ProgramId::main(path), Entry::SameAs(module)),
-    ]
+    under_both_names("rules_apple", path, spec)
 }
 
 /// Everything Ahab knows about Apple builds, in source order.

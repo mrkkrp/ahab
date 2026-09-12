@@ -1,20 +1,12 @@
-use std::collections::BTreeSet;
-
-use super::super::library::{Entry, always, aspect_bazel_lib, bazel_lib};
+use super::super::library::{
+    Entry, always, aspect_bazel_lib, bazel_lib, under_both_names,
+};
 use super::super::program_id::ProgramId;
 use super::super::{Clause, Guard, Reproducibility, ReproducibilitySpec};
-use crate::glob::Glob;
 
-/// One of rules_pkg's packaging tools, under both names it answers to: from
-/// the module for a consumer, from the main repository when rules_pkg
-/// itself is analyzed. The second form matches on path alone—the same loose
-/// end as Gazelle's generators.
+/// One of rules_pkg's packaging tools, under both names it answers to.
 fn pkg_tool(path: &str, spec: Entry) -> Vec<(ProgramId, Entry)> {
-    let module = ProgramId::module("rules_pkg", path);
-    vec![
-        (module.clone(), spec),
-        (ProgramId::main(path), Entry::SameAs(module)),
-    ]
+    under_both_names("rules_pkg", path, spec)
 }
 
 /// The command-line compressor shipped by the Brotli module.
@@ -30,11 +22,12 @@ fn bsdtar(module: &str) -> ProgramId {
 }
 
 /// A guard that holds when any of `flags` is on the command line.
-fn given(flags: [&str; 2]) -> Option<Guard> {
-    Some(Guard {
-        family: flags.into_iter().map(Glob::new).collect(),
-        off: BTreeSet::new(),
-    })
+fn given<F>(flags: F) -> Option<Guard>
+where
+    F: IntoIterator,
+    F::Item: AsRef<str>,
+{
+    Some(Guard::on(flags))
 }
 
 /// What libarchive's tar does with time, which is the only thing about it
@@ -45,18 +38,12 @@ fn given(flags: [&str; 2]) -> Option<Guard> {
 /// patterns are whole ones. Every rule set that reaches for this tool spells
 /// its flags out, so the gap costs a missed finding rather than a false one.
 fn bsdtar_spec() -> ReproducibilitySpec {
-    ReproducibilitySpec::new(
-        Reproducibility::Sometimes,
-        [] as [&str; 0],
-        [] as [&str; 0],
-    )
-    // Both are written joined as well as separated; folding brings the two
-    // spellings to one shape.
-    .with_valued_flags(["--mtime", "--options"])
-    .with_clauses(
-        [
-            Clause {
-                when: given(["--create", "-c"]),
+    ReproducibilitySpec::of(Reproducibility::Sometimes)
+        // Both are written joined as well as separated; folding brings the
+        // two spellings to one shape.
+        .with_valued_flags(["--mtime", "--options"])
+        .with_clauses(
+            [
                 // Three ways to state the times rather than read them off
                 // the filesystem: `--mtime`, entries taken from another
                 // archive or a specification (the `@` form), or an mtree
@@ -68,24 +55,20 @@ fn bsdtar_spec() -> ReproducibilitySpec {
                 // claim—a specification naming no times leaves them to the
                 // filesystem after all. The loose end is that one such line
                 // vouches for the rest.
-                any_of: ["--mtime=*", "@*", "* time=*"]
-                    .into_iter()
-                    .map(Glob::new)
-                    .collect(),
-                because: "the times an archive records are the \
-                          filesystem's unless it is told otherwise"
-                    .to_owned(),
-            },
-            Clause {
-                when: given(["--gzip", "-z"]),
-                any_of: [Glob::new("--options=*gzip:!timestamp*")]
-                    .into_iter()
-                    .collect(),
-                because: "gzip records the moment it compressed".to_owned(),
-            },
-        ],
-        [] as [Clause; 0],
-    )
+                Clause::new(
+                    given(["--create", "-c"]),
+                    ["--mtime=*", "@*", "* time=*"],
+                    "the times an archive records are the filesystem's \
+                     unless it is told otherwise",
+                ),
+                Clause::new(
+                    given(["--gzip", "-z"]),
+                    ["--options=*gzip:!timestamp*"],
+                    "gzip records the moment it compressed",
+                ),
+            ],
+            [] as [Clause; 0],
+        )
 }
 
 /// Everything Ahab knows about packaging, in source order.

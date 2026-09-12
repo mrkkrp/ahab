@@ -1,10 +1,10 @@
 //! Finding the absolute paths an action references.
 
-use std::collections::HashSet;
+use std::collections::{HashMap, HashSet};
 
 use analysis_v2_proto::analysis::{Action, ActionGraphContainer};
 
-use super::{ActionRef, LeakSite, Violation, target_labels};
+use super::{ActionRef, LeakSite, Violation};
 use crate::param_files::{analyzable_strings, expanded_command_line};
 use crate::reproducibility_spec::{
     library::Library, program_id::ProgramId,
@@ -226,10 +226,10 @@ fn declared_path_strings<'a>(
 /// governs it—as are the [`ALLOWED_ABSOLUTE_PATHS`].
 pub(super) fn check(
     container: &ActionGraphContainer,
+    targets: &HashMap<u32, &str>,
     library: &Library,
 ) -> Vec<Violation> {
     let mut violations = Vec::new();
-    let targets = target_labels(container);
 
     for action in &container.actions {
         // Resolved at the first path we would report, so that the actions
@@ -263,7 +263,7 @@ pub(super) fn check(
                     continue;
                 }
                 violations.push(Violation::AbsolutePath {
-                    action: ActionRef::of(action, &targets),
+                    action: ActionRef::of(action, targets),
                     path,
                     site: LeakSite::of(sourced),
                 });
@@ -279,7 +279,7 @@ pub(super) fn check(
                     continue;
                 }
                 violations.push(Violation::AbsolutePath {
-                    action: ActionRef::of(action, &targets),
+                    action: ActionRef::of(action, targets),
                     path,
                     site: LeakSite::EnvVar {
                         key: kv.key.clone(),
@@ -298,7 +298,8 @@ mod tests {
     use super::*;
     use crate::checks::EXPECTED_PATH;
     use crate::checks::tests::{
-        action_with_args, action_with_env, assert_abs_path, container,
+        action_with_args, action_with_env, assert_abs_path,
+        check_absolute_paths as check, container,
     };
 
     fn plain(text: &str) -> Vec<String> {

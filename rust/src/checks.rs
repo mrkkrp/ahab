@@ -306,12 +306,17 @@ impl Violation {
             site: None,
         };
 
+        let ran = |kind, action, program| Facets {
+            program: Some(program),
+            ..bare(kind, action)
+        };
+
         match self {
             Violation::EnvironmentLeak {
                 action,
                 source,
-                sentinel: _,
                 site,
+                ..
             } => Facets {
                 source: Some(*source),
                 site: Some(site),
@@ -338,48 +343,22 @@ impl Violation {
                 ..bare("absolute_path", action)
             },
             Violation::SystemProgram {
-                action,
-                program,
-                wrappers: _,
-            } => Facets {
-                program: Some(program),
-                ..bare("system_program", action)
-            },
+                action, program, ..
+            } => ran("system_program", action, program),
             Violation::HostDerivedProgram {
-                action,
-                program,
-                wrappers: _,
-            } => Facets {
-                program: Some(program),
-                ..bare("host_derived_program", action)
-            },
+                action, program, ..
+            } => ran("host_derived_program", action, program),
             Violation::UnknownProgram {
-                action,
-                program,
-                wrappers: _,
-            } => Facets {
-                program: Some(program),
-                ..bare("unknown_program", action)
-            },
+                action, program, ..
+            } => ran("unknown_program", action, program),
             Violation::NeverReproducible {
-                action,
-                program,
-                wrappers: _,
-                synonym: _,
-            } => Facets {
-                program: Some(program),
-                ..bare("never_reproducible", action)
-            },
+                action, program, ..
+            } => ran("never_reproducible", action, program),
             Violation::ConditionalReproducibility {
                 action,
                 program,
-                wrappers: _,
-                synonym: _,
-                unmet: _,
-            } => Facets {
-                program: Some(program),
-                ..bare("conditional_reproducibility", action)
-            },
+                ..
+            } => ran("conditional_reproducibility", action, program),
         }
     }
 
@@ -390,6 +369,9 @@ impl Violation {
         let unknown = "reproducibility unknown";
         let at = |action: &ActionRef| palette.action(&action.to_string());
         let found = |text: &str| palette.finding(text);
+        let ran = |program: &ProgramId| {
+            found(&format!("{:?}", program.to_string()))
+        };
 
         match self {
             Violation::EnvironmentLeak {
@@ -449,7 +431,7 @@ impl Violation {
                 "{hermeticity}: {} runs program {}{}, which comes from \
                  outside the build",
                 at(action),
-                found(&format!("{:?}", program.to_string())),
+                ran(program),
                 provenance(wrappers, None, palette),
             ),
             Violation::HostDerivedProgram {
@@ -461,7 +443,7 @@ impl Violation {
                  work with tools this machine provides rather than ones \
                  the build declares",
                 at(action),
-                found(&format!("{:?}", program.to_string())),
+                ran(program),
                 provenance(wrappers, None, palette),
             ),
             Violation::UnknownProgram {
@@ -472,7 +454,7 @@ impl Violation {
                 "{unknown}: {} runs program {}{}, which has no known \
                  reproducibility spec",
                 at(action),
-                found(&format!("{:?}", program.to_string())),
+                ran(program),
                 provenance(wrappers, None, palette),
             ),
             Violation::NeverReproducible {
@@ -484,7 +466,7 @@ impl Violation {
                 "{reproducibility}: {} runs program {}{}, which is never \
                  reproducible",
                 at(action),
-                found(&format!("{:?}", program.to_string())),
+                ran(program),
                 provenance(wrappers, synonym.as_ref(), palette),
             ),
             Violation::ConditionalReproducibility {
@@ -518,7 +500,7 @@ impl Violation {
                     "{reproducibility}: {} runs program {}{} \
                      non-reproducibly: {}",
                     at(action),
-                    found(&format!("{:?}", program.to_string())),
+                    ran(program),
                     provenance(wrappers, synonym.as_ref(), palette),
                     reasons.join("; "),
                 )
@@ -541,12 +523,15 @@ pub(crate) fn check_all(
     hostname: &str,
     library: &Library,
 ) -> BTreeMap<Violation, usize> {
-    let mut violations = check_environment_leaks(container, user, hostname);
-    violations.extend(check_path(container));
-    violations.extend(absolute_paths::check(container, library));
-    violations.extend(check_execution_requirements(container));
-    violations.extend(check_workspace_status(container));
-    violations.extend(check_reproducibility(container, library));
+    let targets = target_labels(container);
+
+    let mut violations =
+        check_environment_leaks(container, &targets, user, hostname);
+    violations.extend(check_path(container, &targets));
+    violations.extend(absolute_paths::check(container, &targets, library));
+    violations.extend(check_execution_requirements(container, &targets));
+    violations.extend(check_workspace_status(container, &targets));
+    violations.extend(check_reproducibility(container, &targets, library));
 
     let mut counted = BTreeMap::new();
     for violation in violations {
@@ -637,9 +622,9 @@ fn reachable_from_each(
 /// Every action that reads Bazel's workspace status files.
 fn check_workspace_status(
     container: &ActionGraphContainer,
+    targets: &HashMap<u32, &str>,
 ) -> Vec<Violation> {
     let mut violations = Vec::new();
-    let targets = target_labels(container);
 
     let fragments: HashMap<u32, &PathFragment> = container
         .path_fragments
@@ -685,7 +670,7 @@ fn check_workspace_status(
         for id in found {
             if let Some(path) = paths.get(&id) {
                 violations.push(Violation::WorkspaceStatus {
-                    action: ActionRef::of(action, &targets),
+                    action: ActionRef::of(action, targets),
                     path: path.clone(),
                 });
             }
@@ -726,15 +711,15 @@ fn is_non_hermetic_requirement(key: &str) -> bool {
 /// like an ordinary hermetic one.
 fn check_execution_requirements(
     container: &ActionGraphContainer,
+    targets: &HashMap<u32, &str>,
 ) -> Vec<Violation> {
     let mut violations = Vec::new();
-    let targets = target_labels(container);
 
     for action in &container.actions {
         for kv in &action.execution_info {
             if is_non_hermetic_requirement(&kv.key) {
                 violations.push(Violation::ExecutionRequirement {
-                    action: ActionRef::of(action, &targets),
+                    action: ActionRef::of(action, targets),
                     requirement: kv.key.clone(),
                 });
             }
@@ -748,11 +733,11 @@ fn check_execution_requirements(
 /// param files or its environment values.
 fn check_environment_leaks(
     container: &ActionGraphContainer,
+    targets: &HashMap<u32, &str>,
     user: &str,
     hostname: &str,
 ) -> Vec<Violation> {
     let mut violations = Vec::new();
-    let targets = target_labels(container);
 
     for action in &container.actions {
         let scanned = analyzable_strings(action);
@@ -763,7 +748,7 @@ fn check_environment_leaks(
             for sourced in &scanned {
                 if sourced.value.contains(sentinel) {
                     violations.push(Violation::EnvironmentLeak {
-                        action: ActionRef::of(action, &targets),
+                        action: ActionRef::of(action, targets),
                         source,
                         sentinel: sentinel.to_owned(),
                         site: LeakSite::of(*sourced),
@@ -774,7 +759,7 @@ fn check_environment_leaks(
             for kv in &action.environment_variables {
                 if kv.value.contains(sentinel) {
                     violations.push(Violation::EnvironmentLeak {
-                        action: ActionRef::of(action, &targets),
+                        action: ActionRef::of(action, targets),
                         source,
                         sentinel: sentinel.to_owned(),
                         site: LeakSite::EnvVar {
@@ -792,15 +777,17 @@ fn check_environment_leaks(
 
 /// One [`Violation`] per action setting `PATH` to anything but
 /// [`EXPECTED_PATH`].
-fn check_path(container: &ActionGraphContainer) -> Vec<Violation> {
+fn check_path(
+    container: &ActionGraphContainer,
+    targets: &HashMap<u32, &str>,
+) -> Vec<Violation> {
     let mut violations = Vec::new();
-    let targets = target_labels(container);
 
     for action in &container.actions {
         for kv in &action.environment_variables {
             if kv.key == "PATH" && kv.value != EXPECTED_PATH {
                 violations.push(Violation::BadPath {
-                    action: ActionRef::of(action, &targets),
+                    action: ActionRef::of(action, targets),
                     actual: kv.value.clone(),
                 });
             }
@@ -813,10 +800,10 @@ fn check_path(container: &ActionGraphContainer) -> Vec<Violation> {
 /// Each action's program against the library of specs.
 fn check_reproducibility(
     container: &ActionGraphContainer,
+    targets: &HashMap<u32, &str>,
     library: &Library,
 ) -> Vec<Violation> {
     let mut violations = Vec::new();
-    let targets = target_labels(container);
 
     for action in &container.actions {
         let command_line = expanded_command_line(action);
@@ -828,7 +815,7 @@ fn check_reproducibility(
             ProgramId::of(executable.value),
             args.iter().map(|sourced| sourced.value).collect(),
         );
-        let action_ref = || ActionRef::of(action, &targets);
+        let action_ref = || ActionRef::of(action, targets);
         let wrappers = resolved.wrappers.clone();
 
         // Reported as a hermeticity failure rather than as a program we
@@ -885,10 +872,61 @@ fn check_reproducibility(
 
 #[cfg(test)]
 pub(crate) mod tests {
-
     use super::*;
     use crate::reproducibility_spec::program_id::Origin;
     use analysis_v2_proto::analysis::KeyValuePair;
+
+    // Each test exercises one check on its own, so these shims build
+    // the label index the way `check_all` does before handing it over.
+    fn check_environment_leaks(
+        container: &ActionGraphContainer,
+        user: &str,
+        hostname: &str,
+    ) -> Vec<Violation> {
+        super::check_environment_leaks(
+            container,
+            &target_labels(container),
+            user,
+            hostname,
+        )
+    }
+
+    fn check_path(container: &ActionGraphContainer) -> Vec<Violation> {
+        super::check_path(container, &target_labels(container))
+    }
+
+    fn check_execution_requirements(
+        container: &ActionGraphContainer,
+    ) -> Vec<Violation> {
+        super::check_execution_requirements(
+            container,
+            &target_labels(container),
+        )
+    }
+
+    fn check_workspace_status(
+        container: &ActionGraphContainer,
+    ) -> Vec<Violation> {
+        super::check_workspace_status(container, &target_labels(container))
+    }
+
+    fn check_reproducibility(
+        container: &ActionGraphContainer,
+        library: &Library,
+    ) -> Vec<Violation> {
+        super::check_reproducibility(
+            container,
+            &target_labels(container),
+            library,
+        )
+    }
+
+    pub(crate) fn check_absolute_paths(
+        container: &ActionGraphContainer,
+        library: &Library,
+    ) -> Vec<Violation> {
+        absolute_paths::check(container, &target_labels(container), library)
+    }
 
     const USER_SENTINEL: &str = "ahab-user-SENTINEL";
     const HOST_SENTINEL: &str = "ahab-host-SENTINEL";
@@ -1741,7 +1779,7 @@ pub(crate) mod tests {
             1,
             &["/bin/bash", "-c", "true"],
         )]);
-        assert!(absolute_paths::check(&c, &Library::default()).is_empty());
+        assert!(check_absolute_paths(&c, &Library::default()).is_empty());
         assert_eq!(check_reproducibility(&c, &Library::builtin()).len(), 1);
     }
 
@@ -1752,7 +1790,7 @@ pub(crate) mod tests {
             1,
             &["/bin/bash", "-I/usr/include"],
         )]);
-        let found = absolute_paths::check(&c, &Library::default());
+        let found = check_absolute_paths(&c, &Library::default());
         assert_eq!(found.len(), 1);
         assert_abs_path(
             &found[0],
@@ -1772,7 +1810,7 @@ pub(crate) mod tests {
         let found = check_reproducibility(&c, &Library::builtin());
         assert_eq!(found.len(), 1);
         assert!(matches!(found[0], Violation::SystemProgram { .. }));
-        assert!(absolute_paths::check(&c, &Library::default()).is_empty());
+        assert!(check_absolute_paths(&c, &Library::default()).is_empty());
     }
 
     #[test]
@@ -1904,7 +1942,7 @@ pub(crate) mod tests {
         let mut individually =
             check_environment_leaks(&c, USER_SENTINEL, HOST_SENTINEL);
         individually.extend(check_path(&c));
-        individually.extend(absolute_paths::check(&c, &Library::default()));
+        individually.extend(check_absolute_paths(&c, &Library::default()));
         individually.extend(check_reproducibility(&c, &Library::builtin()));
 
         let combined = check_all(
@@ -2033,7 +2071,7 @@ pub(crate) mod tests {
             &["clang", "@out/foo.params"],
             &[("out/foo.params", &["-L/opt/lib"])],
         )]);
-        let found = absolute_paths::check(&c, &Library::default());
+        let found = check_absolute_paths(&c, &Library::default());
         assert_eq!(found.len(), 1, "{found:?}");
         match &found[0] {
             Violation::AbsolutePath { path, site, .. } => {
@@ -2058,7 +2096,7 @@ pub(crate) mod tests {
             &["clang", "-fmodule-map-file=out/m.cppmap"],
             &[("out/m.cppmap", &["umbrella \"/usr/include\""])],
         )]);
-        let found = absolute_paths::check(&c, &Library::default());
+        let found = check_absolute_paths(&c, &Library::default());
         assert_eq!(found.len(), 1, "{found:?}");
     }
 
@@ -2070,7 +2108,7 @@ pub(crate) mod tests {
             &["clang", "@out/foo.params", "@out/foo.params"],
             &[("out/foo.params", &["-L/opt/lib"])],
         )]);
-        assert_eq!(absolute_paths::check(&c, &Library::default()).len(), 1);
+        assert_eq!(check_absolute_paths(&c, &Library::default()).len(), 1);
     }
 
     #[test]

@@ -34,6 +34,18 @@ pub enum Reproducibility {
 /// How a program's raw arguments are read as canonical options.
 pub type Recognize = Arc<dyn Fn(&str) -> Option<String> + Send + Sync>;
 
+/// Compile patterns into the set every rule here matches against.
+pub fn globs<P>(patterns: P) -> BTreeSet<Glob>
+where
+    P: IntoIterator,
+    P::Item: AsRef<str>,
+{
+    patterns
+        .into_iter()
+        .map(|pattern| Glob::new(pattern.as_ref()))
+        .collect()
+}
+
 /// A condition on an invocation, by which a [`Clause`] applies or does not:
 /// a family of flags that turn something on, and those that turn it off.
 #[derive(Debug, Clone, PartialEq, Eq, Default)]
@@ -42,6 +54,34 @@ pub struct Guard {
     pub family: BTreeSet<Glob>,
     /// Flags of the same family that turn it off again.
     pub off: BTreeSet<Glob>,
+}
+
+impl Guard {
+    /// A condition nothing turns off again.
+    pub fn on<F>(family: F) -> Guard
+    where
+        F: IntoIterator,
+        F::Item: AsRef<str>,
+    {
+        Guard {
+            family: globs(family),
+            off: BTreeSet::new(),
+        }
+    }
+
+    /// A condition `off` turns back off.
+    pub fn toggled<F, O>(family: F, off: O) -> Guard
+    where
+        F: IntoIterator,
+        F::Item: AsRef<str>,
+        O: IntoIterator,
+        O::Item: AsRef<str>,
+    {
+        Guard {
+            family: globs(family),
+            off: globs(off),
+        }
+    }
 }
 
 impl Guard {
@@ -78,13 +118,23 @@ pub struct Clause {
 }
 
 impl Clause {
-    /// A clause that always applies, phrased as a single pattern.
-    fn plain(pattern: &str, because: &str) -> Self {
+    /// A clause satisfied by any one of `any_of`, applying only where
+    /// `when` holds.
+    pub fn new<P>(when: Option<Guard>, any_of: P, because: &str) -> Clause
+    where
+        P: IntoIterator,
+        P::Item: AsRef<str>,
+    {
         Clause {
-            when: None,
-            any_of: [Glob::new(pattern)].into_iter().collect(),
+            when,
+            any_of: globs(any_of),
             because: because.to_owned(),
         }
+    }
+
+    /// A clause that always applies, phrased as a single pattern.
+    fn plain(pattern: &str, because: &str) -> Clause {
+        Clause::new(None, [pattern], because)
     }
 
     /// Whether the clause has anything to say about these arguments.
@@ -179,6 +229,16 @@ impl PartialEq for ReproducibilitySpec {
 impl Eq for ReproducibilitySpec {}
 
 impl ReproducibilitySpec {
+    /// A spec that is its disposition and nothing else, for a program no
+    /// flag can help or hurt.
+    pub fn of(reproducibility: Reproducibility) -> ReproducibilitySpec {
+        ReproducibilitySpec::new(
+            reproducibility,
+            [] as [&str; 0],
+            [] as [&str; 0],
+        )
+    }
+
     /// Construct a spec from a baseline disposition and the unconditional
     /// flags, each becoming a clause of its own that always applies. A
     /// condition or a choice needs [`Self::with_clauses`]. The recognizer
@@ -225,12 +285,9 @@ impl ReproducibilitySpec {
     pub fn with_valued_flags<F>(mut self, flags: F) -> Self
     where
         F: IntoIterator,
-        F::Item: Into<String>,
+        F::Item: AsRef<str>,
     {
-        self.takes_value = flags
-            .into_iter()
-            .map(|flag| Glob::new(&flag.into()))
-            .collect();
+        self.takes_value = globs(flags);
         self
     }
 
@@ -240,12 +297,9 @@ impl ReproducibilitySpec {
     pub fn with_declared_paths<P>(mut self, patterns: P) -> Self
     where
         P: IntoIterator,
-        P::Item: Into<String>,
+        P::Item: AsRef<str>,
     {
-        self.declared_paths = patterns
-            .into_iter()
-            .map(|pattern| Glob::new(&pattern.into()))
-            .collect();
+        self.declared_paths = globs(patterns);
         self
     }
 
