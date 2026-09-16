@@ -1,4 +1,4 @@
-load("@bazel_skylib//rules:common_settings.bzl", "bool_flag")
+load("@ahab_module_info//:defs.bzl", "AHAB_IS_ROOT")
 load("//:defs.bzl", "ahab")
 
 package(default_visibility = ["//visibility:public"])
@@ -8,22 +8,12 @@ exports_files([
     "MODULE.bazel",
 ])
 
-bool_flag(
-    name = "from_source",
-    build_setting_default = False,
-)
-
-config_setting(
-    name = "source_build",
-    flag_values = {":from_source": "True"},
-)
-
 alias(
     name = "ahab_bin",
-    actual = select({
-        ":source_build": "//rust:ahab",
-        "//conditions:default": "@ahab_prebuilt//:ahab",
-    }),
+    # Query follows every branch of a select() and //rust cannot be loaded
+    # without the build dependencies that only the root module has,
+    # therefore we cannot rely on a select() here.
+    actual = "//rust:ahab" if AHAB_IS_ROOT else "@ahab_prebuilt//:ahab",
 )
 
 ahab(

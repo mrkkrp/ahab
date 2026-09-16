@@ -1,4 +1,4 @@
-load("@ahab_version//:defs.bzl", "AHAB_VERSION")
+load("@ahab_module_info//:defs.bzl", "AHAB_VERSION")
 load(
     "@rules_rust//rust:defs.bzl",
     "rust_binary",

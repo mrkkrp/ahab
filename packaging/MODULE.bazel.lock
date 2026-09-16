@@ -192,10 +192,28 @@
   },
   "selectedYankedVersions": {},
   "moduleExtensions": {
+    "@@ahab+//private:extensions.bzl%module_info": {
+      "general": {
+        "bzlTransitiveDigest": "RWkRuJW3D8AsvhxSXq2xdjZVk6iuqi1832m6Gw/CQGU=",
+        "usagesDigest": "UvwCK2A/Xa1aXedbCcluak4oPCMWXdGiFgnJfvi3B4s=",
+        "recordedInputs": [
+          "REPO_MAPPING:ahab+,bazel_tools bazel_tools"
+        ],
+        "generatedRepoSpecs": {
+          "ahab_module_info": {
+            "repoRuleId": "@@ahab+//private:extensions.bzl%_module_info_repo",
+            "attributes": {
+              "is_root": false,
+              "version": "0.2.1"
+            }
+          }
+        }
+      }
+    },
     "@@ahab+//private:extensions.bzl%prebuilt": {
       "general": {
-        "bzlTransitiveDigest": "mCQstpRT2OT1ABGfP7yFbPU0XSKSKehVYZzLDc+xm8c=",
-        "usagesDigest": "2OFGLL235T7gGcbD+QmuweWSGayt1vr/ROVNsQCM/dY=",
+        "bzlTransitiveDigest": "RWkRuJW3D8AsvhxSXq2xdjZVk6iuqi1832m6Gw/CQGU=",
+        "usagesDigest": "07aEFxhVSUpcWkMM0F9rZTo1L0qRrqXOxr5uS6LQa3Y=",
         "recordedInputs": [
           "REPO_MAPPING:ahab+,bazel_tools bazel_tools"
         ],
@@ -203,7 +221,7 @@
           "ahab_prebuilt": {
             "repoRuleId": "@@ahab+//private:extensions.bzl%_hub",
             "attributes": {
-              "version": "0.1.0"
+              "version": "0.2.1"
             }
           }
         }

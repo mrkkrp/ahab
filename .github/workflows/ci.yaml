@@ -61,6 +61,7 @@ jobs:
           bazel run //:ahab.report
           bazel run //:ahab.check
           bazel run //:ahab.explain
+          bazel query 'deps(//...)' > /dev/null
       - name: Check that Ahab can be consumed as a module (Bazel 8)
         if: ${{ !cancelled() }}
         working-directory: packaging
@@ -71,6 +72,7 @@ jobs:
           bazel run //:ahab.report
           bazel run //:ahab.check
           bazel run //:ahab.explain
+          bazel query 'deps(//...)' > /dev/null
   fishery:
     name: Fishery ${{ matrix.shard }}/${{ strategy.job-total }}
     runs-on: ubuntu-latest
