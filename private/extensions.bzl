@@ -121,45 +121,49 @@ _hub = repository_rule(
     doc = "Picks the binary for the platform being built for.",
 )
 
-def _ahab_version(module_ctx):
-    """The version of the module that declared this extension.
+def _ahab_module(module_ctx):
+    """The Ahab module that declared this extension.
     """
     for mod in module_ctx.modules:
         if mod.name == "ahab":
-            return mod.version
-    fail("the prebuilt extension was evaluated without the ahab module")
+            return mod
+    fail("this extension was evaluated without the ahab module")
 
-_VERSION_BUILD = """\
+_MODULE_INFO_BUILD = """\
 exports_files(["defs.bzl"])
 """
 
-def _version_impl(repository_ctx):
-    repository_ctx.file("BUILD.bazel", _VERSION_BUILD)
-    repository_ctx.file("defs.bzl", 'AHAB_VERSION = "{version}"\n'.format(
+def _module_info_impl(repository_ctx):
+    repository_ctx.file("BUILD.bazel", _MODULE_INFO_BUILD)
+    repository_ctx.file("defs.bzl", 'AHAB_VERSION = "{version}"\nAHAB_IS_ROOT = {is_root}\n'.format(
         version = repository_ctx.attr.version,
+        is_root = repository_ctx.attr.is_root,
     ))
 
-_version_repo = repository_rule(
-    implementation = _version_impl,
+_module_info_repo = repository_rule(
+    implementation = _module_info_impl,
     attrs = {
+        "is_root": attr.bool(mandatory = True),
         "version": attr.string(mandatory = True),
     },
-    doc = "Hands `module()`'s version to the BUILD files that need it.",
+    doc = "Hands the module's version and root status to its BUILD files.",
 )
 
-def _version_extension_impl(module_ctx):
-    _version_repo(
-        name = "ahab_version",
-        version = _ahab_version(module_ctx),
+def _module_info_extension_impl(module_ctx):
+    ahab = _ahab_module(module_ctx)
+    _module_info_repo(
+        name = "ahab_module_info",
+        is_root = ahab.is_root,
+        version = ahab.version,
     )
 
-version = module_extension(
-    implementation = _version_extension_impl,
-    doc = "Makes the module's own version available to `//rust`.",
+module_info = module_extension(
+    implementation = _module_info_extension_impl,
+    doc = "Makes the module's version and root status available to BUILD files.",
 )
 
 def _prebuilt_impl(module_ctx):
-    version = _ahab_version(module_ctx)
+    version = _ahab_module(module_ctx).version
     for platform, sha256 in AHAB_PREBUILT.items():
         http_archive(
             name = "ahab_prebuilt_" + platform,

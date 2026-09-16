@@ -295,17 +295,18 @@
   },
   "selectedYankedVersions": {},
   "moduleExtensions": {
-    "//private:extensions.bzl%version": {
+    "//private:extensions.bzl%module_info": {
       "general": {
-        "bzlTransitiveDigest": "0ENTGUFWBYwhLdmvN1x+55XYxiQjTbyzoDMYXWFhn9E=",
-        "usagesDigest": "AfttaV305xs6GpETIGa37jzIGCvqkBvEMt6Gyl1dqig=",
+        "bzlTransitiveDigest": "RWkRuJW3D8AsvhxSXq2xdjZVk6iuqi1832m6Gw/CQGU=",
+        "usagesDigest": "KvAn1c+IhKsRzDGcHP/YhO3fXfZVoMxXxwBwrNaqyvs=",
         "recordedInputs": [
           "REPO_MAPPING:,bazel_tools bazel_tools"
         ],
         "generatedRepoSpecs": {
-          "ahab_version": {
-            "repoRuleId": "@@//private:extensions.bzl%_version_repo",
+          "ahab_module_info": {
+            "repoRuleId": "@@//private:extensions.bzl%_module_info_repo",
             "attributes": {
+              "is_root": true,
               "version": "0.2.1"
             }
           }

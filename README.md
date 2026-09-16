@@ -555,17 +555,11 @@ failed build teaches people to stop fixing things.
 ## Development
 
 Ahab builds itself from source, which is what the rest of this section
-assumes: `.bazelrc` sets `--//:from_source=True`, and the dependencies that
-a consumer never sees—`rules_rs`, the Rust toolchain, the crates, protobuf—
-are active because Ahab is the root module. `//:ahab_bin` is the binary the
-macros run, and it is `//rust:ahab` here and the downloaded one elsewhere.
-
-The Linux release binaries are static, built against musl by asking for one
-of the platforms rules_rs publishes:
-
-```
-bazel build --platforms=@rules_rs//rs/platforms:x86_64-unknown-linux-musl //rust:ahab
-```
+assumes: the dependencies that a consumer never sees—`rules_rs`, the Rust
+toolchain, the crates, protobuf—are active because Ahab is the root module.
+`//:ahab_bin` is the binary the macros run and it gets dispatched to a
+prebuilt one for the users and to a normal `rust_binary` target during
+development.
 
 Some useful commands while developing:
 

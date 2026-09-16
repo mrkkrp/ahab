@@ -61,6 +61,14 @@
   insists on the flag having a value even when compile-time extraction reads
   no binary.
 
+* A `bazel query` run by a module that depends on Ahab works again.
+  `//:ahab_bin` used to choose between the built binary and the downloaded
+  one with a `select()`, and `bazel query`, which follows both branches,
+  tried to load `//rust`, whose build dependencies a consumer does not have
+  and is not meant to have. The choice is now made while BUILD files load,
+  from whether Ahab is the root module. The `--//:from_source` flag is gone
+  with the `select()` that read it.
+
 ## Ahab 0.2.1
 
 * Add reproducibility specs for Closure and J2CL build tools, the metadata
