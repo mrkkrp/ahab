@@ -1,4 +1,4 @@
-## Unreleased
+## Ahab 0.3.0
 
 * A `/` roots a path only where something in the text says a value begins
   there, and the list of such things is closed: the start of the text, a

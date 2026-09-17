@@ -298,7 +298,7 @@
     "//private:extensions.bzl%module_info": {
       "general": {
         "bzlTransitiveDigest": "RWkRuJW3D8AsvhxSXq2xdjZVk6iuqi1832m6Gw/CQGU=",
-        "usagesDigest": "KvAn1c+IhKsRzDGcHP/YhO3fXfZVoMxXxwBwrNaqyvs=",
+        "usagesDigest": "+wqoaUoECJUPYap1LFaqmaUZiLLnwIctUOYeaDWXpG8=",
         "recordedInputs": [
           "REPO_MAPPING:,bazel_tools bazel_tools"
         ],
@@ -307,7 +307,7 @@
             "repoRuleId": "@@//private:extensions.bzl%_module_info_repo",
             "attributes": {
               "is_root": true,
-              "version": "0.2.1"
+              "version": "0.3.0"
             }
           }
         }
