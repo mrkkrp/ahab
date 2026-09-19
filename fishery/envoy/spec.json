@@ -1,6 +1,7 @@
 {
   "repo": "https://github.com/envoyproxy/envoy",
   "commit": "8eea3285d6bdb89f8ea34632cfe7ce1608a8f374",
+  "module_name": "envoy",
   "label": "//source/common/...",
   "configs": [],
   "weight": 4

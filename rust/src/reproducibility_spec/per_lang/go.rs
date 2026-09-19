@@ -1,4 +1,4 @@
-use super::super::library::{Entry, always, under_both_names};
+use super::super::library::{Entry, always};
 use super::super::program_id::ProgramId;
 
 /// A program the `go_sdk` extension downloads and unpacks.
@@ -19,9 +19,9 @@ fn metadata_merger(platform: &str) -> ProgramId {
     )
 }
 
-/// One of Gazelle's own generators, under both names it answers to.
-fn gazelle_generator(path: &str) -> Vec<(ProgramId, Entry)> {
-    under_both_names("gazelle", path, Entry::Spec(always()))
+/// One of Gazelle's own generators.
+fn gazelle_generator(path: &str) -> (ProgramId, Entry) {
+    (ProgramId::module("gazelle", path), Entry::Spec(always()))
 }
 
 /// Everything Ahab knows about Go builds, in source order.
@@ -66,17 +66,19 @@ pub(in crate::reproducibility_spec) fn entries() -> Vec<(ProgramId, Entry)>
     // file the build handed it—a CSV of proto imports, the SDK's package
     // list—into a Go source file. Here because the alternative is that
     // everyone who uses Gazelle writes the same three specs.
-    .chain(gazelle_generator(
-        "language/proto/gen/gen_known_imports_/gen_known_imports",
-    ))
-    .chain(gazelle_generator(
-        "language/go/gen_std_package_list/gen_std_package_list_\
-         /gen_std_package_list",
-    ))
-    .chain(gazelle_generator(
-        "language/go/platform_info_generator/platform_info_generator_\
-         /platform_info_generator",
-    ))
+    .chain([
+        gazelle_generator(
+            "language/proto/gen/gen_known_imports_/gen_known_imports",
+        ),
+        gazelle_generator(
+            "language/go/gen_std_package_list/gen_std_package_list_\
+             /gen_std_package_list",
+        ),
+        gazelle_generator(
+            "language/go/platform_info_generator/platform_info_generator_\
+             /platform_info_generator",
+        ),
+    ])
     // The yacc of the Go world, reached through Gazelle's `go_deps`. It
     // reads no clock and no environment, and the single map it keeps is
     // only indexed, never ranged over—which is where a Go program of this
@@ -194,25 +196,24 @@ mod tests {
     const STD_PACKAGE_LIST: &str = "language/go/gen_std_package_list\
          /gen_std_package_list_/gen_std_package_list";
 
-    #[test]
-    fn gazelles_generators_answer_to_both_of_their_names() {
-        for path in [
+    /// The three paths [`gazelle_generator`] names.
+    fn generators() -> [&'static str; 3] {
+        [
             "language/proto/gen/gen_known_imports_/gen_known_imports",
             STD_PACKAGE_LIST,
             "language/go/platform_info_generator\
              /platform_info_generator_/platform_info_generator",
-        ] {
-            let from_module =
-                Library::builtin().resolve(gazelle(path), vec![]);
-            assert!(from_module.spec.is_some(), "{path} from the module");
+        ]
+    }
 
-            let from_main =
-                Library::builtin().resolve(ProgramId::main(path), vec![]);
-            let (_, spec) =
-                from_main.spec.clone().expect("a spec in the main module");
-            assert_eq!(from_main.synonym(), Some(&gazelle(path)), "{path}");
+    #[test]
+    fn gazelles_generators_are_vouched_for() {
+        for path in generators() {
+            let resolved =
+                Library::builtin(None).resolve(gazelle(path), vec![]);
+            let (_, spec) = resolved.spec.expect("a spec");
             assert_eq!(
-                spec.assess(from_main.args),
+                spec.assess(resolved.args),
                 Conformance::Reproducible,
                 "{path}",
             );
@@ -220,11 +221,34 @@ mod tests {
     }
 
     #[test]
+    fn they_answer_the_same_when_gazelle_analyzes_itself() {
+        // Gazelle's own build runs them out of the main repository, which
+        // is the same three programs under a name that says nothing about
+        // whose they are—until `--module-name` says.
+        let library = Library::builtin(Some("gazelle"));
+        for path in generators() {
+            let resolved = library.resolve(ProgramId::main(path), vec![]);
+            assert_eq!(resolved.program, gazelle(path), "{path}");
+            assert_eq!(resolved.synonym(), None, "{path}");
+            assert!(resolved.spec.is_some(), "{path}");
+        }
+    }
+
+    #[test]
+    fn unattributed_they_are_nobodys_program() {
+        for path in generators() {
+            let resolved = Library::builtin(None)
+                .resolve(ProgramId::main(path), vec![]);
+            assert!(resolved.spec.is_none(), "{path}");
+        }
+    }
+
+    #[test]
     fn the_builder_is_named_by_the_extension_that_downloads_it() {
-        let resolution = Library::builtin()
+        let resolution = Library::builtin(None)
             .resolve(go_sdk("builder_reset/builder"), vec!["compilepkg"]);
         assert!(resolution.spec.is_some());
-        let elsewhere = Library::builtin().resolve(
+        let elsewhere = Library::builtin(None).resolve(
             ProgramId::module("rules_go", "builder_reset/builder"),
             vec!["compilepkg"],
         );

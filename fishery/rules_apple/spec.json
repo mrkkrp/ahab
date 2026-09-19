@@ -1,6 +1,7 @@
 {
   "repo": "https://github.com/bazelbuild/rules_apple",
   "commit": "74a3c3a2eb3d9c6432a32c158fc11e0cfaa4f881",
+  "module_name": "rules_apple",
   "label": "deps(//examples/ios/HelloWorldSwift:HelloWorldSwift)",
   "configs": [],
   "flags": [

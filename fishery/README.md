@@ -71,6 +71,7 @@ here; only the first two are required:
 {
   "repo": "https://gitlab.arm.com/bazel/rules_tar",
   "commit": "c7da674bdea961c1f8f955a3cad5837251e0cc38",
+  "module_name": "e2e",
   "label": "//...",
   "configs": [],
   "flags": [],
@@ -84,12 +85,20 @@ here; only the first two are required:
 | ------------------ | ------------------- | ------------------------------ |
 | `repo`             | required            | anything `git fetch` accepts   |
 | `commit`           | required            | a full 40-character SHA        |
+| `module_name`      | none                | the analyzed workspace's own   |
 | `label`            | `//...`             | what to analyze                |
 | `configs`          | `[]`                | `--config` values to forward   |
 | `flags`            | `[]`                | Bazel flags to forward         |
 | `compilation_mode` | the project's own   | `fastbuild`, `dbg` or `opt`    |
 | `workspace`        | the root workspace  | a workspace nested inside it   |
 | `weight`           | `1`                 | how costly this one is to run  |
+
+`module_name` is the `module(name = …)` of the `MODULE.bazel` being
+analyzed. It goes to `--module-name`, which is what lets a rule set analyzed
+by the fishery see its own tools the way its consumers do:
+`@rules_pkg//pkg/private/tar/build_tar` rather than a bare
+`//pkg/private/tar/build_tar` that names no module at all. Leave it out for
+a workspace that declares no module—a scratch `e2e/` often does not.
 
 `flags` are handed to `bazel aquery` as they stand, through Ahab's
 `--bazel-flag`. `configs` covers a project that has already written the

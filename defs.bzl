@@ -10,6 +10,8 @@ def _ahab_impl(ctx):
         args.append("--config=" + config)
     if ctx.attr.compilation_mode:
         args.append("--compilation-mode=" + ctx.attr.compilation_mode)
+    if ctx.attr.module_name:
+        args.append("--module-name=" + ctx.attr.module_name)
     for flag in ctx.attr.bazel_flags:
         args.append("--bazel-flag=" + flag)
     if ctx.attr.shut_up:
@@ -107,6 +109,9 @@ _ahab = rule(
         "compilation_mode": attr.string(
             doc = "The compilation mode to analyze, e.g. `dbg`.",
         ),
+        "module_name": attr.string(
+            doc = "The module name this workspace publishes as.",
+        ),
         "bazel_flags": attr.string_list(
             doc = "Flags to hand to `bazel aquery` as they stand.",
         ),
@@ -201,6 +206,7 @@ def ahab(
         label = None,
         configs = [],
         compilation_mode = None,
+        module_name = None,
         bazel_flags = [],
         shut_up = False,
         no_fail = False,
@@ -228,6 +234,9 @@ def ahab(
       compilation_mode: The compilation mode to analyze—`fastbuild`, `dbg`
         or `opt`. Defaults to whatever the project's own configuration
         chooses.
+      module_name: The `module(name = …)` this workspace publishes as.
+        Programs it builds are then named the way a consumer of it would
+        see them, instead of by path alone.
       bazel_flags: Flags handed to `bazel aquery` as they stand.
       shut_up: Suppress the Moby-Dick quote appended to the report.
       no_fail: Print the report but exit 0 even when there are violations.
@@ -255,6 +264,7 @@ def ahab(
         label = label,
         configs = configs,
         compilation_mode = compilation_mode,
+        module_name = module_name,
         bazel_flags = bazel_flags,
         shut_up = shut_up,
         no_fail = no_fail,
@@ -302,6 +312,7 @@ def ahab_check(
         baseline,
         configs = [],
         compilation_mode = None,
+        module_name = None,
         bazel_flags = [],
         shut_up = False,
         repro_specs = [],
@@ -326,6 +337,9 @@ def ahab_check(
       compilation_mode: The compilation mode to analyze—`fastbuild`, `dbg`
         or `opt`. Defaults to whatever the project's own configuration
         chooses.
+      module_name: The `module(name = …)` this workspace publishes as.
+        Programs it builds are then named the way a consumer of it would
+        see them, instead of by path alone.
       bazel_flags: Flags handed to `bazel aquery` as they stand.
       shut_up: Suppress the Moby-Dick quote appended to the report.
       repro_specs: Reproducibility specs; see `ahab`.
@@ -338,6 +352,7 @@ def ahab_check(
         expect_json = baseline,
         configs = configs,
         compilation_mode = compilation_mode,
+        module_name = module_name,
         bazel_flags = bazel_flags,
         shut_up = shut_up,
         repro_specs = repro_specs,
@@ -351,6 +366,7 @@ def ahab_update(
         baseline,
         configs = [],
         compilation_mode = None,
+        module_name = None,
         bazel_flags = [],
         shut_up = False,
         repro_specs = [],
@@ -378,6 +394,9 @@ def ahab_update(
       compilation_mode: The compilation mode to analyze—`fastbuild`, `dbg`
         or `opt`. Defaults to whatever the project's own configuration
         chooses.
+      module_name: The `module(name = …)` this workspace publishes as.
+        Programs it builds are then named the way a consumer of it would
+        see them, instead of by path alone.
       bazel_flags: Flags handed to `bazel aquery` as they stand.
       shut_up: Suppress the Moby-Dick quote appended to the report.
       repro_specs: Reproducibility specs; see `ahab`.
@@ -391,6 +410,7 @@ def ahab_update(
         no_fail = True,
         configs = configs,
         compilation_mode = compilation_mode,
+        module_name = module_name,
         bazel_flags = bazel_flags,
         shut_up = shut_up,
         repro_specs = repro_specs,

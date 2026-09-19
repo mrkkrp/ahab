@@ -139,10 +139,11 @@ ahab_explain(
 ### The macros
 
 `ahab` takes `label`, `configs`, `bazel_flags`, `compilation_mode`,
-`repro_specs`, `exceptions`, `shut_up`, `no_fail`, `write_json`,
-`explain_json` and `expect_json`. The three wrappers take the subset that
-makes sense for them, plus `baseline` or `report`. All of them pass
-unrecognized arguments through, so `visibility` and `tags` work as usual.
+`module_name`, `repro_specs`, `exceptions`, `shut_up`, `no_fail`,
+`write_json`, `explain_json` and `expect_json`. The three wrappers take the
+subset that makes sense for them, plus `baseline` or `report`. All of them
+pass unrecognized arguments through, so `visibility` and `tags` work as
+usual.
 
 `configs` forwards `--config=<name>` values to the underlying `aquery`,
 which matters when the thing worth analyzing is a particular configuration.

@@ -1181,7 +1181,8 @@
         },
         "program": {
           "origin": {
-            "main": {
+            "module": {
+              "name": "aspect_rules_js",
               "extension": null
             }
           },
@@ -1200,7 +1201,8 @@
         },
         "program": {
           "origin": {
-            "main": {
+            "module": {
+              "name": "aspect_rules_js",
               "extension": null
             }
           },
@@ -1219,7 +1221,8 @@
         },
         "program": {
           "origin": {
-            "main": {
+            "module": {
+              "name": "aspect_rules_js",
               "extension": null
             }
           },
@@ -1238,7 +1241,8 @@
         },
         "program": {
           "origin": {
-            "main": {
+            "module": {
+              "name": "aspect_rules_js",
               "extension": null
             }
           },
@@ -1257,7 +1261,8 @@
         },
         "program": {
           "origin": {
-            "main": {
+            "module": {
+              "name": "aspect_rules_js",
               "extension": null
             }
           },
@@ -1276,7 +1281,8 @@
         },
         "program": {
           "origin": {
-            "main": {
+            "module": {
+              "name": "aspect_rules_js",
               "extension": null
             }
           },
@@ -1295,7 +1301,8 @@
         },
         "program": {
           "origin": {
-            "main": {
+            "module": {
+              "name": "aspect_rules_js",
               "extension": null
             }
           },
@@ -1314,7 +1321,8 @@
         },
         "program": {
           "origin": {
-            "main": {
+            "module": {
+              "name": "aspect_rules_js",
               "extension": null
             }
           },
@@ -1333,7 +1341,8 @@
         },
         "program": {
           "origin": {
-            "main": {
+            "module": {
+              "name": "aspect_rules_js",
               "extension": null
             }
           },
@@ -1352,7 +1361,8 @@
         },
         "program": {
           "origin": {
-            "main": {
+            "module": {
+              "name": "aspect_rules_js",
               "extension": null
             }
           },
@@ -1371,7 +1381,8 @@
         },
         "program": {
           "origin": {
-            "main": {
+            "module": {
+              "name": "aspect_rules_js",
               "extension": null
             }
           },
@@ -1390,7 +1401,8 @@
         },
         "program": {
           "origin": {
-            "main": {
+            "module": {
+              "name": "aspect_rules_js",
               "extension": null
             }
           },
@@ -1409,7 +1421,8 @@
         },
         "program": {
           "origin": {
-            "main": {
+            "module": {
+              "name": "aspect_rules_js",
               "extension": null
             }
           },
@@ -1428,7 +1441,8 @@
         },
         "program": {
           "origin": {
-            "main": {
+            "module": {
+              "name": "aspect_rules_js",
               "extension": null
             }
           },
@@ -1447,7 +1461,8 @@
         },
         "program": {
           "origin": {
-            "main": {
+            "module": {
+              "name": "aspect_rules_js",
               "extension": null
             }
           },
@@ -1466,7 +1481,8 @@
         },
         "program": {
           "origin": {
-            "main": {
+            "module": {
+              "name": "aspect_rules_js",
               "extension": null
             }
           },
@@ -1485,7 +1501,8 @@
         },
         "program": {
           "origin": {
-            "main": {
+            "module": {
+              "name": "aspect_rules_js",
               "extension": null
             }
           },
@@ -1504,7 +1521,8 @@
         },
         "program": {
           "origin": {
-            "main": {
+            "module": {
+              "name": "aspect_rules_js",
               "extension": null
             }
           },
@@ -1523,7 +1541,8 @@
         },
         "program": {
           "origin": {
-            "main": {
+            "module": {
+              "name": "aspect_rules_js",
               "extension": null
             }
           },
@@ -1542,7 +1561,8 @@
         },
         "program": {
           "origin": {
-            "main": {
+            "module": {
+              "name": "aspect_rules_js",
               "extension": null
             }
           },
@@ -1561,7 +1581,8 @@
         },
         "program": {
           "origin": {
-            "main": {
+            "module": {
+              "name": "aspect_rules_js",
               "extension": null
             }
           },
@@ -1580,7 +1601,8 @@
         },
         "program": {
           "origin": {
-            "main": {
+            "module": {
+              "name": "aspect_rules_js",
               "extension": null
             }
           },
@@ -1599,7 +1621,8 @@
         },
         "program": {
           "origin": {
-            "main": {
+            "module": {
+              "name": "aspect_rules_js",
               "extension": null
             }
           },
@@ -1618,7 +1641,8 @@
         },
         "program": {
           "origin": {
-            "main": {
+            "module": {
+              "name": "aspect_rules_js",
               "extension": "pnpm"
             }
           },
@@ -1637,7 +1661,8 @@
         },
         "program": {
           "origin": {
-            "main": {
+            "module": {
+              "name": "aspect_rules_js",
               "extension": "pnpm"
             }
           },
@@ -1656,7 +1681,8 @@
         },
         "program": {
           "origin": {
-            "main": {
+            "module": {
+              "name": "aspect_rules_js",
               "extension": null
             }
           },
@@ -1675,7 +1701,8 @@
         },
         "program": {
           "origin": {
-            "main": {
+            "module": {
+              "name": "aspect_rules_js",
               "extension": null
             }
           },
@@ -1694,7 +1721,8 @@
         },
         "program": {
           "origin": {
-            "main": {
+            "module": {
+              "name": "aspect_rules_js",
               "extension": null
             }
           },
@@ -1713,7 +1741,8 @@
         },
         "program": {
           "origin": {
-            "main": {
+            "module": {
+              "name": "aspect_rules_js",
               "extension": null
             }
           },
@@ -1732,7 +1761,8 @@
         },
         "program": {
           "origin": {
-            "main": {
+            "module": {
+              "name": "aspect_rules_js",
               "extension": null
             }
           },
@@ -1751,7 +1781,8 @@
         },
         "program": {
           "origin": {
-            "main": {
+            "module": {
+              "name": "aspect_rules_js",
               "extension": null
             }
           },
@@ -1770,7 +1801,8 @@
         },
         "program": {
           "origin": {
-            "main": {
+            "module": {
+              "name": "aspect_rules_js",
               "extension": null
             }
           },
@@ -1789,7 +1821,8 @@
         },
         "program": {
           "origin": {
-            "main": {
+            "module": {
+              "name": "aspect_rules_js",
               "extension": null
             }
           },
@@ -1808,7 +1841,8 @@
         },
         "program": {
           "origin": {
-            "main": {
+            "module": {
+              "name": "aspect_rules_js",
               "extension": null
             }
           },
@@ -1827,7 +1861,8 @@
         },
         "program": {
           "origin": {
-            "main": {
+            "module": {
+              "name": "aspect_rules_js",
               "extension": null
             }
           },
@@ -1846,22 +1881,15 @@
         },
         "program": {
           "origin": {
-            "main": {
-              "extension": null
-            }
-          },
-          "path": "npm/private/lifecycle/min/bin_/bin"
-        },
-        "wrappers": [],
-        "synonym": {
-          "origin": {
             "module": {
               "name": "aspect_rules_js",
               "extension": null
             }
           },
           "path": "npm/private/lifecycle/min/bin_/bin"
-        }
+        },
+        "wrappers": [],
+        "synonym": null
       }
     },
     {
@@ -1874,22 +1902,15 @@
         },
         "program": {
           "origin": {
-            "main": {
-              "extension": null
-            }
-          },
-          "path": "npm/private/lifecycle/min/bin_/bin"
-        },
-        "wrappers": [],
-        "synonym": {
-          "origin": {
             "module": {
               "name": "aspect_rules_js",
               "extension": null
             }
           },
           "path": "npm/private/lifecycle/min/bin_/bin"
-        }
+        },
+        "wrappers": [],
+        "synonym": null
       }
     },
     {
@@ -1902,22 +1923,15 @@
         },
         "program": {
           "origin": {
-            "main": {
-              "extension": null
-            }
-          },
-          "path": "npm/private/lifecycle/min/bin_/bin"
-        },
-        "wrappers": [],
-        "synonym": {
-          "origin": {
             "module": {
               "name": "aspect_rules_js",
               "extension": null
             }
           },
           "path": "npm/private/lifecycle/min/bin_/bin"
-        }
+        },
+        "wrappers": [],
+        "synonym": null
       }
     },
     {
@@ -1930,22 +1944,15 @@
         },
         "program": {
           "origin": {
-            "main": {
-              "extension": null
-            }
-          },
-          "path": "npm/private/lifecycle/min/bin_/bin"
-        },
-        "wrappers": [],
-        "synonym": {
-          "origin": {
             "module": {
               "name": "aspect_rules_js",
               "extension": null
             }
           },
           "path": "npm/private/lifecycle/min/bin_/bin"
-        }
+        },
+        "wrappers": [],
+        "synonym": null
       }
     },
     {
@@ -1958,22 +1965,15 @@
         },
         "program": {
           "origin": {
-            "main": {
-              "extension": null
-            }
-          },
-          "path": "npm/private/lifecycle/min/bin_/bin"
-        },
-        "wrappers": [],
-        "synonym": {
-          "origin": {
             "module": {
               "name": "aspect_rules_js",
               "extension": null
             }
           },
           "path": "npm/private/lifecycle/min/bin_/bin"
-        }
+        },
+        "wrappers": [],
+        "synonym": null
       }
     },
     {
@@ -1986,22 +1986,15 @@
         },
         "program": {
           "origin": {
-            "main": {
-              "extension": null
-            }
-          },
-          "path": "npm/private/lifecycle/min/bin_/bin"
-        },
-        "wrappers": [],
-        "synonym": {
-          "origin": {
             "module": {
               "name": "aspect_rules_js",
               "extension": null
             }
           },
           "path": "npm/private/lifecycle/min/bin_/bin"
-        }
+        },
+        "wrappers": [],
+        "synonym": null
       }
     },
     {
@@ -2014,22 +2007,15 @@
         },
         "program": {
           "origin": {
-            "main": {
-              "extension": null
-            }
-          },
-          "path": "npm/private/lifecycle/min/bin_/bin"
-        },
-        "wrappers": [],
-        "synonym": {
-          "origin": {
             "module": {
               "name": "aspect_rules_js",
               "extension": null
             }
           },
           "path": "npm/private/lifecycle/min/bin_/bin"
-        }
+        },
+        "wrappers": [],
+        "synonym": null
       }
     }
   ]

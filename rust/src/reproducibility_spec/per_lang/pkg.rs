@@ -1,12 +1,10 @@
-use super::super::library::{
-    Entry, always, aspect_bazel_lib, bazel_lib, under_both_names,
-};
+use super::super::library::{Entry, always, aspect_bazel_lib, bazel_lib};
 use super::super::program_id::ProgramId;
 use super::super::{Clause, Guard, Reproducibility, ReproducibilitySpec};
 
-/// One of rules_pkg's packaging tools, under both names it answers to.
-fn pkg_tool(path: &str, spec: Entry) -> Vec<(ProgramId, Entry)> {
-    under_both_names("rules_pkg", path, spec)
+/// One of rules_pkg's packaging tools.
+fn pkg_tool(path: &str, spec: Entry) -> (ProgramId, Entry) {
+    (ProgramId::module("rules_pkg", path), spec)
 }
 
 /// The command-line compressor shipped by the Brotli module.
@@ -87,14 +85,12 @@ pub(in crate::reproducibility_spec) fn entries() -> Vec<(ProgramId, Entry)>
         ["--preserve_mtime"],
     ));
 
-    let mut entries = pkg_tool("pkg/private/tar/build_tar", tar);
+    let mut entries = vec![pkg_tool("pkg/private/tar/build_tar", tar)];
 
     // The zip tool needs nothing asked of it: `-t` defaults to the zip
     // epoch, so an archive told no time still gets a fixed one.
-    entries.extend(pkg_tool(
-        "pkg/private/zip/build_zip",
-        Entry::Spec(always()),
-    ));
+    entries
+        .push(pkg_tool("pkg/private/zip/build_zip", Entry::Spec(always())));
 
     // A Brotli stream carries no filename, timestamp or ownership metadata.
     // Its clock is used only for verbose progress, on stderr.
@@ -103,14 +99,12 @@ pub(in crate::reproducibility_spec) fn entries() -> Vec<(ProgramId, Entry)>
     // A Debian package is an `ar` archive of two tarballs, and make_deb
     // writes zero into every field that would otherwise carry a clock: the
     // member timestamps, the gzip header, and the control file's `Date`.
-    entries.extend(pkg_tool(
-        "pkg/private/deb/make_deb",
-        Entry::Spec(always()),
-    ));
+    entries
+        .push(pkg_tool("pkg/private/deb/make_deb", Entry::Spec(always())));
 
     // Renames and drops files on their way into a package. A function of
     // the manifest it is given.
-    entries.extend(pkg_tool("pkg/filter_directory", Entry::Spec(always())));
+    entries.push(pkg_tool("pkg/filter_directory", Entry::Spec(always())));
 
     // rules_tar's one tool, which every one of its rules dispatches to by
     // flag rather than by subcommand. It never builds an archive out of
@@ -351,26 +345,28 @@ mod tests {
 
     #[test]
     fn both_toolchains_answer_with_the_same_tar() {
-        let resolution =
-            Library::builtin().resolve(bsdtar("aspect_bazel_lib"), vec![]);
+        let resolution = Library::builtin(None)
+            .resolve(bsdtar("aspect_bazel_lib"), vec![]);
         assert_eq!(resolution.synonym(), Some(&bsdtar("tar.bzl")));
     }
 
     #[test]
-    fn the_tools_answer_to_both_of_their_names() {
+    fn the_tools_answer_when_rules_pkg_analyzes_itself() {
+        let library = Library::builtin(Some("rules_pkg"));
         for path in [
             "pkg/private/tar/build_tar",
             "pkg/private/zip/build_zip",
             "pkg/private/deb/make_deb",
             "pkg/filter_directory",
         ] {
-            let from_main =
-                Library::builtin().resolve(ProgramId::main(path), vec![]);
+            let from_main = library.resolve(ProgramId::main(path), vec![]);
             assert_eq!(
-                from_main.synonym(),
-                Some(&ProgramId::module("rules_pkg", path)),
+                from_main.program,
+                ProgramId::module("rules_pkg", path),
                 "{path}",
             );
+            assert_eq!(from_main.synonym(), None, "{path}");
+            assert!(from_main.spec.is_some(), "{path}");
         }
     }
 }

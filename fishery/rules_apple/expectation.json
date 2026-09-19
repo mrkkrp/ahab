@@ -197,7 +197,8 @@
         },
         "program": {
           "origin": {
-            "main": {
+            "module": {
+              "name": "rules_apple",
               "extension": null
             }
           },
@@ -216,7 +217,8 @@
         },
         "program": {
           "origin": {
-            "main": {
+            "module": {
+              "name": "rules_apple",
               "extension": null
             }
           },
@@ -235,7 +237,8 @@
         },
         "program": {
           "origin": {
-            "main": {
+            "module": {
+              "name": "rules_apple",
               "extension": null
             }
           },
@@ -254,7 +257,8 @@
         },
         "program": {
           "origin": {
-            "main": {
+            "module": {
+              "name": "rules_apple",
               "extension": null
             }
           },
@@ -1053,7 +1057,8 @@
         },
         "program": {
           "origin": {
-            "main": {
+            "module": {
+              "name": "rules_apple",
               "extension": null
             }
           },
@@ -1092,7 +1097,8 @@
         },
         "program": {
           "origin": {
-            "main": {
+            "module": {
+              "name": "rules_apple",
               "extension": null
             }
           },
@@ -1111,7 +1117,8 @@
         },
         "program": {
           "origin": {
-            "main": {
+            "module": {
+              "name": "rules_apple",
               "extension": null
             }
           },
@@ -1130,7 +1137,8 @@
         },
         "program": {
           "origin": {
-            "main": {
+            "module": {
+              "name": "rules_apple",
               "extension": null
             }
           },
@@ -1149,7 +1157,8 @@
         },
         "program": {
           "origin": {
-            "main": {
+            "module": {
+              "name": "rules_apple",
               "extension": null
             }
           },

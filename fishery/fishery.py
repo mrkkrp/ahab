@@ -188,6 +188,9 @@ def ahab_run(name, args):
     mode = spec.get("compilation_mode")
     if mode:
         command.append(f"--compilation-mode={mode}")
+    module = spec.get("module_name")
+    if module:
+        command.append(f"--module-name={module}")
     for flag in spec.get("flags", []):
         command.append(f"--bazel-flag={expand(flag, name)}")
     exceptions = target_dir(name) / "exceptions.json"

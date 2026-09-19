@@ -106,6 +106,29 @@ pub struct Cli {
     /// `fastbuild`, `dbg` or `opt`—rather than the default.
     #[arg(long = "compilation-mode", value_name = "MODE")]
     pub compilation_mode: Option<String>,
+
+    /// The name of the Bazel module this workspace publishes as, i.e. its
+    /// `module(name = …)`.
+    #[arg(
+        long = "module-name",
+        value_name = "NAME",
+        value_parser = parse_module_name
+    )]
+    pub module_name: Option<String>,
+}
+
+/// Accept a `--module-name` Bazel could have given a module.
+fn parse_module_name(name: &str) -> Result<String, String> {
+    let allowed =
+        |c: char| c.is_ascii_alphanumeric() || matches!(c, '.' | '_' | '-');
+    if name.is_empty() || !name.chars().all(allowed) {
+        return Err(format!(
+            "{name:?} is not a module name: expected the \
+             `module(name = …)` of this workspace's `MODULE.bazel`, \
+             which holds letters, digits, `.`, `_` and `-`"
+        ));
+    }
+    Ok(name.to_owned())
 }
 
 impl Cli {
@@ -137,7 +160,7 @@ impl Cli {
             }
         }
 
-        let mut library = Library::builtin();
+        let mut library = Library::builtin(self.module_name.as_deref());
         for path in &self.repro_specs {
             let path = resolve_against_invocation_dir(path);
             library.extend(read_specs(&path)?);
@@ -898,7 +921,7 @@ mod tests {
             "rules_rust",
             "util/process_wrapper/process_wrapper",
         );
-        let mut library = Library::builtin();
+        let mut library = Library::builtin(None);
         assert!(
             library.resolve(pw.clone(), vec!["--", "x"]).program != pw,
             "the built-in entry should unwrap",
@@ -1410,6 +1433,39 @@ mod tests {
         ])
         .unwrap();
         assert_eq!(chosen.output_base.as_deref(), Some("/tmp/somewhere"));
+    }
+
+    #[test]
+    fn a_module_name_is_optional_and_has_to_look_like_one() {
+        assert_eq!(
+            Cli::try_parse_from(["ahab", "//..."]).unwrap().module_name,
+            None,
+        );
+        assert_eq!(
+            Cli::try_parse_from([
+                "ahab",
+                "//...",
+                "--module-name",
+                "aspect_rules_js",
+            ])
+            .unwrap()
+            .module_name
+            .as_deref(),
+            Some("aspect_rules_js"),
+        );
+
+        for bad in ["", "@rules_pkg", "rules_pkg//", "rules_rust+crate"] {
+            assert!(
+                Cli::try_parse_from([
+                    "ahab",
+                    "//...",
+                    "--module-name",
+                    bad
+                ])
+                .is_err(),
+                "{bad:?} was accepted",
+            );
+        }
     }
 
     #[test]

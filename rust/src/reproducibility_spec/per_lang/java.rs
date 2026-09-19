@@ -109,7 +109,7 @@ mod tests {
 
     #[test]
     fn java_hands_the_question_to_the_jar_it_runs() {
-        let resolution = Library::builtin().resolve(
+        let resolution = Library::builtin(None).resolve(
             java_tool("bin/java"),
             vec![
                 "--add-opens=java.base/java.lang=ALL-UNNAMED",
@@ -132,7 +132,7 @@ mod tests {
 
     #[test]
     fn a_java_invoked_without_a_jar_is_not_vouched_for() {
-        let resolution = Library::builtin().resolve(
+        let resolution = Library::builtin(None).resolve(
             java_tool("bin/java"),
             vec!["-cp", "x.jar:y.jar", "com.example.Main"],
         );
@@ -170,7 +170,7 @@ mod tests {
 
     #[test]
     fn both_turbines_are_judged_by_one_entry() {
-        let native = Library::builtin().resolve(
+        let native = Library::builtin(None).resolve(
             java_tool("java_tools/turbine_direct_graal"),
             vec!["--output", "libx-hjar.jar"],
         );

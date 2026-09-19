@@ -1,6 +1,4 @@
-use super::super::library::{
-    Entry, always, host_derived, under_both_names,
-};
+use super::super::library::{Entry, always, host_derived};
 use super::super::program_id::ProgramId;
 
 /// A program in `apple_support`'s crosstool. Every one ends up at
@@ -10,9 +8,9 @@ fn crosstool(path: &str) -> ProgramId {
     ProgramId::module("apple_support", &format!("crosstool/{path}"))
 }
 
-/// One of `rules_apple`'s tools, under both names it answers to.
-fn apple_tool(path: &str, spec: Entry) -> Vec<(ProgramId, Entry)> {
-    under_both_names("rules_apple", path, spec)
+/// One of `rules_apple`'s tools.
+fn apple_tool(path: &str, spec: Entry) -> (ProgramId, Entry) {
+    (ProgramId::module("rules_apple", path), spec)
 }
 
 /// Everything Ahab knows about Apple builds, in source order.
@@ -40,14 +38,14 @@ pub(in crate::reproducibility_spec) fn entries() -> Vec<(ProgramId, Entry)>
 
     // "Wrapper for 'xcrun' tools": `actool`, `ibtool` and the rest of
     // Xcode's asset compilers.
-    entries.extend(apple_tool(
+    entries.push(apple_tool(
         "tools/xctoolrunner/xctoolrunner",
         Entry::Spec(host_derived()),
     ));
 
     // Runs `xcrun swift-stdlib-tool --copy`, so which Swift runtime
     // libraries land in the bundle is a fact about the installed Xcode.
-    entries.extend(apple_tool(
+    entries.push(apple_tool(
         "tools/swift_stdlib_tool/swift_stdlib_tool",
         Entry::Spec(host_derived()),
     ));
@@ -55,14 +53,14 @@ pub(in crate::reproducibility_spec) fn entries() -> Vec<(ProgramId, Entry)>
     // Writes what `xcrun xcodebuild -version` reports—Xcode build number,
     // SDK version, platform build—into a plist: a description of the
     // machine.
-    entries.extend(apple_tool(
+    entries.push(apple_tool(
         "tools/environment_plist/environment_plist",
         Entry::Spec(host_derived()),
     ));
 
     // Reads a bundle's identity and entitlements back out with `codesign`,
     // so its dossier is shaped by the signing tool and keychain at hand.
-    entries.extend(apple_tool(
+    entries.push(apple_tool(
         "tools/dossier_codesigningtool/dossier_codesigningtool",
         Entry::Spec(host_derived()),
     ));
@@ -76,7 +74,7 @@ pub(in crate::reproducibility_spec) fn entries() -> Vec<(ProgramId, Entry)>
     // Which mode an action asked for is invisible here—the sole argument
     // is a JSON control file and the `binary` key lives inside it—so the
     // verdict is about the tool, and it is the pessimistic one.
-    entries.extend(apple_tool(
+    entries.push(apple_tool(
         "tools/plisttool/plisttool",
         Entry::Spec(host_derived()),
     ));
@@ -93,7 +91,7 @@ pub(in crate::reproducibility_spec) fn entries() -> Vec<(ProgramId, Entry)>
     // the normalized name with CRC-32C and no per-volume seed, so two Macs
     // agree—and macOS is the only place these actions run. It would not
     // hold elsewhere: ext4 mixes in a seed drawn at mkfs time.
-    entries.extend(apple_tool(
+    entries.push(apple_tool(
         "tools/bundletool/bundletool",
         Entry::Spec(always()),
     ));
@@ -159,18 +157,27 @@ mod tests {
     }
 
     #[test]
-    fn a_rules_apple_tool_answers_under_its_own_repositorys_name() {
+    fn a_rules_apple_tool_answers_when_rules_apple_analyzes_itself() {
         let program = ProgramId::main("tools/xctoolrunner/xctoolrunner");
-        let resolved = Library::builtin().resolve(program, vec![]);
-        let synonym = resolved.synonym().cloned();
+        let resolved = Library::builtin(Some("rules_apple"))
+            .resolve(program.clone(), vec![]);
         let (_, spec) = resolved.spec.expect("a spec for the program");
         assert_eq!(spec.assess([]), Conformance::HostDerived);
         assert_eq!(
-            synonym,
-            Some(ProgramId::module(
+            resolved.program,
+            ProgramId::module(
                 "rules_apple",
                 "tools/xctoolrunner/xctoolrunner",
-            )),
+            ),
+        );
+
+        // And that is the only way it answers: unattributed, the path is
+        // nothing but a path somebody's build happens to use.
+        assert!(
+            Library::builtin(None)
+                .resolve(program, vec![])
+                .spec
+                .is_none()
         );
     }
 }

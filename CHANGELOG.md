@@ -1,3 +1,23 @@
+## Unreleased
+
+* Added the new `--module-name` option which allows us to specify the name
+  of the published module we are analyzing, so that its programs are looked
+  up in the library of reproducibility specs accordingly, rather than as
+  programs in the main repository. This is mainly relevant for the fishery,
+  not for the end users.
+
+* The built-in library no longer names programs by a main-repository path.
+  This eliminates the latent bug where if you had a program in your main
+  repository at the same path as one of the 14 entries that defined a
+  main-repository synonym Ahab would assume that your program has the same
+  reproducibility spec as the one its library described.
+
+* The TypeScript compiler and `rules_ts`'s options validator are named by
+  the module whose extension builds them, `@aspect_rules_ts+typescript//`.
+  They were named as an extension of the main repository, which is how they
+  appear only when `rules_ts` itself is the workspace under analysis, so a
+  project merely *using* `rules_ts` matched neither.
+
 ## Ahab 0.3.0
 
 * A `/` roots a path only where something in the text says a value begins
