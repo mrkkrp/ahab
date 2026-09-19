@@ -302,7 +302,8 @@
         },
         "program": {
           "origin": {
-            "main": {
+            "module": {
+              "name": "rules_pkg",
               "extension": null
             }
           },
@@ -321,7 +322,8 @@
         },
         "program": {
           "origin": {
-            "main": {
+            "module": {
+              "name": "rules_pkg",
               "extension": null
             }
           },
@@ -340,7 +342,8 @@
         },
         "program": {
           "origin": {
-            "main": {
+            "module": {
+              "name": "rules_pkg",
               "extension": null
             }
           },
@@ -359,7 +362,8 @@
         },
         "program": {
           "origin": {
-            "main": {
+            "module": {
+              "name": "rules_pkg",
               "extension": null
             }
           },
@@ -378,7 +382,8 @@
         },
         "program": {
           "origin": {
-            "main": {
+            "module": {
+              "name": "rules_pkg",
               "extension": null
             }
           },
@@ -397,7 +402,8 @@
         },
         "program": {
           "origin": {
-            "main": {
+            "module": {
+              "name": "rules_pkg",
               "extension": null
             }
           },
@@ -416,7 +422,8 @@
         },
         "program": {
           "origin": {
-            "main": {
+            "module": {
+              "name": "rules_pkg",
               "extension": null
             }
           },
@@ -435,7 +442,8 @@
         },
         "program": {
           "origin": {
-            "main": {
+            "module": {
+              "name": "rules_pkg",
               "extension": null
             }
           },
@@ -454,7 +462,8 @@
         },
         "program": {
           "origin": {
-            "main": {
+            "module": {
+              "name": "rules_pkg",
               "extension": null
             }
           },
@@ -473,7 +482,8 @@
         },
         "program": {
           "origin": {
-            "main": {
+            "module": {
+              "name": "rules_pkg",
               "extension": null
             }
           },
@@ -492,7 +502,8 @@
         },
         "program": {
           "origin": {
-            "main": {
+            "module": {
+              "name": "rules_pkg",
               "extension": null
             }
           },
@@ -533,15 +544,6 @@
         },
         "program": {
           "origin": {
-            "main": {
-              "extension": null
-            }
-          },
-          "path": "pkg/private/tar/build_tar"
-        },
-        "wrappers": [],
-        "synonym": {
-          "origin": {
             "module": {
               "name": "rules_pkg",
               "extension": null
@@ -549,6 +551,8 @@
           },
           "path": "pkg/private/tar/build_tar"
         },
+        "wrappers": [],
+        "synonym": null,
         "unmet": [
           {
             "because": "it was given an option that breaks it",

@@ -292,7 +292,7 @@ mod tests {
 
     #[test]
     fn the_host_compiler_and_the_downloaded_one_are_judged_apart() {
-        let host = Library::builtin()
+        let host = Library::builtin(None)
             .resolve(local_config_cc("cc_wrapper.sh"), clang_args());
         let (_, spec) = host.spec.expect("a spec for the host wrapper");
         assert_eq!(spec.reproducibility, Reproducibility::HostDerived);

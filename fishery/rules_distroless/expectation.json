@@ -261,7 +261,8 @@
         },
         "program": {
           "origin": {
-            "main": {
+            "module": {
+              "name": "rules_distroless_examples",
               "extension": null
             }
           },
@@ -280,7 +281,8 @@
         },
         "program": {
           "origin": {
-            "main": {
+            "module": {
+              "name": "rules_distroless_examples",
               "extension": null
             }
           },

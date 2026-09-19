@@ -1,6 +1,7 @@
 {
   "repo": "https://github.com/bazelbuild/buildtools",
   "commit": "f6a1982250030df9c2d24a675a04f150ff6aca6b",
+  "module_name": "buildtools",
   "label": "//...",
   "configs": []
 }

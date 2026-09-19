@@ -594,7 +594,8 @@
         },
         "program": {
           "origin": {
-            "main": {
+            "module": {
+              "name": "buildtools",
               "extension": null
             }
           },
@@ -613,7 +614,8 @@
         },
         "program": {
           "origin": {
-            "main": {
+            "module": {
+              "name": "buildtools",
               "extension": null
             }
           },

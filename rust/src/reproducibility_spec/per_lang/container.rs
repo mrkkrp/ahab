@@ -175,7 +175,7 @@ mod tests {
             let name = format!("img_{os}_{arch}");
             let program = img_tool(&go_binary("cmd/img", &name));
             let resolution =
-                Library::builtin().resolve(program.clone(), vec![]);
+                Library::builtin(None).resolve(program.clone(), vec![]);
             assert_eq!(
                 resolution.synonym(),
                 Some(&canonical_img()),
@@ -195,7 +195,10 @@ mod tests {
             let name = format!("img_windows_{arch}");
             let program = img_tool(&format!("cmd/img/{name}_/{name}.exe"));
             assert!(
-                Library::builtin().resolve(program, vec![]).spec.is_some(),
+                Library::builtin(None)
+                    .resolve(program, vec![])
+                    .spec
+                    .is_some(),
                 "{name}.exe",
             );
         }

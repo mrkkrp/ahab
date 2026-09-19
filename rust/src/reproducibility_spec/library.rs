@@ -93,20 +93,6 @@ pub(super) fn host_derived() -> ReproducibilitySpec {
     ReproducibilitySpec::of(Reproducibility::HostDerived)
 }
 
-/// An entry under both the name a consumer sees and the one the rule set's
-/// own build produces, the second deferring to the first.
-pub(super) fn under_both_names(
-    module: &str,
-    path: &str,
-    entry: Entry,
-) -> Vec<(ProgramId, Entry)> {
-    let from_module = ProgramId::module(module, path);
-    vec![
-        (from_module.clone(), entry),
-        (ProgramId::main(path), Entry::SameAs(from_module)),
-    ]
-}
-
 /// The library Ahab ships with.
 fn entries() -> Vec<(ProgramId, Entry)> {
     let mut entries = super::per_lang::rust::entries();
@@ -284,14 +270,31 @@ pub struct Library {
     exact: HashMap<ProgramId, Entry>,
     /// Entries whose path is a glob, oldest first.
     patterns: Vec<PatternEntry>,
+    /// The module the repository being analyzed publishes as, when it has
+    /// one.
+    main_module: Option<String>,
 }
 
 impl Library {
-    /// The library Ahab ships with.
-    pub fn builtin() -> Library {
-        let mut library = Library::default();
+    /// The library Ahab ships with, naming programs for a project
+    /// publishing as `main_module`; see the field.
+    pub fn builtin(main_module: Option<&str>) -> Library {
+        let mut library = Library {
+            main_module: main_module.map(ToOwned::to_owned),
+            ..Library::default()
+        };
         library.extend(entries());
         library
+    }
+
+    /// A program as this analysis names it: one in the repository under
+    /// analysis is attributed to the module it publishes as, when one was
+    /// named.
+    fn attribute(&self, id: ProgramId) -> ProgramId {
+        match &self.main_module {
+            Some(module) => id.in_module(module),
+            None => id,
+        }
     }
 
     /// Add entries, replacing any already present for the same program.
@@ -302,6 +305,13 @@ impl Library {
         entries: impl IntoIterator<Item = (ProgramId, Entry)>,
     ) {
         for (key, entry) in entries {
+            let key = self.attribute(key);
+            let entry = match entry {
+                Entry::SameAs(target) => {
+                    Entry::SameAs(self.attribute(target))
+                }
+                entry => entry,
+            };
             if is_pattern(&key.path) {
                 self.patterns.retain(|held| held.key != key);
                 self.patterns.push(PatternEntry {
@@ -340,7 +350,7 @@ impl Library {
         program: ProgramId,
         args: Vec<&'a str>,
     ) -> Resolution<'a> {
-        let mut program = program;
+        let mut program = self.attribute(program);
         let mut key = program.clone();
         let mut args = args;
         let mut wrappers = Vec::new();
@@ -372,7 +382,7 @@ impl Library {
                         break;
                     };
                     wrappers.push(program);
-                    program = ProgramId::of(wrapped);
+                    program = self.attribute(ProgramId::of(wrapped));
                     key = program.clone();
                     args = rest;
                 }
@@ -546,7 +556,7 @@ mod tests {
 
     #[test]
     fn the_zip_tool_is_vouched_for_however_it_is_asked_to_pack() {
-        let resolution = Library::builtin().resolve(
+        let resolution = Library::builtin(None).resolve(
             ProgramId::module("bazel_tools", "tools/zip/zipper/zipper"),
             vec![
                 "cC",
@@ -607,13 +617,13 @@ mod tests {
     #[test]
     fn a_program_the_library_does_not_name_has_no_spec() {
         assert!(
-            Library::builtin()
+            Library::builtin(None)
                 .resolve(ProgramId::of("/usr/bin/gcc"), vec![])
                 .spec
                 .is_none()
         );
         assert!(
-            Library::builtin()
+            Library::builtin(None)
                 .resolve(ProgramId::of("external/llvm+/bin/clang"), vec![])
                 .spec
                 .is_none()
@@ -622,7 +632,7 @@ mod tests {
 
     #[test]
     fn every_synonym_in_the_library_points_at_a_real_entry() {
-        let library = Library::builtin();
+        let library = Library::builtin(None);
         for (program, _) in entries() {
             let mut seen = vec![program.clone()];
             let mut at = program.clone();
@@ -747,7 +757,7 @@ mod tests {
 
     #[test]
     fn a_program_outside_the_execution_root_is_the_machines() {
-        let resolved = Library::builtin()
+        let resolved = Library::builtin(None)
             .resolve(ProgramId::of("/usr/bin/gcc"), vec![]);
         assert_eq!(resolved.program.origin, Origin::System);
         assert!(resolved.spec.is_none());
@@ -760,7 +770,8 @@ mod tests {
             "cc_configure_extension",
             "cc_wrapper.sh",
         );
-        let resolved = Library::builtin().resolve(wrapper.clone(), vec![]);
+        let resolved =
+            Library::builtin(None).resolve(wrapper.clone(), vec![]);
         assert_ne!(resolved.program.origin, Origin::System);
         assert_eq!(
             resolved.spec.map(|(_, spec)| spec.reproducibility),
@@ -779,7 +790,7 @@ mod tests {
             "cc_configure_extension",
             "armeabi_cc_toolchain_config.bzl",
         );
-        let resolved = Library::builtin().resolve(static_file, vec![]);
+        let resolved = Library::builtin(None).resolve(static_file, vec![]);
         assert!(resolved.spec.is_none());
     }
 
@@ -793,6 +804,62 @@ mod tests {
             spec_for(&library, &b()).map(|spec| spec.reproducibility),
             Some(Reproducibility::HostDerived),
         );
+    }
+
+    #[test]
+    fn no_built_in_entry_answers_on_a_path_alone() {
+        // A key in the main repository names no module, so it would match
+        // any project that happened to build a binary at that path, and an
+        // `always` verdict would do so without printing anything.
+        for (program, entry) in entries() {
+            assert!(
+                !matches!(program.origin, Origin::Main { .. }),
+                "{program} is keyed to the main repository",
+            );
+            if let Entry::SameAs(target) = entry {
+                assert!(
+                    !matches!(target.origin, Origin::Main { .. }),
+                    "{program} defers to {target}, \
+                     which is keyed to the main repository",
+                );
+            }
+        }
+    }
+
+    #[test]
+    fn naming_the_module_files_a_user_entry_under_it_too() {
+        // Otherwise a project that told Ahab which module it is could no
+        // longer name its own programs the way it always had.
+        let mut library = Library::builtin(Some("acme"));
+        library
+            .extend([(ProgramId::main("tools/gen"), Entry::Spec(never()))]);
+
+        let resolved =
+            library.resolve(ProgramId::main("tools/gen"), vec![]);
+        assert_eq!(
+            resolved.program,
+            ProgramId::module("acme", "tools/gen")
+        );
+        assert_eq!(resolved.spec.map(|(_, spec)| spec), Some(never()));
+    }
+
+    #[test]
+    fn a_wrapped_program_is_attributed_like_any_other() {
+        let mut library = Library::builtin(Some("acme"));
+        library.extend([
+            (a(), wraps_after_dashdash()),
+            (ProgramId::module("acme", "tools/gen"), Entry::Spec(never())),
+        ]);
+
+        let resolved = library.resolve(
+            a(),
+            vec!["--", "bazel-out/k8-fastbuild/bin/tools/gen"],
+        );
+        assert_eq!(
+            resolved.program,
+            ProgramId::module("acme", "tools/gen")
+        );
+        assert_eq!(resolved.spec.map(|(_, spec)| spec), Some(never()));
     }
 
     #[test]

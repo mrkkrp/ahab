@@ -5,22 +5,25 @@
 //! function of its inputs. TypeScript shares this module because its
 //! compiler is an npm package reached the same way.
 
-use super::super::library::{Entry, always, never, under_both_names};
+use super::super::library::{Entry, always, never};
 use super::super::program_id::ProgramId;
 use super::super::{Reproducibility, ReproducibilitySpec};
 
-/// One of rules_js's own tools, under both names it answers to.
-fn rules_js_tool(path: &str) -> Vec<(ProgramId, Entry)> {
-    under_both_names("aspect_rules_js", path, Entry::Spec(never()))
+/// One of rules_js's own tools.
+fn rules_js_tool(path: &str) -> (ProgramId, Entry) {
+    (
+        ProgramId::module("aspect_rules_js", path),
+        Entry::Spec(never()),
+    )
 }
 
 /// A program in the repository rules_ts's `typescript` extension builds.
-/// The extension is named for where it is defined, so every project
-/// following rules_ts's own instructions reaches these under this identity.
-/// A project that gets the extension through an intermediate module does
-/// not match.
+/// The extension is named for where it is defined—`ts/extensions.bzl` in
+/// rules_ts—rather than for the variable a consumer binds it to, so every
+/// project reaching these through rules_ts matches. A project that gets
+/// the extension through an intermediate module does not.
 fn npm_typescript(path: &str) -> ProgramId {
-    ProgramId::main_extension("typescript", path)
+    ProgramId::extension("aspect_rules_ts", "typescript", path)
 }
 
 /// A program shipped by J2CL.
@@ -44,7 +47,8 @@ pub(in crate::reproducibility_spec) fn entries() -> Vec<(ProgramId, Entry)>
     // machine's C++ toolchain when a package ships a `binding.gyp` and no
     // install script. `never` rather than unknown: no flag could redeem it,
     // because the code it runs is not in the build at all.
-    let mut entries = rules_js_tool("npm/private/lifecycle/min/bin_/bin");
+    let mut entries =
+        vec![rules_js_tool("npm/private/lifecycle/min/bin_/bin")];
 
     // Dispatches the Closure compiler, its library checker and the webfiles
     // validator, each reading the sources, manifests and options named by
@@ -263,12 +267,40 @@ mod tests {
     }
 
     #[test]
-    fn the_runner_answers_to_both_of_its_names() {
-        let from_main =
-            Library::builtin().resolve(ProgramId::main(LIFECYCLE), vec![]);
+    fn the_runner_answers_when_rules_js_analyzes_itself() {
+        let from_main = Library::builtin(Some("aspect_rules_js"))
+            .resolve(ProgramId::main(LIFECYCLE), vec![]);
         assert_eq!(
-            from_main.synonym(),
-            Some(&ProgramId::module("aspect_rules_js", LIFECYCLE)),
+            from_main.program,
+            ProgramId::module("aspect_rules_js", LIFECYCLE),
         );
+        assert_eq!(from_main.synonym(), None);
+        assert!(from_main.spec.is_some());
+    }
+
+    #[test]
+    fn the_compiler_answers_whoever_builds_with_rules_ts() {
+        // The extension is rules_ts's, so a consumer's build names it by
+        // that module; rules_ts's own build reaches the same repository
+        // through the main one and needs telling which module that is.
+        for (library, program) in [
+            (
+                Library::builtin(None),
+                ProgramId::of(
+                    "external/aspect_rules_ts++typescript+npm_typescript\
+                     /tsc_/tsc",
+                ),
+            ),
+            (
+                Library::builtin(Some("aspect_rules_ts")),
+                ProgramId::of(
+                    "external/++typescript+npm_typescript/tsc_/tsc",
+                ),
+            ),
+        ] {
+            let resolved = library.resolve(program, vec![]);
+            assert_eq!(resolved.program, npm_typescript("tsc_/tsc"));
+            assert!(resolved.spec.is_some());
+        }
     }
 }

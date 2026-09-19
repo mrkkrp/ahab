@@ -1,6 +1,7 @@
 {
   "repo": "https://github.com/aspect-build/rules_js",
   "commit": "4578c68e24fc7a7efe7a8e6de1bc67ea77a77931",
+  "module_name": "aspect_rules_js",
   "label": "//... - //js/private/test/image/...",
   "configs": []
 }

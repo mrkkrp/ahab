@@ -242,7 +242,8 @@
         },
         "program": {
           "origin": {
-            "main": {
+            "module": {
+              "name": "aspect_rules_ts",
               "extension": "typescript"
             }
           },

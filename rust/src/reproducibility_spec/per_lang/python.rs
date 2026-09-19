@@ -74,7 +74,7 @@ mod tests {
 
     #[test]
     fn the_interpreter_hands_the_question_to_the_script() {
-        let resolution = Library::builtin()
+        let resolution = Library::builtin(None)
             .resolve(rules_python("python/private/python3"), pycompile());
         assert_eq!(
             resolution.program,
@@ -88,7 +88,7 @@ mod tests {
     #[test]
     fn an_interpreter_given_no_script_is_not_vouched_for() {
         for form in [vec!["-c", "print(1)"], vec!["-m", "compileall"]] {
-            let resolution = Library::builtin()
+            let resolution = Library::builtin(None)
                 .resolve(rules_python("python/private/python3"), form);
             assert_eq!(
                 resolution.program,
@@ -117,7 +117,7 @@ mod tests {
 
     #[test]
     fn the_precompiler_answers_under_either_of_its_file_names() {
-        let resolution = Library::builtin().resolve(
+        let resolution = Library::builtin(None).resolve(
             rules_python("tools/precompiler/precompiler_.py"),
             vec!["--invalidation_mode", "timestamp", "--src", "x.py"],
         );

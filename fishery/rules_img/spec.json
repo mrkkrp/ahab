@@ -1,6 +1,7 @@
 {
   "repo": "https://github.com/bazel-contrib/rules_img",
   "commit": "c93884af99707664f2ab0c1828a0083df17f544b",
+  "module_name": "rules_img",
   "label": "//...",
   "configs": [],
   "weight": 2

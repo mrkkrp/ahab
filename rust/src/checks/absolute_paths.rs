@@ -828,7 +828,7 @@ mod tests {
     #[test]
     fn a_path_the_program_declares_in_its_output_is_not_reported() {
         let c = container(vec![image_manifest_action()]);
-        assert!(check(&c, &Library::builtin()).is_empty());
+        assert!(check(&c, &Library::builtin(None)).is_empty());
     }
 
     #[test]
@@ -855,7 +855,7 @@ mod tests {
             .arguments
             .push("/home/someone/annotations.json".to_owned());
         let c = container(vec![action]);
-        let found = check(&c, &Library::builtin());
+        let found = check(&c, &Library::builtin(None));
         assert_eq!(found.len(), 1);
         assert_abs_path(
             &found[0],

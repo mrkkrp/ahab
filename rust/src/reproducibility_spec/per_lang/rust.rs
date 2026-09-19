@@ -233,7 +233,7 @@ mod tests {
     fn the_rustdoc_zipper_answers_for_the_tool_it_is_handed() {
         let zipper =
             ProgramId::module("bazel_tools", "tools/zip/zipper/zipper");
-        let resolution = Library::builtin().resolve(
+        let resolution = Library::builtin(None).resolve(
             ProgramId::module(
                 "rules_rust",
                 "rust/private/rustdoc/dir_zipper/dir_zipper",
@@ -342,7 +342,7 @@ mod tests {
 
     #[test]
     fn clippy_driver_is_judged_by_rustcs_spec() {
-        let resolution = Library::builtin()
+        let resolution = Library::builtin(None)
             .resolve(rust_tool("clippy-driver"), rules_rust_flags());
         assert_eq!(resolution.program, rust_tool("clippy-driver"));
         assert_eq!(resolution.synonym(), Some(&rust_tool("rustc")));

@@ -24,7 +24,7 @@ pub(super) mod testing {
         program: ProgramId,
         args: Vec<&str>,
     ) -> Conformance {
-        let resolution = Library::builtin().resolve(program, args);
+        let resolution = Library::builtin(None).resolve(program, args);
         let (_, spec) = resolution.spec.expect("a spec for the program");
         spec.assess(resolution.args)
     }
