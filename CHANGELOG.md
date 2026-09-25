@@ -18,6 +18,11 @@
   appear only when `rules_ts` itself is the workspace under analysis, so a
   project merely *using* `rules_ts` matched neither.
 
+* The package directory given to `rules_pkg`'s tar and zip tools, and the
+  paths `pkg_tar`'s `modes`, `owners` and `ownernames` are keyed by, are no
+  longer reported as absolute paths. They name places inside the archive,
+  e.g. `package_dir = "/usr/bin"`, not anything on the build machine.
+
 ## Ahab 0.3.0
 
 * A `/` roots a path only where something in the text says a value begins
