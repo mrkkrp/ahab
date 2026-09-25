@@ -1,0 +1,3022 @@
+{
+  "violations": [
+    {
+      "count": 1,
+      "violation": {
+        "kind": "execution_requirement",
+        "action": {
+          "mnemonic": "CopyFile",
+          "target": "//examples/assertion/empty:empty_index_json_cp"
+        },
+        "requirement": "no-sandbox"
+      }
+    },
+    {
+      "count": 1,
+      "violation": {
+        "kind": "execution_requirement",
+        "action": {
+          "mnemonic": "CopyFile",
+          "target": "//examples/assertion:case10_index_json_cp"
+        },
+        "requirement": "no-sandbox"
+      }
+    },
+    {
+      "count": 1,
+      "violation": {
+        "kind": "execution_requirement",
+        "action": {
+          "mnemonic": "CopyFile",
+          "target": "//examples/assertion:case11_index_json_cp"
+        },
+        "requirement": "no-sandbox"
+      }
+    },
+    {
+      "count": 1,
+      "violation": {
+        "kind": "execution_requirement",
+        "action": {
+          "mnemonic": "CopyFile",
+          "target": "//examples/assertion:case12_base_index_json_cp"
+        },
+        "requirement": "no-sandbox"
+      }
+    },
+    {
+      "count": 1,
+      "violation": {
+        "kind": "execution_requirement",
+        "action": {
+          "mnemonic": "CopyFile",
+          "target": "//examples/assertion:case12_index_json_cp"
+        },
+        "requirement": "no-sandbox"
+      }
+    },
+    {
+      "count": 1,
+      "violation": {
+        "kind": "execution_requirement",
+        "action": {
+          "mnemonic": "CopyFile",
+          "target": "//examples/assertion:case13_index_json_cp"
+        },
+        "requirement": "no-sandbox"
+      }
+    },
+    {
+      "count": 1,
+      "violation": {
+        "kind": "execution_requirement",
+        "action": {
+          "mnemonic": "CopyFile",
+          "target": "//examples/assertion:case14_index_json_cp"
+        },
+        "requirement": "no-sandbox"
+      }
+    },
+    {
+      "count": 1,
+      "violation": {
+        "kind": "execution_requirement",
+        "action": {
+          "mnemonic": "CopyFile",
+          "target": "//examples/assertion:case15_base_index_json_cp"
+        },
+        "requirement": "no-sandbox"
+      }
+    },
+    {
+      "count": 1,
+      "violation": {
+        "kind": "execution_requirement",
+        "action": {
+          "mnemonic": "CopyFile",
+          "target": "//examples/assertion:case15_cmd_index_json_cp"
+        },
+        "requirement": "no-sandbox"
+      }
+    },
+    {
+      "count": 1,
+      "violation": {
+        "kind": "execution_requirement",
+        "action": {
+          "mnemonic": "CopyFile",
+          "target": "//examples/assertion:case15_index_json_cp"
+        },
+        "requirement": "no-sandbox"
+      }
+    },
+    {
+      "count": 1,
+      "violation": {
+        "kind": "execution_requirement",
+        "action": {
+          "mnemonic": "CopyFile",
+          "target": "//examples/assertion:case16_base_index_json_cp"
+        },
+        "requirement": "no-sandbox"
+      }
+    },
+    {
+      "count": 1,
+      "violation": {
+        "kind": "execution_requirement",
+        "action": {
+          "mnemonic": "CopyFile",
+          "target": "//examples/assertion:case16_index_json_cp"
+        },
+        "requirement": "no-sandbox"
+      }
+    },
+    {
+      "count": 1,
+      "violation": {
+        "kind": "execution_requirement",
+        "action": {
+          "mnemonic": "CopyFile",
+          "target": "//examples/assertion:case17_index_json_cp"
+        },
+        "requirement": "no-sandbox"
+      }
+    },
+    {
+      "count": 1,
+      "violation": {
+        "kind": "execution_requirement",
+        "action": {
+          "mnemonic": "CopyFile",
+          "target": "//examples/assertion:case18_index_json_cp"
+        },
+        "requirement": "no-sandbox"
+      }
+    },
+    {
+      "count": 1,
+      "violation": {
+        "kind": "execution_requirement",
+        "action": {
+          "mnemonic": "CopyFile",
+          "target": "//examples/assertion:case19_index_json_cp"
+        },
+        "requirement": "no-sandbox"
+      }
+    },
+    {
+      "count": 1,
+      "violation": {
+        "kind": "execution_requirement",
+        "action": {
+          "mnemonic": "CopyFile",
+          "target": "//examples/assertion:case20_index_json_cp"
+        },
+        "requirement": "no-sandbox"
+      }
+    },
+    {
+      "count": 1,
+      "violation": {
+        "kind": "execution_requirement",
+        "action": {
+          "mnemonic": "CopyFile",
+          "target": "//examples/assertion:case2_index_json_cp"
+        },
+        "requirement": "no-sandbox"
+      }
+    },
+    {
+      "count": 1,
+      "violation": {
+        "kind": "execution_requirement",
+        "action": {
+          "mnemonic": "CopyFile",
+          "target": "//examples/assertion:case3_index_json_cp"
+        },
+        "requirement": "no-sandbox"
+      }
+    },
+    {
+      "count": 1,
+      "violation": {
+        "kind": "execution_requirement",
+        "action": {
+          "mnemonic": "CopyFile",
+          "target": "//examples/assertion:case4_index_json_cp"
+        },
+        "requirement": "no-sandbox"
+      }
+    },
+    {
+      "count": 1,
+      "violation": {
+        "kind": "execution_requirement",
+        "action": {
+          "mnemonic": "CopyFile",
+          "target": "//examples/assertion:case5_index_json_cp"
+        },
+        "requirement": "no-sandbox"
+      }
+    },
+    {
+      "count": 1,
+      "violation": {
+        "kind": "execution_requirement",
+        "action": {
+          "mnemonic": "CopyFile",
+          "target": "//examples/assertion:case6_index_json_cp"
+        },
+        "requirement": "no-sandbox"
+      }
+    },
+    {
+      "count": 1,
+      "violation": {
+        "kind": "execution_requirement",
+        "action": {
+          "mnemonic": "CopyFile",
+          "target": "//examples/assertion:case7_base_index_json_cp"
+        },
+        "requirement": "no-sandbox"
+      }
+    },
+    {
+      "count": 1,
+      "violation": {
+        "kind": "execution_requirement",
+        "action": {
+          "mnemonic": "CopyFile",
+          "target": "//examples/assertion:case7_index_json_cp"
+        },
+        "requirement": "no-sandbox"
+      }
+    },
+    {
+      "count": 1,
+      "violation": {
+        "kind": "execution_requirement",
+        "action": {
+          "mnemonic": "CopyFile",
+          "target": "//examples/assertion:case8_base_index_json_cp"
+        },
+        "requirement": "no-sandbox"
+      }
+    },
+    {
+      "count": 1,
+      "violation": {
+        "kind": "execution_requirement",
+        "action": {
+          "mnemonic": "CopyFile",
+          "target": "//examples/assertion:case8_index_json_cp"
+        },
+        "requirement": "no-sandbox"
+      }
+    },
+    {
+      "count": 1,
+      "violation": {
+        "kind": "execution_requirement",
+        "action": {
+          "mnemonic": "CopyFile",
+          "target": "//examples/assertion:case9_image_index_json_cp"
+        },
+        "requirement": "no-sandbox"
+      }
+    },
+    {
+      "count": 1,
+      "violation": {
+        "kind": "execution_requirement",
+        "action": {
+          "mnemonic": "CopyFile",
+          "target": "//examples/assertion:imagE_index_json_cp"
+        },
+        "requirement": "no-sandbox"
+      }
+    },
+    {
+      "count": 1,
+      "violation": {
+        "kind": "execution_requirement",
+        "action": {
+          "mnemonic": "CopyFile",
+          "target": "//examples/assertion:same_tar_multiple_times_index_json_cp"
+        },
+        "requirement": "no-sandbox"
+      }
+    },
+    {
+      "count": 1,
+      "violation": {
+        "kind": "execution_requirement",
+        "action": {
+          "mnemonic": "CopyFile",
+          "target": "//examples/attest:image_index_json_cp"
+        },
+        "requirement": "no-sandbox"
+      }
+    },
+    {
+      "count": 1,
+      "violation": {
+        "kind": "execution_requirement",
+        "action": {
+          "mnemonic": "CopyFile",
+          "target": "//examples/attest:sbom"
+        },
+        "requirement": "no-sandbox"
+      }
+    },
+    {
+      "count": 1,
+      "violation": {
+        "kind": "execution_requirement",
+        "action": {
+          "mnemonic": "CopyFile",
+          "target": "//examples/cmd_location_expansion:image_index_json_cp"
+        },
+        "requirement": "no-sandbox"
+      }
+    },
+    {
+      "count": 1,
+      "violation": {
+        "kind": "execution_requirement",
+        "action": {
+          "mnemonic": "CopyFile",
+          "target": "//examples/deb:image_amd64_index_json_cp"
+        },
+        "requirement": "no-sandbox"
+      }
+    },
+    {
+      "count": 1,
+      "violation": {
+        "kind": "execution_requirement",
+        "action": {
+          "mnemonic": "CopyFile",
+          "target": "//examples/deb:image_arm64_index_json_cp"
+        },
+        "requirement": "no-sandbox"
+      }
+    },
+    {
+      "count": 1,
+      "violation": {
+        "kind": "execution_requirement",
+        "action": {
+          "mnemonic": "CopyFile",
+          "target": "//examples/env:image_index_json_cp"
+        },
+        "requirement": "no-sandbox"
+      }
+    },
+    {
+      "count": 1,
+      "violation": {
+        "kind": "execution_requirement",
+        "action": {
+          "mnemonic": "CopyFile",
+          "target": "//examples/image_index:app_all_annotated_from_file_index_json_cp"
+        },
+        "requirement": "no-sandbox"
+      }
+    },
+    {
+      "count": 1,
+      "violation": {
+        "kind": "execution_requirement",
+        "action": {
+          "mnemonic": "CopyFile",
+          "target": "//examples/image_index:app_all_annotated_index_json_cp"
+        },
+        "requirement": "no-sandbox"
+      }
+    },
+    {
+      "count": 1,
+      "violation": {
+        "kind": "execution_requirement",
+        "action": {
+          "mnemonic": "CopyFile",
+          "target": "//examples/image_index:app_all_index_json_cp"
+        },
+        "requirement": "no-sandbox"
+      }
+    },
+    {
+      "count": 1,
+      "violation": {
+        "kind": "execution_requirement",
+        "action": {
+          "mnemonic": "CopyFile",
+          "target": "//examples/image_index:app_index_json_cp"
+        },
+        "requirement": "no-sandbox"
+      }
+    },
+    {
+      "count": 3,
+      "violation": {
+        "kind": "execution_requirement",
+        "action": {
+          "mnemonic": "CopyFile",
+          "target": "//examples/image_index:entrypoint_sh"
+        },
+        "requirement": "no-sandbox"
+      }
+    },
+    {
+      "count": 1,
+      "violation": {
+        "kind": "execution_requirement",
+        "action": {
+          "mnemonic": "CopyFile",
+          "target": "//examples/labels:image_index_json_cp"
+        },
+        "requirement": "no-sandbox"
+      }
+    },
+    {
+      "count": 1,
+      "violation": {
+        "kind": "execution_requirement",
+        "action": {
+          "mnemonic": "CopyFile",
+          "target": "//examples/labels:image_labels_dict_index_json_cp"
+        },
+        "requirement": "no-sandbox"
+      }
+    },
+    {
+      "count": 1,
+      "violation": {
+        "kind": "execution_requirement",
+        "action": {
+          "mnemonic": "CopyFile",
+          "target": "//examples/multi_architecture_image:image_index_json_cp"
+        },
+        "requirement": "no-sandbox"
+      }
+    },
+    {
+      "count": 1,
+      "violation": {
+        "kind": "execution_requirement",
+        "action": {
+          "mnemonic": "CopyFile",
+          "target": "//examples/multi_architecture_image:index_index_json_cp"
+        },
+        "requirement": "no-sandbox"
+      }
+    },
+    {
+      "count": 1,
+      "violation": {
+        "kind": "execution_requirement",
+        "action": {
+          "mnemonic": "CopyFile",
+          "target": "//examples/push:image_index_index_json_cp"
+        },
+        "requirement": "no-sandbox"
+      }
+    },
+    {
+      "count": 1,
+      "violation": {
+        "kind": "execution_requirement",
+        "action": {
+          "mnemonic": "CopyFile",
+          "target": "//examples/push:image_index_json_cp"
+        },
+        "requirement": "no-sandbox"
+      }
+    },
+    {
+      "count": 1,
+      "violation": {
+        "kind": "execution_requirement",
+        "action": {
+          "mnemonic": "CopyFile",
+          "target": "//examples/sign:image_index_json_cp"
+        },
+        "requirement": "no-sandbox"
+      }
+    },
+    {
+      "count": 1,
+      "violation": {
+        "kind": "execution_requirement",
+        "action": {
+          "mnemonic": "CopyFile",
+          "target": "//examples/tarball_as_base:image_index_json_cp"
+        },
+        "requirement": "no-sandbox"
+      }
+    },
+    {
+      "count": 1,
+      "violation": {
+        "kind": "execution_requirement",
+        "action": {
+          "mnemonic": "CopyFile",
+          "target": "//examples/tarball_incremental_loader:image_index_json_cp"
+        },
+        "requirement": "no-sandbox"
+      }
+    },
+    {
+      "count": 1,
+      "violation": {
+        "kind": "execution_requirement",
+        "action": {
+          "mnemonic": "ExtractTarball",
+          "target": "//examples/tarball_as_base:base"
+        },
+        "requirement": "local"
+      }
+    },
+    {
+      "count": 1,
+      "violation": {
+        "kind": "execution_requirement",
+        "action": {
+          "mnemonic": "Genrule",
+          "target": "//examples/just_tar:10mb_file"
+        },
+        "requirement": "local"
+      }
+    },
+    {
+      "count": 1,
+      "violation": {
+        "kind": "absolute_path",
+        "action": {
+          "mnemonic": "Genrule",
+          "target": "//examples/just_tar:10mb_file"
+        },
+        "path": "/dev/urandom",
+        "site": {
+          "location": "argument",
+          "value": "source external/bazel_tools/tools/genrule/genrule-setup.sh; head -c 10485760 < /dev/urandom > bazel-out/k8-fastbuild/bin/examples/just_tar/10mb_file.out"
+        }
+      }
+    },
+    {
+      "count": 1,
+      "violation": {
+        "kind": "absolute_path",
+        "action": {
+          "mnemonic": "OCIImage",
+          "target": "//examples/assertion:case8_base"
+        },
+        "path": "/root",
+        "site": {
+          "location": "argument",
+          "value": "--workdir=/root"
+        }
+      }
+    },
+    {
+      "count": 1,
+      "violation": {
+        "kind": "system_program",
+        "action": {
+          "mnemonic": "Genrule",
+          "target": "//examples/assertion:case10_run"
+        },
+        "program": {
+          "origin": "system",
+          "path": "/bin/bash"
+        },
+        "wrappers": []
+      }
+    },
+    {
+      "count": 1,
+      "violation": {
+        "kind": "system_program",
+        "action": {
+          "mnemonic": "Genrule",
+          "target": "//examples/assertion:case9_manifest"
+        },
+        "program": {
+          "origin": "system",
+          "path": "/bin/bash"
+        },
+        "wrappers": []
+      }
+    },
+    {
+      "count": 1,
+      "violation": {
+        "kind": "system_program",
+        "action": {
+          "mnemonic": "Genrule",
+          "target": "//examples/assertion:test_0__deps"
+        },
+        "program": {
+          "origin": "system",
+          "path": "/bin/bash"
+        },
+        "wrappers": []
+      }
+    },
+    {
+      "count": 1,
+      "violation": {
+        "kind": "system_program",
+        "action": {
+          "mnemonic": "Genrule",
+          "target": "//examples/assertion:test_1__deps"
+        },
+        "program": {
+          "origin": "system",
+          "path": "/bin/bash"
+        },
+        "wrappers": []
+      }
+    },
+    {
+      "count": 1,
+      "violation": {
+        "kind": "system_program",
+        "action": {
+          "mnemonic": "Genrule",
+          "target": "//examples/assertion:test_2__deps"
+        },
+        "program": {
+          "origin": "system",
+          "path": "/bin/bash"
+        },
+        "wrappers": []
+      }
+    },
+    {
+      "count": 1,
+      "violation": {
+        "kind": "system_program",
+        "action": {
+          "mnemonic": "Genrule",
+          "target": "//examples/assertion:test_3__deps"
+        },
+        "program": {
+          "origin": "system",
+          "path": "/bin/bash"
+        },
+        "wrappers": []
+      }
+    },
+    {
+      "count": 1,
+      "violation": {
+        "kind": "system_program",
+        "action": {
+          "mnemonic": "Genrule",
+          "target": "//examples/assertion:test_4__deps"
+        },
+        "program": {
+          "origin": "system",
+          "path": "/bin/bash"
+        },
+        "wrappers": []
+      }
+    },
+    {
+      "count": 1,
+      "violation": {
+        "kind": "system_program",
+        "action": {
+          "mnemonic": "Genrule",
+          "target": "//examples/assertion:test_5__deps"
+        },
+        "program": {
+          "origin": "system",
+          "path": "/bin/bash"
+        },
+        "wrappers": []
+      }
+    },
+    {
+      "count": 1,
+      "violation": {
+        "kind": "system_program",
+        "action": {
+          "mnemonic": "Genrule",
+          "target": "//examples/assertion:test_case13_config_json"
+        },
+        "program": {
+          "origin": "system",
+          "path": "/bin/bash"
+        },
+        "wrappers": []
+      }
+    },
+    {
+      "count": 1,
+      "violation": {
+        "kind": "system_program",
+        "action": {
+          "mnemonic": "Genrule",
+          "target": "//examples/assertion:test_case14_config_json"
+        },
+        "program": {
+          "origin": "system",
+          "path": "/bin/bash"
+        },
+        "wrappers": []
+      }
+    },
+    {
+      "count": 1,
+      "violation": {
+        "kind": "system_program",
+        "action": {
+          "mnemonic": "Genrule",
+          "target": "//examples/assertion:test_case15_base_config_json"
+        },
+        "program": {
+          "origin": "system",
+          "path": "/bin/bash"
+        },
+        "wrappers": []
+      }
+    },
+    {
+      "count": 1,
+      "violation": {
+        "kind": "system_program",
+        "action": {
+          "mnemonic": "Genrule",
+          "target": "//examples/assertion:test_case15_cmd_config_json"
+        },
+        "program": {
+          "origin": "system",
+          "path": "/bin/bash"
+        },
+        "wrappers": []
+      }
+    },
+    {
+      "count": 1,
+      "violation": {
+        "kind": "system_program",
+        "action": {
+          "mnemonic": "Genrule",
+          "target": "//examples/assertion:test_case15_config_json"
+        },
+        "program": {
+          "origin": "system",
+          "path": "/bin/bash"
+        },
+        "wrappers": []
+      }
+    },
+    {
+      "count": 1,
+      "violation": {
+        "kind": "system_program",
+        "action": {
+          "mnemonic": "Genrule",
+          "target": "//examples/assertion:test_case16_base_config_json"
+        },
+        "program": {
+          "origin": "system",
+          "path": "/bin/bash"
+        },
+        "wrappers": []
+      }
+    },
+    {
+      "count": 1,
+      "violation": {
+        "kind": "system_program",
+        "action": {
+          "mnemonic": "Genrule",
+          "target": "//examples/assertion:test_case16_config_json"
+        },
+        "program": {
+          "origin": "system",
+          "path": "/bin/bash"
+        },
+        "wrappers": []
+      }
+    },
+    {
+      "count": 1,
+      "violation": {
+        "kind": "system_program",
+        "action": {
+          "mnemonic": "Genrule",
+          "target": "//examples/assertion:test_case17_config_json"
+        },
+        "program": {
+          "origin": "system",
+          "path": "/bin/bash"
+        },
+        "wrappers": []
+      }
+    },
+    {
+      "count": 1,
+      "violation": {
+        "kind": "system_program",
+        "action": {
+          "mnemonic": "Genrule",
+          "target": "//examples/assertion:test_case18_config_json"
+        },
+        "program": {
+          "origin": "system",
+          "path": "/bin/bash"
+        },
+        "wrappers": []
+      }
+    },
+    {
+      "count": 1,
+      "violation": {
+        "kind": "system_program",
+        "action": {
+          "mnemonic": "Genrule",
+          "target": "//examples/assertion:test_case19_config_json"
+        },
+        "program": {
+          "origin": "system",
+          "path": "/bin/bash"
+        },
+        "wrappers": []
+      }
+    },
+    {
+      "count": 1,
+      "violation": {
+        "kind": "system_program",
+        "action": {
+          "mnemonic": "Genrule",
+          "target": "//examples/assertion:test_case20_config_json"
+        },
+        "program": {
+          "origin": "system",
+          "path": "/bin/bash"
+        },
+        "wrappers": []
+      }
+    },
+    {
+      "count": 1,
+      "violation": {
+        "kind": "system_program",
+        "action": {
+          "mnemonic": "Genrule",
+          "target": "//examples/assertion:test_case6_config_json"
+        },
+        "program": {
+          "origin": "system",
+          "path": "/bin/bash"
+        },
+        "wrappers": []
+      }
+    },
+    {
+      "count": 1,
+      "violation": {
+        "kind": "system_program",
+        "action": {
+          "mnemonic": "Genrule",
+          "target": "//examples/assertion:test_case7_config_json"
+        },
+        "program": {
+          "origin": "system",
+          "path": "/bin/bash"
+        },
+        "wrappers": []
+      }
+    },
+    {
+      "count": 1,
+      "violation": {
+        "kind": "system_program",
+        "action": {
+          "mnemonic": "Genrule",
+          "target": "//examples/assertion:test_case8_config_json"
+        },
+        "program": {
+          "origin": "system",
+          "path": "/bin/bash"
+        },
+        "wrappers": []
+      }
+    },
+    {
+      "count": 2,
+      "violation": {
+        "kind": "system_program",
+        "action": {
+          "mnemonic": "Genrule",
+          "target": "//examples/cmd_location_expansion:app_cmd"
+        },
+        "program": {
+          "origin": "system",
+          "path": "/bin/bash"
+        },
+        "wrappers": []
+      }
+    },
+    {
+      "count": 1,
+      "violation": {
+        "kind": "system_program",
+        "action": {
+          "mnemonic": "Genrule",
+          "target": "//examples/cmd_location_expansion:assert_cmd_is_escaped_gen"
+        },
+        "program": {
+          "origin": "system",
+          "path": "/bin/bash"
+        },
+        "wrappers": []
+      }
+    },
+    {
+      "count": 1,
+      "violation": {
+        "kind": "system_program",
+        "action": {
+          "mnemonic": "Genrule",
+          "target": "//examples/cmd_location_expansion:assert_image_metadata_config_json"
+        },
+        "program": {
+          "origin": "system",
+          "path": "/bin/bash"
+        },
+        "wrappers": []
+      }
+    },
+    {
+      "count": 1,
+      "violation": {
+        "kind": "system_program",
+        "action": {
+          "mnemonic": "Genrule",
+          "target": "//examples/env:assert_version_is_correct_gen"
+        },
+        "program": {
+          "origin": "system",
+          "path": "/bin/bash"
+        },
+        "wrappers": []
+      }
+    },
+    {
+      "count": 1,
+      "violation": {
+        "kind": "system_program",
+        "action": {
+          "mnemonic": "Genrule",
+          "target": "//examples/image_index:app_all_annotated_from_file_manifest"
+        },
+        "program": {
+          "origin": "system",
+          "path": "/bin/bash"
+        },
+        "wrappers": []
+      }
+    },
+    {
+      "count": 1,
+      "violation": {
+        "kind": "system_program",
+        "action": {
+          "mnemonic": "Genrule",
+          "target": "//examples/image_index:app_all_annotated_manifest"
+        },
+        "program": {
+          "origin": "system",
+          "path": "/bin/bash"
+        },
+        "wrappers": []
+      }
+    },
+    {
+      "count": 1,
+      "violation": {
+        "kind": "system_program",
+        "action": {
+          "mnemonic": "Genrule",
+          "target": "//examples/just_tar:10mb_file"
+        },
+        "program": {
+          "origin": "system",
+          "path": "/bin/bash"
+        },
+        "wrappers": []
+      }
+    },
+    {
+      "count": 1,
+      "violation": {
+        "kind": "system_program",
+        "action": {
+          "mnemonic": "Genrule",
+          "target": "//examples/labels:assert_labels_dict_config_json"
+        },
+        "program": {
+          "origin": "system",
+          "path": "/bin/bash"
+        },
+        "wrappers": []
+      }
+    },
+    {
+      "count": 1,
+      "violation": {
+        "kind": "system_program",
+        "action": {
+          "mnemonic": "Genrule",
+          "target": "//examples/labels:assert_labels_from_file_config_json"
+        },
+        "program": {
+          "origin": "system",
+          "path": "/bin/bash"
+        },
+        "wrappers": []
+      }
+    },
+    {
+      "count": 1,
+      "violation": {
+        "kind": "system_program",
+        "action": {
+          "mnemonic": "Jq",
+          "target": "//examples/assertion/empty:empty.digest"
+        },
+        "program": {
+          "origin": "system",
+          "path": "/bin/bash"
+        },
+        "wrappers": []
+      }
+    },
+    {
+      "count": 1,
+      "violation": {
+        "kind": "system_program",
+        "action": {
+          "mnemonic": "Jq",
+          "target": "//examples/assertion:case10.digest"
+        },
+        "program": {
+          "origin": "system",
+          "path": "/bin/bash"
+        },
+        "wrappers": []
+      }
+    },
+    {
+      "count": 1,
+      "violation": {
+        "kind": "system_program",
+        "action": {
+          "mnemonic": "Jq",
+          "target": "//examples/assertion:case11.digest"
+        },
+        "program": {
+          "origin": "system",
+          "path": "/bin/bash"
+        },
+        "wrappers": []
+      }
+    },
+    {
+      "count": 1,
+      "violation": {
+        "kind": "system_program",
+        "action": {
+          "mnemonic": "Jq",
+          "target": "//examples/assertion:case12.digest"
+        },
+        "program": {
+          "origin": "system",
+          "path": "/bin/bash"
+        },
+        "wrappers": []
+      }
+    },
+    {
+      "count": 1,
+      "violation": {
+        "kind": "system_program",
+        "action": {
+          "mnemonic": "Jq",
+          "target": "//examples/assertion:case12_base.digest"
+        },
+        "program": {
+          "origin": "system",
+          "path": "/bin/bash"
+        },
+        "wrappers": []
+      }
+    },
+    {
+      "count": 1,
+      "violation": {
+        "kind": "system_program",
+        "action": {
+          "mnemonic": "Jq",
+          "target": "//examples/assertion:case13.digest"
+        },
+        "program": {
+          "origin": "system",
+          "path": "/bin/bash"
+        },
+        "wrappers": []
+      }
+    },
+    {
+      "count": 1,
+      "violation": {
+        "kind": "system_program",
+        "action": {
+          "mnemonic": "Jq",
+          "target": "//examples/assertion:case14.digest"
+        },
+        "program": {
+          "origin": "system",
+          "path": "/bin/bash"
+        },
+        "wrappers": []
+      }
+    },
+    {
+      "count": 1,
+      "violation": {
+        "kind": "system_program",
+        "action": {
+          "mnemonic": "Jq",
+          "target": "//examples/assertion:case15.digest"
+        },
+        "program": {
+          "origin": "system",
+          "path": "/bin/bash"
+        },
+        "wrappers": []
+      }
+    },
+    {
+      "count": 1,
+      "violation": {
+        "kind": "system_program",
+        "action": {
+          "mnemonic": "Jq",
+          "target": "//examples/assertion:case15_base.digest"
+        },
+        "program": {
+          "origin": "system",
+          "path": "/bin/bash"
+        },
+        "wrappers": []
+      }
+    },
+    {
+      "count": 1,
+      "violation": {
+        "kind": "system_program",
+        "action": {
+          "mnemonic": "Jq",
+          "target": "//examples/assertion:case15_cmd.digest"
+        },
+        "program": {
+          "origin": "system",
+          "path": "/bin/bash"
+        },
+        "wrappers": []
+      }
+    },
+    {
+      "count": 1,
+      "violation": {
+        "kind": "system_program",
+        "action": {
+          "mnemonic": "Jq",
+          "target": "//examples/assertion:case16.digest"
+        },
+        "program": {
+          "origin": "system",
+          "path": "/bin/bash"
+        },
+        "wrappers": []
+      }
+    },
+    {
+      "count": 1,
+      "violation": {
+        "kind": "system_program",
+        "action": {
+          "mnemonic": "Jq",
+          "target": "//examples/assertion:case16_base.digest"
+        },
+        "program": {
+          "origin": "system",
+          "path": "/bin/bash"
+        },
+        "wrappers": []
+      }
+    },
+    {
+      "count": 1,
+      "violation": {
+        "kind": "system_program",
+        "action": {
+          "mnemonic": "Jq",
+          "target": "//examples/assertion:case17.digest"
+        },
+        "program": {
+          "origin": "system",
+          "path": "/bin/bash"
+        },
+        "wrappers": []
+      }
+    },
+    {
+      "count": 1,
+      "violation": {
+        "kind": "system_program",
+        "action": {
+          "mnemonic": "Jq",
+          "target": "//examples/assertion:case18.digest"
+        },
+        "program": {
+          "origin": "system",
+          "path": "/bin/bash"
+        },
+        "wrappers": []
+      }
+    },
+    {
+      "count": 1,
+      "violation": {
+        "kind": "system_program",
+        "action": {
+          "mnemonic": "Jq",
+          "target": "//examples/assertion:case19.digest"
+        },
+        "program": {
+          "origin": "system",
+          "path": "/bin/bash"
+        },
+        "wrappers": []
+      }
+    },
+    {
+      "count": 1,
+      "violation": {
+        "kind": "system_program",
+        "action": {
+          "mnemonic": "Jq",
+          "target": "//examples/assertion:case2.digest"
+        },
+        "program": {
+          "origin": "system",
+          "path": "/bin/bash"
+        },
+        "wrappers": []
+      }
+    },
+    {
+      "count": 1,
+      "violation": {
+        "kind": "system_program",
+        "action": {
+          "mnemonic": "Jq",
+          "target": "//examples/assertion:case20.digest"
+        },
+        "program": {
+          "origin": "system",
+          "path": "/bin/bash"
+        },
+        "wrappers": []
+      }
+    },
+    {
+      "count": 1,
+      "violation": {
+        "kind": "system_program",
+        "action": {
+          "mnemonic": "Jq",
+          "target": "//examples/assertion:case3.digest"
+        },
+        "program": {
+          "origin": "system",
+          "path": "/bin/bash"
+        },
+        "wrappers": []
+      }
+    },
+    {
+      "count": 1,
+      "violation": {
+        "kind": "system_program",
+        "action": {
+          "mnemonic": "Jq",
+          "target": "//examples/assertion:case4.digest"
+        },
+        "program": {
+          "origin": "system",
+          "path": "/bin/bash"
+        },
+        "wrappers": []
+      }
+    },
+    {
+      "count": 1,
+      "violation": {
+        "kind": "system_program",
+        "action": {
+          "mnemonic": "Jq",
+          "target": "//examples/assertion:case5.digest"
+        },
+        "program": {
+          "origin": "system",
+          "path": "/bin/bash"
+        },
+        "wrappers": []
+      }
+    },
+    {
+      "count": 1,
+      "violation": {
+        "kind": "system_program",
+        "action": {
+          "mnemonic": "Jq",
+          "target": "//examples/assertion:case6.digest"
+        },
+        "program": {
+          "origin": "system",
+          "path": "/bin/bash"
+        },
+        "wrappers": []
+      }
+    },
+    {
+      "count": 1,
+      "violation": {
+        "kind": "system_program",
+        "action": {
+          "mnemonic": "Jq",
+          "target": "//examples/assertion:case7.digest"
+        },
+        "program": {
+          "origin": "system",
+          "path": "/bin/bash"
+        },
+        "wrappers": []
+      }
+    },
+    {
+      "count": 1,
+      "violation": {
+        "kind": "system_program",
+        "action": {
+          "mnemonic": "Jq",
+          "target": "//examples/assertion:case7_base.digest"
+        },
+        "program": {
+          "origin": "system",
+          "path": "/bin/bash"
+        },
+        "wrappers": []
+      }
+    },
+    {
+      "count": 1,
+      "violation": {
+        "kind": "system_program",
+        "action": {
+          "mnemonic": "Jq",
+          "target": "//examples/assertion:case8.digest"
+        },
+        "program": {
+          "origin": "system",
+          "path": "/bin/bash"
+        },
+        "wrappers": []
+      }
+    },
+    {
+      "count": 1,
+      "violation": {
+        "kind": "system_program",
+        "action": {
+          "mnemonic": "Jq",
+          "target": "//examples/assertion:case8_base.digest"
+        },
+        "program": {
+          "origin": "system",
+          "path": "/bin/bash"
+        },
+        "wrappers": []
+      }
+    },
+    {
+      "count": 1,
+      "violation": {
+        "kind": "system_program",
+        "action": {
+          "mnemonic": "Jq",
+          "target": "//examples/assertion:case9_image.digest"
+        },
+        "program": {
+          "origin": "system",
+          "path": "/bin/bash"
+        },
+        "wrappers": []
+      }
+    },
+    {
+      "count": 1,
+      "violation": {
+        "kind": "system_program",
+        "action": {
+          "mnemonic": "Jq",
+          "target": "//examples/assertion:imagE.digest"
+        },
+        "program": {
+          "origin": "system",
+          "path": "/bin/bash"
+        },
+        "wrappers": []
+      }
+    },
+    {
+      "count": 1,
+      "violation": {
+        "kind": "system_program",
+        "action": {
+          "mnemonic": "Jq",
+          "target": "//examples/assertion:same_tar_multiple_times.digest"
+        },
+        "program": {
+          "origin": "system",
+          "path": "/bin/bash"
+        },
+        "wrappers": []
+      }
+    },
+    {
+      "count": 1,
+      "violation": {
+        "kind": "system_program",
+        "action": {
+          "mnemonic": "Jq",
+          "target": "//examples/assertion:test_case9_jq1"
+        },
+        "program": {
+          "origin": "system",
+          "path": "/bin/bash"
+        },
+        "wrappers": []
+      }
+    },
+    {
+      "count": 1,
+      "violation": {
+        "kind": "system_program",
+        "action": {
+          "mnemonic": "Jq",
+          "target": "//examples/assertion:test_case9_jq2"
+        },
+        "program": {
+          "origin": "system",
+          "path": "/bin/bash"
+        },
+        "wrappers": []
+      }
+    },
+    {
+      "count": 1,
+      "violation": {
+        "kind": "system_program",
+        "action": {
+          "mnemonic": "Jq",
+          "target": "//examples/attest:image.digest"
+        },
+        "program": {
+          "origin": "system",
+          "path": "/bin/bash"
+        },
+        "wrappers": []
+      }
+    },
+    {
+      "count": 1,
+      "violation": {
+        "kind": "system_program",
+        "action": {
+          "mnemonic": "Jq",
+          "target": "//examples/cmd_location_expansion:image.digest"
+        },
+        "program": {
+          "origin": "system",
+          "path": "/bin/bash"
+        },
+        "wrappers": []
+      }
+    },
+    {
+      "count": 1,
+      "violation": {
+        "kind": "system_program",
+        "action": {
+          "mnemonic": "Jq",
+          "target": "//examples/deb:image_amd64.digest"
+        },
+        "program": {
+          "origin": "system",
+          "path": "/bin/bash"
+        },
+        "wrappers": []
+      }
+    },
+    {
+      "count": 1,
+      "violation": {
+        "kind": "system_program",
+        "action": {
+          "mnemonic": "Jq",
+          "target": "//examples/deb:image_arm64.digest"
+        },
+        "program": {
+          "origin": "system",
+          "path": "/bin/bash"
+        },
+        "wrappers": []
+      }
+    },
+    {
+      "count": 1,
+      "violation": {
+        "kind": "system_program",
+        "action": {
+          "mnemonic": "Jq",
+          "target": "//examples/env:image.digest"
+        },
+        "program": {
+          "origin": "system",
+          "path": "/bin/bash"
+        },
+        "wrappers": []
+      }
+    },
+    {
+      "count": 1,
+      "violation": {
+        "kind": "system_program",
+        "action": {
+          "mnemonic": "Jq",
+          "target": "//examples/image_index:app.digest"
+        },
+        "program": {
+          "origin": "system",
+          "path": "/bin/bash"
+        },
+        "wrappers": []
+      }
+    },
+    {
+      "count": 1,
+      "violation": {
+        "kind": "system_program",
+        "action": {
+          "mnemonic": "Jq",
+          "target": "//examples/image_index:app_all.digest"
+        },
+        "program": {
+          "origin": "system",
+          "path": "/bin/bash"
+        },
+        "wrappers": []
+      }
+    },
+    {
+      "count": 1,
+      "violation": {
+        "kind": "system_program",
+        "action": {
+          "mnemonic": "Jq",
+          "target": "//examples/image_index:app_all_annotated.digest"
+        },
+        "program": {
+          "origin": "system",
+          "path": "/bin/bash"
+        },
+        "wrappers": []
+      }
+    },
+    {
+      "count": 1,
+      "violation": {
+        "kind": "system_program",
+        "action": {
+          "mnemonic": "Jq",
+          "target": "//examples/image_index:app_all_annotated_from_file.digest"
+        },
+        "program": {
+          "origin": "system",
+          "path": "/bin/bash"
+        },
+        "wrappers": []
+      }
+    },
+    {
+      "count": 1,
+      "violation": {
+        "kind": "system_program",
+        "action": {
+          "mnemonic": "Jq",
+          "target": "//examples/labels:image.digest"
+        },
+        "program": {
+          "origin": "system",
+          "path": "/bin/bash"
+        },
+        "wrappers": []
+      }
+    },
+    {
+      "count": 1,
+      "violation": {
+        "kind": "system_program",
+        "action": {
+          "mnemonic": "Jq",
+          "target": "//examples/labels:image_labels_dict.digest"
+        },
+        "program": {
+          "origin": "system",
+          "path": "/bin/bash"
+        },
+        "wrappers": []
+      }
+    },
+    {
+      "count": 1,
+      "violation": {
+        "kind": "system_program",
+        "action": {
+          "mnemonic": "Jq",
+          "target": "//examples/multi_architecture_image:image.digest"
+        },
+        "program": {
+          "origin": "system",
+          "path": "/bin/bash"
+        },
+        "wrappers": []
+      }
+    },
+    {
+      "count": 1,
+      "violation": {
+        "kind": "system_program",
+        "action": {
+          "mnemonic": "Jq",
+          "target": "//examples/multi_architecture_image:index.digest"
+        },
+        "program": {
+          "origin": "system",
+          "path": "/bin/bash"
+        },
+        "wrappers": []
+      }
+    },
+    {
+      "count": 1,
+      "violation": {
+        "kind": "system_program",
+        "action": {
+          "mnemonic": "Jq",
+          "target": "//examples/push:image.digest"
+        },
+        "program": {
+          "origin": "system",
+          "path": "/bin/bash"
+        },
+        "wrappers": []
+      }
+    },
+    {
+      "count": 1,
+      "violation": {
+        "kind": "system_program",
+        "action": {
+          "mnemonic": "Jq",
+          "target": "//examples/push:image_index.digest"
+        },
+        "program": {
+          "origin": "system",
+          "path": "/bin/bash"
+        },
+        "wrappers": []
+      }
+    },
+    {
+      "count": 1,
+      "violation": {
+        "kind": "system_program",
+        "action": {
+          "mnemonic": "Jq",
+          "target": "//examples/sign:image.digest"
+        },
+        "program": {
+          "origin": "system",
+          "path": "/bin/bash"
+        },
+        "wrappers": []
+      }
+    },
+    {
+      "count": 1,
+      "violation": {
+        "kind": "system_program",
+        "action": {
+          "mnemonic": "Jq",
+          "target": "//examples/tarball_as_base:image.digest"
+        },
+        "program": {
+          "origin": "system",
+          "path": "/bin/bash"
+        },
+        "wrappers": []
+      }
+    },
+    {
+      "count": 1,
+      "violation": {
+        "kind": "system_program",
+        "action": {
+          "mnemonic": "Jq",
+          "target": "//examples/tarball_incremental_loader:image.digest"
+        },
+        "program": {
+          "origin": "system",
+          "path": "/bin/bash"
+        },
+        "wrappers": []
+      }
+    },
+    {
+      "count": 1,
+      "violation": {
+        "kind": "unknown_program",
+        "action": {
+          "mnemonic": "ExtractTarball",
+          "target": "//examples/tarball_as_base:base"
+        },
+        "program": {
+          "origin": {
+            "module": {
+              "name": "rules_oci",
+              "extension": "oci"
+            }
+          },
+          "path": "regctl"
+        },
+        "wrappers": []
+      }
+    },
+    {
+      "count": 1,
+      "violation": {
+        "kind": "unknown_program",
+        "action": {
+          "mnemonic": "OCIImage",
+          "target": "//examples/assertion/empty:empty"
+        },
+        "program": {
+          "origin": {
+            "module": {
+              "name": "rules_oci",
+              "extension": null
+            }
+          },
+          "path": "examples/assertion/empty/image_empty.sh"
+        },
+        "wrappers": []
+      }
+    },
+    {
+      "count": 2,
+      "violation": {
+        "kind": "unknown_program",
+        "action": {
+          "mnemonic": "OCIImage",
+          "target": "//examples/assertion:case10"
+        },
+        "program": {
+          "origin": {
+            "module": {
+              "name": "rules_oci",
+              "extension": null
+            }
+          },
+          "path": "examples/assertion/image_case10.sh"
+        },
+        "wrappers": []
+      }
+    },
+    {
+      "count": 1,
+      "violation": {
+        "kind": "unknown_program",
+        "action": {
+          "mnemonic": "OCIImage",
+          "target": "//examples/assertion:case11"
+        },
+        "program": {
+          "origin": {
+            "module": {
+              "name": "rules_oci",
+              "extension": null
+            }
+          },
+          "path": "examples/assertion/image_case11.sh"
+        },
+        "wrappers": []
+      }
+    },
+    {
+      "count": 1,
+      "violation": {
+        "kind": "unknown_program",
+        "action": {
+          "mnemonic": "OCIImage",
+          "target": "//examples/assertion:case12"
+        },
+        "program": {
+          "origin": {
+            "module": {
+              "name": "rules_oci",
+              "extension": null
+            }
+          },
+          "path": "examples/assertion/image_case12.sh"
+        },
+        "wrappers": []
+      }
+    },
+    {
+      "count": 1,
+      "violation": {
+        "kind": "unknown_program",
+        "action": {
+          "mnemonic": "OCIImage",
+          "target": "//examples/assertion:case12_base"
+        },
+        "program": {
+          "origin": {
+            "module": {
+              "name": "rules_oci",
+              "extension": null
+            }
+          },
+          "path": "examples/assertion/image_case12_base.sh"
+        },
+        "wrappers": []
+      }
+    },
+    {
+      "count": 1,
+      "violation": {
+        "kind": "unknown_program",
+        "action": {
+          "mnemonic": "OCIImage",
+          "target": "//examples/assertion:case13"
+        },
+        "program": {
+          "origin": {
+            "module": {
+              "name": "rules_oci",
+              "extension": null
+            }
+          },
+          "path": "examples/assertion/image_case13.sh"
+        },
+        "wrappers": []
+      }
+    },
+    {
+      "count": 1,
+      "violation": {
+        "kind": "unknown_program",
+        "action": {
+          "mnemonic": "OCIImage",
+          "target": "//examples/assertion:case14"
+        },
+        "program": {
+          "origin": {
+            "module": {
+              "name": "rules_oci",
+              "extension": null
+            }
+          },
+          "path": "examples/assertion/image_case14.sh"
+        },
+        "wrappers": []
+      }
+    },
+    {
+      "count": 1,
+      "violation": {
+        "kind": "unknown_program",
+        "action": {
+          "mnemonic": "OCIImage",
+          "target": "//examples/assertion:case15"
+        },
+        "program": {
+          "origin": {
+            "module": {
+              "name": "rules_oci",
+              "extension": null
+            }
+          },
+          "path": "examples/assertion/image_case15.sh"
+        },
+        "wrappers": []
+      }
+    },
+    {
+      "count": 1,
+      "violation": {
+        "kind": "unknown_program",
+        "action": {
+          "mnemonic": "OCIImage",
+          "target": "//examples/assertion:case15_base"
+        },
+        "program": {
+          "origin": {
+            "module": {
+              "name": "rules_oci",
+              "extension": null
+            }
+          },
+          "path": "examples/assertion/image_case15_base.sh"
+        },
+        "wrappers": []
+      }
+    },
+    {
+      "count": 1,
+      "violation": {
+        "kind": "unknown_program",
+        "action": {
+          "mnemonic": "OCIImage",
+          "target": "//examples/assertion:case15_cmd"
+        },
+        "program": {
+          "origin": {
+            "module": {
+              "name": "rules_oci",
+              "extension": null
+            }
+          },
+          "path": "examples/assertion/image_case15_cmd.sh"
+        },
+        "wrappers": []
+      }
+    },
+    {
+      "count": 1,
+      "violation": {
+        "kind": "unknown_program",
+        "action": {
+          "mnemonic": "OCIImage",
+          "target": "//examples/assertion:case16"
+        },
+        "program": {
+          "origin": {
+            "module": {
+              "name": "rules_oci",
+              "extension": null
+            }
+          },
+          "path": "examples/assertion/image_case16.sh"
+        },
+        "wrappers": []
+      }
+    },
+    {
+      "count": 1,
+      "violation": {
+        "kind": "unknown_program",
+        "action": {
+          "mnemonic": "OCIImage",
+          "target": "//examples/assertion:case16_base"
+        },
+        "program": {
+          "origin": {
+            "module": {
+              "name": "rules_oci",
+              "extension": null
+            }
+          },
+          "path": "examples/assertion/image_case16_base.sh"
+        },
+        "wrappers": []
+      }
+    },
+    {
+      "count": 1,
+      "violation": {
+        "kind": "unknown_program",
+        "action": {
+          "mnemonic": "OCIImage",
+          "target": "//examples/assertion:case17"
+        },
+        "program": {
+          "origin": {
+            "module": {
+              "name": "rules_oci",
+              "extension": null
+            }
+          },
+          "path": "examples/assertion/image_case17.sh"
+        },
+        "wrappers": []
+      }
+    },
+    {
+      "count": 1,
+      "violation": {
+        "kind": "unknown_program",
+        "action": {
+          "mnemonic": "OCIImage",
+          "target": "//examples/assertion:case18"
+        },
+        "program": {
+          "origin": {
+            "module": {
+              "name": "rules_oci",
+              "extension": null
+            }
+          },
+          "path": "examples/assertion/image_case18.sh"
+        },
+        "wrappers": []
+      }
+    },
+    {
+      "count": 1,
+      "violation": {
+        "kind": "unknown_program",
+        "action": {
+          "mnemonic": "OCIImage",
+          "target": "//examples/assertion:case19"
+        },
+        "program": {
+          "origin": {
+            "module": {
+              "name": "rules_oci",
+              "extension": null
+            }
+          },
+          "path": "examples/assertion/image_case19.sh"
+        },
+        "wrappers": []
+      }
+    },
+    {
+      "count": 1,
+      "violation": {
+        "kind": "unknown_program",
+        "action": {
+          "mnemonic": "OCIImage",
+          "target": "//examples/assertion:case2"
+        },
+        "program": {
+          "origin": {
+            "module": {
+              "name": "rules_oci",
+              "extension": null
+            }
+          },
+          "path": "examples/assertion/image_case2.sh"
+        },
+        "wrappers": []
+      }
+    },
+    {
+      "count": 1,
+      "violation": {
+        "kind": "unknown_program",
+        "action": {
+          "mnemonic": "OCIImage",
+          "target": "//examples/assertion:case20"
+        },
+        "program": {
+          "origin": {
+            "module": {
+              "name": "rules_oci",
+              "extension": null
+            }
+          },
+          "path": "examples/assertion/image_case20.sh"
+        },
+        "wrappers": []
+      }
+    },
+    {
+      "count": 1,
+      "violation": {
+        "kind": "unknown_program",
+        "action": {
+          "mnemonic": "OCIImage",
+          "target": "//examples/assertion:case3"
+        },
+        "program": {
+          "origin": {
+            "module": {
+              "name": "rules_oci",
+              "extension": null
+            }
+          },
+          "path": "examples/assertion/image_case3.sh"
+        },
+        "wrappers": []
+      }
+    },
+    {
+      "count": 2,
+      "violation": {
+        "kind": "unknown_program",
+        "action": {
+          "mnemonic": "OCIImage",
+          "target": "//examples/assertion:case4"
+        },
+        "program": {
+          "origin": {
+            "module": {
+              "name": "rules_oci",
+              "extension": null
+            }
+          },
+          "path": "examples/assertion/image_case4.sh"
+        },
+        "wrappers": []
+      }
+    },
+    {
+      "count": 1,
+      "violation": {
+        "kind": "unknown_program",
+        "action": {
+          "mnemonic": "OCIImage",
+          "target": "//examples/assertion:case5"
+        },
+        "program": {
+          "origin": {
+            "module": {
+              "name": "rules_oci",
+              "extension": null
+            }
+          },
+          "path": "examples/assertion/image_case5.sh"
+        },
+        "wrappers": []
+      }
+    },
+    {
+      "count": 1,
+      "violation": {
+        "kind": "unknown_program",
+        "action": {
+          "mnemonic": "OCIImage",
+          "target": "//examples/assertion:case6"
+        },
+        "program": {
+          "origin": {
+            "module": {
+              "name": "rules_oci",
+              "extension": null
+            }
+          },
+          "path": "examples/assertion/image_case6.sh"
+        },
+        "wrappers": []
+      }
+    },
+    {
+      "count": 1,
+      "violation": {
+        "kind": "unknown_program",
+        "action": {
+          "mnemonic": "OCIImage",
+          "target": "//examples/assertion:case7"
+        },
+        "program": {
+          "origin": {
+            "module": {
+              "name": "rules_oci",
+              "extension": null
+            }
+          },
+          "path": "examples/assertion/image_case7.sh"
+        },
+        "wrappers": []
+      }
+    },
+    {
+      "count": 1,
+      "violation": {
+        "kind": "unknown_program",
+        "action": {
+          "mnemonic": "OCIImage",
+          "target": "//examples/assertion:case7_base"
+        },
+        "program": {
+          "origin": {
+            "module": {
+              "name": "rules_oci",
+              "extension": null
+            }
+          },
+          "path": "examples/assertion/image_case7_base.sh"
+        },
+        "wrappers": []
+      }
+    },
+    {
+      "count": 1,
+      "violation": {
+        "kind": "unknown_program",
+        "action": {
+          "mnemonic": "OCIImage",
+          "target": "//examples/assertion:case8"
+        },
+        "program": {
+          "origin": {
+            "module": {
+              "name": "rules_oci",
+              "extension": null
+            }
+          },
+          "path": "examples/assertion/image_case8.sh"
+        },
+        "wrappers": []
+      }
+    },
+    {
+      "count": 1,
+      "violation": {
+        "kind": "unknown_program",
+        "action": {
+          "mnemonic": "OCIImage",
+          "target": "//examples/assertion:case8_base"
+        },
+        "program": {
+          "origin": {
+            "module": {
+              "name": "rules_oci",
+              "extension": null
+            }
+          },
+          "path": "examples/assertion/image_case8_base.sh"
+        },
+        "wrappers": []
+      }
+    },
+    {
+      "count": 1,
+      "violation": {
+        "kind": "unknown_program",
+        "action": {
+          "mnemonic": "OCIImage",
+          "target": "//examples/assertion:case9_image"
+        },
+        "program": {
+          "origin": {
+            "module": {
+              "name": "rules_oci",
+              "extension": null
+            }
+          },
+          "path": "examples/assertion/image_case9_image.sh"
+        },
+        "wrappers": []
+      }
+    },
+    {
+      "count": 1,
+      "violation": {
+        "kind": "unknown_program",
+        "action": {
+          "mnemonic": "OCIImage",
+          "target": "//examples/assertion:imagE"
+        },
+        "program": {
+          "origin": {
+            "module": {
+              "name": "rules_oci",
+              "extension": null
+            }
+          },
+          "path": "examples/assertion/image_imagE.sh"
+        },
+        "wrappers": []
+      }
+    },
+    {
+      "count": 1,
+      "violation": {
+        "kind": "unknown_program",
+        "action": {
+          "mnemonic": "OCIImage",
+          "target": "//examples/assertion:same_tar_multiple_times"
+        },
+        "program": {
+          "origin": {
+            "module": {
+              "name": "rules_oci",
+              "extension": null
+            }
+          },
+          "path": "examples/assertion/image_same_tar_multiple_times.sh"
+        },
+        "wrappers": []
+      }
+    },
+    {
+      "count": 1,
+      "violation": {
+        "kind": "unknown_program",
+        "action": {
+          "mnemonic": "OCIImage",
+          "target": "//examples/attest:image"
+        },
+        "program": {
+          "origin": {
+            "module": {
+              "name": "rules_oci",
+              "extension": null
+            }
+          },
+          "path": "examples/attest/image_image.sh"
+        },
+        "wrappers": []
+      }
+    },
+    {
+      "count": 2,
+      "violation": {
+        "kind": "unknown_program",
+        "action": {
+          "mnemonic": "OCIImage",
+          "target": "//examples/cmd_location_expansion:image"
+        },
+        "program": {
+          "origin": {
+            "module": {
+              "name": "rules_oci",
+              "extension": null
+            }
+          },
+          "path": "examples/cmd_location_expansion/image_image.sh"
+        },
+        "wrappers": []
+      }
+    },
+    {
+      "count": 1,
+      "violation": {
+        "kind": "unknown_program",
+        "action": {
+          "mnemonic": "OCIImage",
+          "target": "//examples/deb:image_amd64"
+        },
+        "program": {
+          "origin": {
+            "module": {
+              "name": "rules_oci",
+              "extension": null
+            }
+          },
+          "path": "examples/deb/image_image_amd64.sh"
+        },
+        "wrappers": []
+      }
+    },
+    {
+      "count": 1,
+      "violation": {
+        "kind": "unknown_program",
+        "action": {
+          "mnemonic": "OCIImage",
+          "target": "//examples/deb:image_arm64"
+        },
+        "program": {
+          "origin": {
+            "module": {
+              "name": "rules_oci",
+              "extension": null
+            }
+          },
+          "path": "examples/deb/image_image_arm64.sh"
+        },
+        "wrappers": []
+      }
+    },
+    {
+      "count": 2,
+      "violation": {
+        "kind": "unknown_program",
+        "action": {
+          "mnemonic": "OCIImage",
+          "target": "//examples/env:image"
+        },
+        "program": {
+          "origin": {
+            "module": {
+              "name": "rules_oci",
+              "extension": null
+            }
+          },
+          "path": "examples/env/image_image.sh"
+        },
+        "wrappers": []
+      }
+    },
+    {
+      "count": 3,
+      "violation": {
+        "kind": "unknown_program",
+        "action": {
+          "mnemonic": "OCIImage",
+          "target": "//examples/image_index:app"
+        },
+        "program": {
+          "origin": {
+            "module": {
+              "name": "rules_oci",
+              "extension": null
+            }
+          },
+          "path": "examples/image_index/image_app.sh"
+        },
+        "wrappers": []
+      }
+    },
+    {
+      "count": 1,
+      "violation": {
+        "kind": "unknown_program",
+        "action": {
+          "mnemonic": "OCIImage",
+          "target": "//examples/labels:image"
+        },
+        "program": {
+          "origin": {
+            "module": {
+              "name": "rules_oci",
+              "extension": null
+            }
+          },
+          "path": "examples/labels/image_image.sh"
+        },
+        "wrappers": []
+      }
+    },
+    {
+      "count": 1,
+      "violation": {
+        "kind": "unknown_program",
+        "action": {
+          "mnemonic": "OCIImage",
+          "target": "//examples/labels:image_labels_dict"
+        },
+        "program": {
+          "origin": {
+            "module": {
+              "name": "rules_oci",
+              "extension": null
+            }
+          },
+          "path": "examples/labels/image_image_labels_dict.sh"
+        },
+        "wrappers": []
+      }
+    },
+    {
+      "count": 3,
+      "violation": {
+        "kind": "unknown_program",
+        "action": {
+          "mnemonic": "OCIImage",
+          "target": "//examples/multi_architecture_image:image"
+        },
+        "program": {
+          "origin": {
+            "module": {
+              "name": "rules_oci",
+              "extension": null
+            }
+          },
+          "path": "examples/multi_architecture_image/image_image.sh"
+        },
+        "wrappers": []
+      }
+    },
+    {
+      "count": 1,
+      "violation": {
+        "kind": "unknown_program",
+        "action": {
+          "mnemonic": "OCIImage",
+          "target": "//examples/push:image"
+        },
+        "program": {
+          "origin": {
+            "module": {
+              "name": "rules_oci",
+              "extension": null
+            }
+          },
+          "path": "examples/push/image_image.sh"
+        },
+        "wrappers": []
+      }
+    },
+    {
+      "count": 1,
+      "violation": {
+        "kind": "unknown_program",
+        "action": {
+          "mnemonic": "OCIImage",
+          "target": "//examples/sign:image"
+        },
+        "program": {
+          "origin": {
+            "module": {
+              "name": "rules_oci",
+              "extension": null
+            }
+          },
+          "path": "examples/sign/image_image.sh"
+        },
+        "wrappers": []
+      }
+    },
+    {
+      "count": 1,
+      "violation": {
+        "kind": "unknown_program",
+        "action": {
+          "mnemonic": "OCIImage",
+          "target": "//examples/tarball_as_base:image"
+        },
+        "program": {
+          "origin": {
+            "module": {
+              "name": "rules_oci",
+              "extension": null
+            }
+          },
+          "path": "examples/tarball_as_base/image_image.sh"
+        },
+        "wrappers": []
+      }
+    },
+    {
+      "count": 1,
+      "violation": {
+        "kind": "unknown_program",
+        "action": {
+          "mnemonic": "OCIImage",
+          "target": "//examples/tarball_incremental_loader:image"
+        },
+        "program": {
+          "origin": {
+            "module": {
+              "name": "rules_oci",
+              "extension": null
+            }
+          },
+          "path": "examples/tarball_incremental_loader/image_image.sh"
+        },
+        "wrappers": []
+      }
+    },
+    {
+      "count": 1,
+      "violation": {
+        "kind": "unknown_program",
+        "action": {
+          "mnemonic": "OCIIndex",
+          "target": "//examples/image_index:app_all"
+        },
+        "program": {
+          "origin": {
+            "module": {
+              "name": "rules_oci",
+              "extension": null
+            }
+          },
+          "path": "examples/image_index/image_index_app_all.sh"
+        },
+        "wrappers": []
+      }
+    },
+    {
+      "count": 1,
+      "violation": {
+        "kind": "unknown_program",
+        "action": {
+          "mnemonic": "OCIIndex",
+          "target": "//examples/image_index:app_all_annotated"
+        },
+        "program": {
+          "origin": {
+            "module": {
+              "name": "rules_oci",
+              "extension": null
+            }
+          },
+          "path": "examples/image_index/image_index_app_all_annotated.sh"
+        },
+        "wrappers": []
+      }
+    },
+    {
+      "count": 1,
+      "violation": {
+        "kind": "unknown_program",
+        "action": {
+          "mnemonic": "OCIIndex",
+          "target": "//examples/image_index:app_all_annotated_from_file"
+        },
+        "program": {
+          "origin": {
+            "module": {
+              "name": "rules_oci",
+              "extension": null
+            }
+          },
+          "path": "examples/image_index/image_index_app_all_annotated_from_file.sh"
+        },
+        "wrappers": []
+      }
+    },
+    {
+      "count": 1,
+      "violation": {
+        "kind": "unknown_program",
+        "action": {
+          "mnemonic": "OCIIndex",
+          "target": "//examples/multi_architecture_image:index"
+        },
+        "program": {
+          "origin": {
+            "module": {
+              "name": "rules_oci",
+              "extension": null
+            }
+          },
+          "path": "examples/multi_architecture_image/image_index_index.sh"
+        },
+        "wrappers": []
+      }
+    },
+    {
+      "count": 1,
+      "violation": {
+        "kind": "unknown_program",
+        "action": {
+          "mnemonic": "OCIIndex",
+          "target": "//examples/push:image_index"
+        },
+        "program": {
+          "origin": {
+            "module": {
+              "name": "rules_oci",
+              "extension": null
+            }
+          },
+          "path": "examples/push/image_index_image_index.sh"
+        },
+        "wrappers": []
+      }
+    },
+    {
+      "count": 2,
+      "violation": {
+        "kind": "unknown_program",
+        "action": {
+          "mnemonic": "OCITarballManifest",
+          "target": "//examples/assertion:case10_tarball"
+        },
+        "program": {
+          "origin": {
+            "module": {
+              "name": "rules_oci",
+              "extension": null
+            }
+          },
+          "path": "examples/assertion/case10_tarball/load.sh"
+        },
+        "wrappers": []
+      }
+    },
+    {
+      "count": 1,
+      "violation": {
+        "kind": "unknown_program",
+        "action": {
+          "mnemonic": "OCITarballManifest",
+          "target": "//examples/assertion:case11_tarball"
+        },
+        "program": {
+          "origin": {
+            "module": {
+              "name": "rules_oci",
+              "extension": null
+            }
+          },
+          "path": "examples/assertion/case11_tarball/load.sh"
+        },
+        "wrappers": []
+      }
+    },
+    {
+      "count": 1,
+      "violation": {
+        "kind": "unknown_program",
+        "action": {
+          "mnemonic": "OCITarballManifest",
+          "target": "//examples/assertion:case4_load"
+        },
+        "program": {
+          "origin": {
+            "module": {
+              "name": "rules_oci",
+              "extension": null
+            }
+          },
+          "path": "examples/assertion/case4_load/load.sh"
+        },
+        "wrappers": []
+      }
+    },
+    {
+      "count": 1,
+      "violation": {
+        "kind": "unknown_program",
+        "action": {
+          "mnemonic": "OCITarballManifest",
+          "target": "//examples/assertion:case5_load"
+        },
+        "program": {
+          "origin": {
+            "module": {
+              "name": "rules_oci",
+              "extension": null
+            }
+          },
+          "path": "examples/assertion/case5_load/load.sh"
+        },
+        "wrappers": []
+      }
+    },
+    {
+      "count": 1,
+      "violation": {
+        "kind": "unknown_program",
+        "action": {
+          "mnemonic": "OCITarballManifest",
+          "target": "//examples/assertion:case9_tarball"
+        },
+        "program": {
+          "origin": {
+            "module": {
+              "name": "rules_oci",
+              "extension": null
+            }
+          },
+          "path": "examples/assertion/case9_tarball/load.sh"
+        },
+        "wrappers": []
+      }
+    },
+    {
+      "count": 1,
+      "violation": {
+        "kind": "unknown_program",
+        "action": {
+          "mnemonic": "OCITarballManifest",
+          "target": "//examples/cmd_location_expansion:assert_cmd_is_escaped_tarball"
+        },
+        "program": {
+          "origin": {
+            "module": {
+              "name": "rules_oci",
+              "extension": null
+            }
+          },
+          "path": "examples/cmd_location_expansion/assert_cmd_is_escaped_tarball/load.sh"
+        },
+        "wrappers": []
+      }
+    },
+    {
+      "count": 1,
+      "violation": {
+        "kind": "unknown_program",
+        "action": {
+          "mnemonic": "OCITarballManifest",
+          "target": "//examples/deb:load"
+        },
+        "program": {
+          "origin": {
+            "module": {
+              "name": "rules_oci",
+              "extension": null
+            }
+          },
+          "path": "examples/deb/load/load.sh"
+        },
+        "wrappers": []
+      }
+    },
+    {
+      "count": 1,
+      "violation": {
+        "kind": "unknown_program",
+        "action": {
+          "mnemonic": "OCITarballManifest",
+          "target": "//examples/env:assert_version_is_correct_tarball"
+        },
+        "program": {
+          "origin": {
+            "module": {
+              "name": "rules_oci",
+              "extension": null
+            }
+          },
+          "path": "examples/env/assert_version_is_correct_tarball/load.sh"
+        },
+        "wrappers": []
+      }
+    },
+    {
+      "count": 1,
+      "violation": {
+        "kind": "unknown_program",
+        "action": {
+          "mnemonic": "OCITarballManifest",
+          "target": "//examples/multi_architecture_image:load"
+        },
+        "program": {
+          "origin": {
+            "module": {
+              "name": "rules_oci",
+              "extension": null
+            }
+          },
+          "path": "examples/multi_architecture_image/load/load.sh"
+        },
+        "wrappers": []
+      }
+    },
+    {
+      "count": 1,
+      "violation": {
+        "kind": "unknown_program",
+        "action": {
+          "mnemonic": "OCITarballManifest",
+          "target": "//examples/tarball_as_base:load"
+        },
+        "program": {
+          "origin": {
+            "module": {
+              "name": "rules_oci",
+              "extension": null
+            }
+          },
+          "path": "examples/tarball_as_base/load/load.sh"
+        },
+        "wrappers": []
+      }
+    },
+    {
+      "count": 1,
+      "violation": {
+        "kind": "unknown_program",
+        "action": {
+          "mnemonic": "OCITarballManifest",
+          "target": "//examples/tarball_incremental_loader:load"
+        },
+        "program": {
+          "origin": {
+            "module": {
+              "name": "rules_oci",
+              "extension": null
+            }
+          },
+          "path": "examples/tarball_incremental_loader/load/load.sh"
+        },
+        "wrappers": []
+      }
+    },
+    {
+      "count": 1,
+      "violation": {
+        "kind": "conditional_reproducibility",
+        "action": {
+          "mnemonic": "Tar",
+          "target": "//examples/assertion:case13_empty_tar"
+        },
+        "program": {
+          "origin": {
+            "module": {
+              "name": "tar.bzl",
+              "extension": "toolchains"
+            }
+          },
+          "path": "tar"
+        },
+        "wrappers": [],
+        "synonym": null,
+        "unmet": [
+          {
+            "because": "the times an archive records are the filesystem's unless it is told otherwise",
+            "any_of": [
+              "* time=*",
+              "--mtime=*",
+              "@*"
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "count": 1,
+      "violation": {
+        "kind": "conditional_reproducibility",
+        "action": {
+          "mnemonic": "Tar",
+          "target": "//examples/assertion:case13_empty_tar2"
+        },
+        "program": {
+          "origin": {
+            "module": {
+              "name": "tar.bzl",
+              "extension": "toolchains"
+            }
+          },
+          "path": "tar"
+        },
+        "wrappers": [],
+        "synonym": null,
+        "unmet": [
+          {
+            "because": "the times an archive records are the filesystem's unless it is told otherwise",
+            "any_of": [
+              "* time=*",
+              "--mtime=*",
+              "@*"
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "count": 1,
+      "violation": {
+        "kind": "conditional_reproducibility",
+        "action": {
+          "mnemonic": "Tar",
+          "target": "//examples/assertion:empty_tar"
+        },
+        "program": {
+          "origin": {
+            "module": {
+              "name": "tar.bzl",
+              "extension": "toolchains"
+            }
+          },
+          "path": "tar"
+        },
+        "wrappers": [],
+        "synonym": null,
+        "unmet": [
+          {
+            "because": "the times an archive records are the filesystem's unless it is told otherwise",
+            "any_of": [
+              "* time=*",
+              "--mtime=*",
+              "@*"
+            ]
+          }
+        ]
+      }
+    }
+  ]
+}

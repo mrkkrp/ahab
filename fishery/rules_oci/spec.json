@@ -1,0 +1,7 @@
+{
+  "repo": "https://github.com/bazel-contrib/rules_oci",
+  "commit": "522cf5b64e5618ed2e40c05828b6d436f108ef42",
+  "module_name": "rules_oci",
+  "label": "//examples/...",
+  "configs": []
+}
