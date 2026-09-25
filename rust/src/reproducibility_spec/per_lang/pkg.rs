@@ -2,6 +2,13 @@ use super::super::library::{Entry, always, aspect_bazel_lib, bazel_lib};
 use super::super::program_id::ProgramId;
 use super::super::{Clause, Guard, Reproducibility, ReproducibilitySpec};
 
+/// The flags of rules_pkg's tar tool whose values are paths in the archive.
+const TAR_PATH_FLAGS: [&str; 4] =
+    ["--directory", "--modes", "--owners", "--owner_names"];
+
+/// The flags of rules_pkg's zip tool whose values are paths in the archive.
+const ZIP_PATH_FLAGS: [&str; 2] = ["-d", "--directory"];
+
 /// One of rules_pkg's packaging tools.
 fn pkg_tool(path: &str, spec: Entry) -> (ProgramId, Entry) {
     (ProgramId::module("rules_pkg", path), spec)
@@ -79,18 +86,36 @@ pub(in crate::reproducibility_spec) fn entries() -> Vec<(ProgramId, Entry)>
     // Not stated here: `--stamp_from`, which is a dependency rather than a
     // flag and which the workspace status check already reads off the
     // action's inputs.
-    let tar = Entry::Spec(ReproducibilitySpec::new(
-        Reproducibility::Sometimes,
-        ["--mtime=*"],
-        ["--preserve_mtime"],
-    ));
+    //
+    // The package directory, and the keys of the per-file modes and owners,
+    // name paths inside the archive, which are absolute more often than not.
+    let tar = Entry::Spec(
+        ReproducibilitySpec::new(
+            Reproducibility::Sometimes,
+            ["--mtime=*"],
+            ["--preserve_mtime"],
+        )
+        .with_valued_flags(TAR_PATH_FLAGS)
+        .with_declared_paths(
+            TAR_PATH_FLAGS.map(|flag| format!("{flag}=*")),
+        ),
+    );
 
     let mut entries = vec![pkg_tool("pkg/private/tar/build_tar", tar)];
 
     // The zip tool needs nothing asked of it: `-t` defaults to the zip
     // epoch, so an archive told no time still gets a fixed one.
-    entries
-        .push(pkg_tool("pkg/private/zip/build_zip", Entry::Spec(always())));
+    // Its package directory, like the tar tool's, lies inside the archive.
+    entries.push(pkg_tool(
+        "pkg/private/zip/build_zip",
+        Entry::Spec(
+            always()
+                .with_valued_flags(ZIP_PATH_FLAGS)
+                .with_declared_paths(
+                    ZIP_PATH_FLAGS.map(|flag| format!("{flag}=*")),
+                ),
+        ),
+    ));
 
     // A Brotli stream carries no filename, timestamp or ownership metadata.
     // Its clock is used only for verbose progress, on stderr.
@@ -183,6 +208,62 @@ mod tests {
             ),
             other => panic!("expected it to break, got {other:?}"),
         }
+    }
+
+    /// What the library's spec for `program` passes over in `args`.
+    fn declared(program: ProgramId, args: &[&str]) -> Vec<String> {
+        let resolution =
+            Library::builtin(None).resolve(program, args.to_vec());
+        let (_, spec) = resolution.spec.expect("a spec for the program");
+        spec.declared_path_args(&resolution.args)
+            .into_iter()
+            .map(ToOwned::to_owned)
+            .collect()
+    }
+
+    #[test]
+    fn paths_inside_a_tar_are_declared() {
+        let mut args = tar_args();
+        args.extend([
+            "--directory=/usr/bin",
+            "--modes=/usr/bin/bazelisk=0755",
+            "--owners",
+            "/etc/bazelisk=0.0",
+            "--owner_names=/etc/bazelisk=root.root",
+        ]);
+        assert_eq!(
+            declared(build_tar(), &args),
+            vec![
+                "--directory=.",
+                "--directory=/usr/bin",
+                "--modes=/usr/bin/bazelisk=0755",
+                "--owners",
+                "/etc/bazelisk=0.0",
+                "--owner_names=/etc/bazelisk=root.root",
+            ],
+        );
+    }
+
+    #[test]
+    fn paths_on_the_build_machine_are_not_declared_by_the_tar_tool() {
+        assert!(
+            declared(
+                build_tar(),
+                &["--output=/tmp/out.tar", "--tar=/tmp/in.tar"],
+            )
+            .is_empty(),
+        );
+    }
+
+    #[test]
+    fn the_package_directory_of_a_zip_is_declared() {
+        assert_eq!(
+            declared(
+                ProgramId::module("rules_pkg", "pkg/private/zip/build_zip"),
+                &["-o", "/tmp/out.zip", "-d", "/abc/def", "-t", "0"],
+            ),
+            vec!["-d", "/abc/def"],
+        );
     }
 
     #[test]
