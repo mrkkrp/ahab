@@ -23,6 +23,11 @@
   longer reported as absolute paths. They name places inside the archive,
   e.g. `package_dir = "/usr/bin"`, not anything on the build machine.
 
+* A reference to an empty param file is no longer spliced away. `bazel
+  aquery --include_param_files` reports such a file on some runs and leaves
+  it out on others, so the verdict on the action changed from one run to
+  the next—notably for `tar` from `tar.bzl` packing an empty archive.
+
 ## Ahab 0.3.0
 
 * A `/` roots a path only where something in the text says a value begins

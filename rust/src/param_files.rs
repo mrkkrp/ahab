@@ -76,14 +76,18 @@ fn references(arg: &str, exec_path: &str) -> bool {
 
 /// The command line as the program receives it: `arguments`, with every
 /// reference to a param file replaced in place by that file's lines.
+///
+/// A reference to an empty param file is left as it stands, because aquery
+/// reports such a file on some runs and leaves it out on others, and the
+/// verdict must not depend on which.
 pub(crate) fn expanded_command_line(action: &Action) -> Vec<Sourced<'_>> {
     let mut expanded = Vec::with_capacity(action.arguments.len());
 
     for arg in &action.arguments {
-        let referenced = action
-            .param_files
-            .iter()
-            .find(|param_file| references(arg, &param_file.exec_path));
+        let referenced = action.param_files.iter().find(|param_file| {
+            !param_file.arguments.is_empty()
+                && references(arg, &param_file.exec_path)
+        });
 
         match referenced {
             Some(param_file) => {
@@ -215,6 +219,18 @@ mod tests {
     }
 
     #[test]
+    fn a_reference_to_an_empty_param_file_is_left_in_place() {
+        let a = action(
+            &["tar", "--create", "@out/empty_mtree.txt"],
+            &[("out/empty_mtree.txt", &[])],
+        );
+        assert_eq!(
+            values(&expanded_command_line(&a)),
+            ["tar", "--create", "@out/empty_mtree.txt"],
+        );
+    }
+
+    #[test]
     fn a_referenced_param_file_is_spliced_in_place() {
         let a = action(
             &["gcc", "@out/foo.params", "-o", "foo.o"],
@@ -250,13 +266,6 @@ mod tests {
             values(&expanded_command_line(&a)),
             ["clang", "-fmodule-map-file=out/m.cppmap"]
         );
-    }
-
-    #[test]
-    fn an_empty_param_file_removes_the_reference() {
-        let a =
-            action(&["gcc", "@out/foo.params"], &[("out/foo.params", &[])]);
-        assert_eq!(values(&expanded_command_line(&a)), ["gcc"]);
     }
 
     #[test]
