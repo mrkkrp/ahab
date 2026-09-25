@@ -28,6 +28,12 @@
   it out on others, so the verdict on the action changed from one run to
   the next—notably for `tar` from `tar.bzl` packing an empty archive.
 
+* A script the build expands from a template is identified by that template
+  when the library has an entry for it. The first such entry is
+  `@rules_oci//oci/private/image.sh`, the script behind every `oci_image`:
+  it is no longer an unknown program, and the image's working directory,
+  `--workdir`, is no longer reported as an absolute path.
+
 ## Ahab 0.3.0
 
 * A `/` roots a path only where something in the text says a value begins

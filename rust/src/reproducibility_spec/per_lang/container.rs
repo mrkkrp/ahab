@@ -159,6 +159,14 @@ pub(in crate::reproducibility_spec) fn entries() -> Vec<(ProgramId, Entry)>
         Entry::Spec(always()),
     ));
 
+    // The script `oci_image` expands for each image, known by its template.
+    // Its timestamp is the epoch unless it is handed one in a file, and the
+    // one absolute path it takes, the working directory, is in the image.
+    entries.push((
+        ProgramId::module("rules_oci", "oci/private/image.sh"),
+        Entry::Spec(always().with_declared_paths(["--workdir=*"])),
+    ));
+
     entries
 }
 
@@ -252,6 +260,23 @@ mod tests {
             ),
             Conformance::Reproducible,
         );
+    }
+
+    #[test]
+    fn the_oci_image_script_is_vouched_for_and_its_workdir_is_declared() {
+        let args = vec![
+            "--from=bazel-out/k8-fastbuild/bin/examples/assertion/case8",
+            "--entrypoint=bazel-out/k8-fastbuild/bin/examples/entrypoint.txt",
+            "--user=root",
+            "--workdir=/root",
+        ];
+        let resolution = Library::builtin(None).resolve(
+            ProgramId::module("rules_oci", "oci/private/image.sh"),
+            args.clone(),
+        );
+        let (_, spec) = resolution.spec.expect("a spec for the script");
+        assert_eq!(spec.assess(args.clone()), Conformance::Reproducible);
+        assert_eq!(spec.declared_path_args(&args), vec!["--workdir=/root"]);
     }
 
     /// What `declared_path_args` passes over in a command line.

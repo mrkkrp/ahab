@@ -18,6 +18,9 @@ use crate::reproducibility_spec::{
 use crate::terminal_color::Palette;
 
 mod absolute_paths;
+mod templates;
+
+pub(crate) use templates::Templates;
 
 /// The `PATH` every action is required to use.
 const EXPECTED_PATH: &str = "/bin:/usr/bin:/usr/local/bin";
@@ -524,14 +527,19 @@ pub(crate) fn check_all(
     library: &Library,
 ) -> BTreeMap<Violation, usize> {
     let targets = target_labels(container);
+    let templates = Templates::of(container);
 
     let mut violations =
         check_environment_leaks(container, &targets, user, hostname);
     violations.extend(check_path(container, &targets));
-    violations.extend(absolute_paths::check(container, &targets, library));
+    violations.extend(absolute_paths::check(
+        container, &targets, &templates, library,
+    ));
     violations.extend(check_execution_requirements(container, &targets));
     violations.extend(check_workspace_status(container, &targets));
-    violations.extend(check_reproducibility(container, &targets, library));
+    violations.extend(check_reproducibility(
+        container, &targets, &templates, library,
+    ));
 
     let mut counted = BTreeMap::new();
     for violation in violations {
@@ -801,6 +809,7 @@ fn check_path(
 fn check_reproducibility(
     container: &ActionGraphContainer,
     targets: &HashMap<u32, &str>,
+    templates: &Templates,
     library: &Library,
 ) -> Vec<Violation> {
     let mut violations = Vec::new();
@@ -812,7 +821,7 @@ fn check_reproducibility(
         };
 
         let resolved = library.resolve(
-            ProgramId::of(executable.value),
+            templates.program(executable.value, library),
             args.iter().map(|sourced| sourced.value).collect(),
         );
         let action_ref = || ActionRef::of(action, targets);
@@ -917,6 +926,7 @@ pub(crate) mod tests {
         super::check_reproducibility(
             container,
             &target_labels(container),
+            &Templates::of(container),
             library,
         )
     }
@@ -925,7 +935,12 @@ pub(crate) mod tests {
         container: &ActionGraphContainer,
         library: &Library,
     ) -> Vec<Violation> {
-        absolute_paths::check(container, &target_labels(container), library)
+        absolute_paths::check(
+            container,
+            &target_labels(container),
+            &Templates::of(container),
+            library,
+        )
     }
 
     const USER_SENTINEL: &str = "ahab-user-SENTINEL";
