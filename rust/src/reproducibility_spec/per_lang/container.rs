@@ -167,6 +167,21 @@ pub(in crate::reproducibility_spec) fn entries() -> Vec<(ProgramId, Entry)>
         Entry::Spec(always().with_declared_paths(["--workdir=*"])),
     ));
 
+    // The other two scripts rules_oci expands per target, neither of which
+    // reads a clock or the machine whatever is substituted into it.
+    // `oci_image_index` appends each image's manifests in argument order;
+    // `oci_load` writes an mtree whose every entry states a fixed owner,
+    // mode and `time=`, in the order the image's manifests give.
+    for template in ["image_index.sh.tpl", "tarball.sh.tpl"] {
+        entries.push((
+            ProgramId::module(
+                "rules_oci",
+                &format!("oci/private/{template}"),
+            ),
+            Entry::Spec(always()),
+        ));
+    }
+
     entries
 }
 
@@ -277,6 +292,33 @@ mod tests {
         let (_, spec) = resolution.spec.expect("a spec for the script");
         assert_eq!(spec.assess(args.clone()), Conformance::Reproducible);
         assert_eq!(spec.declared_path_args(&args), vec!["--workdir=/root"]);
+    }
+
+    #[test]
+    fn the_oci_index_and_tarball_scripts_are_vouched_for() {
+        for (template, args) in [
+            (
+                "image_index.sh.tpl",
+                vec![
+                    "--output=bazel-out/k8-fastbuild/bin/examples/index",
+                    "--image=bazel-out/k8-fastbuild/bin/examples/image",
+                    "--blob=blobs/sha256/0123",
+                ],
+            ),
+            ("tarball.sh.tpl", vec![]),
+        ] {
+            assert_eq!(
+                assess(
+                    ProgramId::module(
+                        "rules_oci",
+                        &format!("oci/private/{template}"),
+                    ),
+                    args,
+                ),
+                Conformance::Reproducible,
+                "{template}",
+            );
+        }
     }
 
     /// What `declared_path_args` passes over in a command line.
