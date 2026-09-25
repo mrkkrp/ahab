@@ -1,5 +1,10 @@
 ## Unreleased
 
+* A `PATH` is no longer required to be exactly
+  `/bin:/usr/bin:/usr/local/bin`. Any combination of these three
+  directories and relative entries is accepted, and only an absolute entry
+  outside of them is reported.
+
 * Added the new `--module-name` option which allows us to specify the name
   of the published module we are analyzing, so that its programs are looked
   up in the library of reproducibility specs accordingly, rather than as
