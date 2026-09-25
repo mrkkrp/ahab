@@ -1,0 +1,7 @@
+{
+  "repo": "https://github.com/bazelbuild/bazelisk",
+  "commit": "e59b730a8380af9c313afeca366e0191f8141eae",
+  "module_name": "bazelisk",
+  "label": "//...",
+  "configs": []
+}
