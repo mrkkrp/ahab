@@ -296,7 +296,6 @@ pub(super) fn check(
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::checks::EXPECTED_PATH;
     use crate::checks::tests::{
         action_with_args, action_with_env, assert_abs_path,
         check_absolute_paths as check, container,
@@ -782,7 +781,7 @@ mod tests {
         let c = container(vec![action_with_env(
             "A",
             1,
-            &[("PATH", EXPECTED_PATH)],
+            &[("PATH", "/bin:/usr/bin:/usr/local/bin")],
         )]);
         assert!(check(&c, &Library::default()).is_empty());
     }

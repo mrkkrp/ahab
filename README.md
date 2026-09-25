@@ -176,10 +176,12 @@ one could never be compared against a saved report.
 
 ### `PATH`
 
-Every action is required to set `PATH` to exactly
-`/bin:/usr/bin:/usr/local/bin`, which is what Bazel uses when nothing
-interferes. Anything else is a path the build chose, and a build that
-chooses its own `PATH` is choosing the machine's tools.
+Every absolute entry of an action's `PATH` is required to be one of `/bin`,
+`/usr/bin`, and `/usr/local/bin`, the directories of the `PATH` Bazel uses
+when nothing interferes. They may come in any order and any combination,
+and relative entries—directories in the execution root—are fine too. Any
+other absolute entry is a directory the build chose, and a build that
+chooses its own directories on `PATH` is choosing the machine's tools.
 
 ### Execution requirements
 

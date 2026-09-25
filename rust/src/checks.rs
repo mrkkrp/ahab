@@ -19,8 +19,19 @@ use crate::terminal_color::Palette;
 
 mod absolute_paths;
 
-/// The `PATH` every action is required to use.
-const EXPECTED_PATH: &str = "/bin:/usr/bin:/usr/local/bin";
+/// The absolute `PATH` entries an action may use, the ones Bazel's default
+/// `PATH` consists of.
+const CANONICAL_PATH_ENTRIES: [&str; 3] =
+    ["/bin", "/usr/bin", "/usr/local/bin"];
+
+/// The absolute entries of `path` outside [`CANONICAL_PATH_ENTRIES`].
+fn ad_hoc_path_entries(path: &str) -> Vec<&str> {
+    path.split(':')
+        .filter(|e| {
+            e.starts_with('/') && !CANONICAL_PATH_ENTRIES.contains(e)
+        })
+        .collect()
+}
 
 /// The action responsible for a violation.
 #[derive(
@@ -213,7 +224,8 @@ pub(crate) enum Violation {
         sentinel: String,
         site: LeakSite,
     },
-    /// An action set `PATH` to something other than [`EXPECTED_PATH`].
+    /// An action put an absolute directory outside [`CANONICAL_PATH_ENTRIES`]
+    /// on `PATH`.
     BadPath { action: ActionRef, actual: String },
     /// An action declares it cannot run like an ordinary hermetic one.
     ExecutionRequirement {
@@ -388,7 +400,7 @@ impl Violation {
                 )
             }
             Violation::BadPath { action, actual } => format!(
-                "{hermeticity}: {} sets PATH to {}, expected {EXPECTED_PATH:?}",
+                "{hermeticity}: {} sets PATH to {}",
                 at(action),
                 found(&format!("{actual:?}")),
             ),
@@ -775,8 +787,8 @@ fn check_environment_leaks(
     violations
 }
 
-/// One [`Violation`] per action setting `PATH` to anything but
-/// [`EXPECTED_PATH`].
+/// One [`Violation`] per action whose `PATH` has an absolute entry outside
+/// [`CANONICAL_PATH_ENTRIES`].
 fn check_path(
     container: &ActionGraphContainer,
     targets: &HashMap<u32, &str>,
@@ -785,7 +797,9 @@ fn check_path(
 
     for action in &container.actions {
         for kv in &action.environment_variables {
-            if kv.key == "PATH" && kv.value != EXPECTED_PATH {
+            if kv.key == "PATH"
+                && !ad_hoc_path_entries(&kv.value).is_empty()
+            {
                 violations.push(Violation::BadPath {
                     action: ActionRef::of(action, targets),
                     actual: kv.value.clone(),
@@ -1544,7 +1558,7 @@ pub(crate) mod tests {
     }
 
     #[test]
-    fn arbitrary_wrong_path_is_a_violation() {
+    fn ad_hoc_absolute_path_entry_is_a_violation() {
         let c = container(vec![action_with_env(
             "CppCompile",
             1,
@@ -1561,42 +1575,57 @@ pub(crate) mod tests {
     }
 
     #[test]
-    fn render_pretty_prints_expected_path() {
+    fn render_shows_the_whole_path() {
         let v = Violation::BadPath {
             action: ActionRef {
                 mnemonic: "CppCompile".to_owned(),
                 target: test_label(3),
             },
-            actual: "/bin".to_owned(),
+            actual: "/opt/bin:/bin:bin:/usr/lib/bin".to_owned(),
         };
         let rendered = v.render(Palette::plain());
         assert!(
             rendered.contains("CppCompile action for target //test:t3"),
             "{rendered}"
         );
-        assert!(rendered.contains(r#"sets PATH to "/bin""#), "{rendered}");
-        assert!(rendered.contains(EXPECTED_PATH), "{rendered}");
+        assert!(
+            rendered.ends_with(
+                r#"sets PATH to "/opt/bin:/bin:bin:/usr/lib/bin""#
+            ),
+            "{rendered}"
+        );
     }
 
     #[test]
-    fn path_superstring_is_a_violation() {
-        let too_long = format!("{EXPECTED_PATH}:/opt/bin");
-        let c = container(vec![action_with_env(
-            "A",
-            1,
-            &[("PATH", &too_long)],
-        )]);
+    fn canonical_path_with_ad_hoc_entry_appended_is_a_violation() {
+        let too_long = "/bin:/usr/bin:/usr/local/bin:/opt/bin";
+        let c =
+            container(vec![action_with_env("A", 1, &[("PATH", too_long)])]);
         let found = check_path(&c);
         assert_eq!(found.len(), 1);
-        assert_bad_path(&found[0], "A", 1, &too_long);
+        assert_bad_path(&found[0], "A", 1, too_long);
     }
 
     #[test]
-    fn exact_expected_path_passes() {
+    fn canonical_entries_in_any_combination_pass() {
+        for path in [
+            "/bin:/usr/bin:/usr/local/bin",
+            "/usr/local/bin:/bin",
+            "/usr/bin",
+            "/bin:/bin",
+        ] {
+            let c =
+                container(vec![action_with_env("A", 1, &[("PATH", path)])]);
+            assert!(check_path(&c).is_empty(), "{path}");
+        }
+    }
+
+    #[test]
+    fn relative_entries_pass() {
         let c = container(vec![action_with_env(
             "A",
             1,
-            &[("PATH", EXPECTED_PATH)],
+            &[("PATH", "bazel-out/k8-fastbuild/bin/tools:.::/usr/bin")],
         )]);
         assert!(check_path(&c).is_empty());
     }
@@ -1903,7 +1932,7 @@ pub(crate) mod tests {
                 &[("HOME", &format!("/home/{USER_SENTINEL}"))],
             ),
             action_with_args("Rustc", 2, &["rustc", "--sysroot=/opt/rust"]),
-            action_with_env("Genrule", 5, &[("PATH", "/usr/local/bin")]),
+            action_with_env("Genrule", 5, &[("PATH", "/opt/bin:/usr/bin")]),
             action_with_args("CppLink", 4, &["/usr/bin/ld", "-L/opt/lib"]),
             action_with_env("Rustc", 2, &[("HOSTNAME", HOST_SENTINEL)]),
             action_with_param_files(
