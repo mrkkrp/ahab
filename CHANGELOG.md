@@ -32,7 +32,8 @@
   when the library has an entry for it. The first such entry is
   `@rules_oci//oci/private/image.sh`, the script behind every `oci_image`:
   it is no longer an unknown program, and the image's working directory,
-  `--workdir`, is no longer reported as an absolute path.
+  `--workdir`, is no longer reported as an absolute path. The scripts behind
+  `oci_image_index` and `oci_load` are vouched for the same way.
 
 ## Ahab 0.3.0
 
