@@ -4,11 +4,9 @@ use std::collections::{HashMap, HashSet};
 
 use analysis_v2_proto::analysis::{Action, ActionGraphContainer};
 
-use super::{ActionRef, LeakSite, Violation};
+use super::{ActionRef, LeakSite, Templates, Violation};
 use crate::param_files::{analyzable_strings, expanded_command_line};
-use crate::reproducibility_spec::{
-    library::Library, program_id::ProgramId,
-};
+use crate::reproducibility_spec::library::Library;
 
 /// Whether `byte` may follow the `/` that roots a path. Glob
 /// metacharacters are absent, though [`continues_path_run`] admits them:
@@ -203,6 +201,7 @@ fn shell_script_operand(action: &Action) -> Option<&str> {
 /// not the sequence the program sees.
 fn declared_path_strings<'a>(
     action: &'a Action,
+    templates: &Templates,
     library: &Library,
 ) -> HashSet<&'a str> {
     let command_line = expanded_command_line(action);
@@ -210,7 +209,7 @@ fn declared_path_strings<'a>(
         return HashSet::new();
     };
     let resolved = library.resolve(
-        ProgramId::of(executable.value),
+        templates.program(executable.value, library),
         args.iter().map(|sourced| sourced.value).collect(),
     );
     let Some((_, spec)) = &resolved.spec else {
@@ -227,6 +226,7 @@ fn declared_path_strings<'a>(
 pub(super) fn check(
     container: &ActionGraphContainer,
     targets: &HashMap<u32, &str>,
+    templates: &Templates,
     library: &Library,
 ) -> Vec<Violation> {
     let mut violations = Vec::new();
@@ -252,7 +252,7 @@ pub(super) fn check(
             }
             if declared
                 .get_or_insert_with(|| {
-                    declared_path_strings(action, library)
+                    declared_path_strings(action, templates, library)
                 })
                 .contains(sourced.value)
             {

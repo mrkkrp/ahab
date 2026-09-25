@@ -20,6 +20,7 @@ rust_library(
         "src/aquery.rs",
         "src/checks.rs",
         "src/checks/absolute_paths.rs",
+        "src/checks/templates.rs",
         "src/cli.rs",
         "src/exceptions.rs",
         "src/glob.rs",

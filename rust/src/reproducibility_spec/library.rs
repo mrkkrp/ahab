@@ -325,6 +325,12 @@ impl Library {
         }
     }
 
+    /// Whether some entry answers for `program`, named as this analysis
+    /// names it.
+    pub fn knows(&self, program: &ProgramId) -> bool {
+        self.lookup(&self.attribute(program.clone())).is_some()
+    }
+
     /// The entry answering for `key`, with the key that carried it. An
     /// exact key beats any pattern; between patterns, the last added wins.
     fn lookup(&self, key: &ProgramId) -> Option<(&ProgramId, &Entry)> {
