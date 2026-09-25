@@ -1,0 +1,217 @@
+{
+  "violations": [
+    {
+      "count": 1,
+      "violation": {
+        "kind": "execution_requirement",
+        "action": {
+          "mnemonic": "CopyToDirectory",
+          "target": "//:npm_package"
+        },
+        "requirement": "no-sandbox"
+      }
+    },
+    {
+      "count": 1,
+      "violation": {
+        "kind": "absolute_path",
+        "action": {
+          "mnemonic": "PackageTar",
+          "target": "//deb:bazelisk-amd64_tar"
+        },
+        "path": "/usr/bin",
+        "site": {
+          "location": "argument",
+          "value": "--directory=/usr/bin"
+        }
+      }
+    },
+    {
+      "count": 1,
+      "violation": {
+        "kind": "absolute_path",
+        "action": {
+          "mnemonic": "PackageTar",
+          "target": "//deb:bazelisk-arm64_tar"
+        },
+        "path": "/usr/bin",
+        "site": {
+          "location": "argument",
+          "value": "--directory=/usr/bin"
+        }
+      }
+    },
+    {
+      "count": 1,
+      "violation": {
+        "kind": "system_program",
+        "action": {
+          "mnemonic": "Genrule",
+          "target": "//:bazelisk-darwin-amd64-sha256"
+        },
+        "program": {
+          "origin": "system",
+          "path": "/bin/bash"
+        },
+        "wrappers": []
+      }
+    },
+    {
+      "count": 1,
+      "violation": {
+        "kind": "system_program",
+        "action": {
+          "mnemonic": "Genrule",
+          "target": "//:bazelisk-darwin-arm64-sha256"
+        },
+        "program": {
+          "origin": "system",
+          "path": "/bin/bash"
+        },
+        "wrappers": []
+      }
+    },
+    {
+      "count": 1,
+      "violation": {
+        "kind": "system_program",
+        "action": {
+          "mnemonic": "Genrule",
+          "target": "//:bazelisk-linux-amd64-sha256"
+        },
+        "program": {
+          "origin": "system",
+          "path": "/bin/bash"
+        },
+        "wrappers": []
+      }
+    },
+    {
+      "count": 1,
+      "violation": {
+        "kind": "system_program",
+        "action": {
+          "mnemonic": "Genrule",
+          "target": "//:bazelisk-linux-arm64-sha256"
+        },
+        "program": {
+          "origin": "system",
+          "path": "/bin/bash"
+        },
+        "wrappers": []
+      }
+    },
+    {
+      "count": 1,
+      "violation": {
+        "kind": "system_program",
+        "action": {
+          "mnemonic": "Genrule",
+          "target": "//:bazelisk-windows-amd64-sha256"
+        },
+        "program": {
+          "origin": "system",
+          "path": "/bin/bash"
+        },
+        "wrappers": []
+      }
+    },
+    {
+      "count": 1,
+      "violation": {
+        "kind": "system_program",
+        "action": {
+          "mnemonic": "Genrule",
+          "target": "//:bazelisk-windows-arm64-sha256"
+        },
+        "program": {
+          "origin": "system",
+          "path": "/bin/bash"
+        },
+        "wrappers": []
+      }
+    },
+    {
+      "count": 1,
+      "violation": {
+        "kind": "system_program",
+        "action": {
+          "mnemonic": "Genrule",
+          "target": "//deb:bazelisk-amd64-deb-sha256"
+        },
+        "program": {
+          "origin": "system",
+          "path": "/bin/bash"
+        },
+        "wrappers": []
+      }
+    },
+    {
+      "count": 1,
+      "violation": {
+        "kind": "system_program",
+        "action": {
+          "mnemonic": "Genrule",
+          "target": "//deb:bazelisk-arm64-deb-sha256"
+        },
+        "program": {
+          "origin": "system",
+          "path": "/bin/bash"
+        },
+        "wrappers": []
+      }
+    },
+    {
+      "count": 1,
+      "violation": {
+        "kind": "system_program",
+        "action": {
+          "mnemonic": "Genrule",
+          "target": "//deb:parse_version"
+        },
+        "program": {
+          "origin": "system",
+          "path": "/bin/bash"
+        },
+        "wrappers": []
+      }
+    },
+    {
+      "count": 1,
+      "violation": {
+        "kind": "system_program",
+        "action": {
+          "mnemonic": "Jq",
+          "target": "//:package"
+        },
+        "program": {
+          "origin": "system",
+          "path": "/bin/bash"
+        },
+        "wrappers": []
+      }
+    },
+    {
+      "count": 1,
+      "violation": {
+        "kind": "workspace_status",
+        "action": {
+          "mnemonic": "Genrule",
+          "target": "//deb:parse_version"
+        },
+        "path": "bazel-out/stable-status.txt"
+      }
+    },
+    {
+      "count": 1,
+      "violation": {
+        "kind": "workspace_status",
+        "action": {
+          "mnemonic": "Genrule",
+          "target": "//deb:parse_version"
+        },
+        "path": "bazel-out/volatile-status.txt"
+      }
+    }
+  ]
+}
