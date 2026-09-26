@@ -861,6 +861,30 @@ mod tests {
     }
 
     #[test]
+    fn a_file_can_declare_a_launcher_template() {
+        let specs = specs_from(
+            "launcher.json",
+            r#"{"programs": {
+                 "@my_rules//tools/launcher.sh.tpl": {
+                   "wraps": {"substituted": {"program": "{{main}}"}}
+                 }
+               }}"#,
+        )
+        .expect("should load");
+
+        let Entry::Wraps(transition) = &specs[0].1 else {
+            panic!("expected a wrapper, got {:?}", specs[0].1);
+        };
+        assert_eq!(
+            *transition,
+            Transition::Substituted {
+                program: "{{main}}".to_owned(),
+                args: None,
+            },
+        );
+    }
+
+    #[test]
     fn a_user_declared_wrapper_unwraps_like_a_built_in_one() {
         let mut library = Library::default();
         library.extend(

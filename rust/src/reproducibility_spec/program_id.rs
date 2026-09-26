@@ -251,6 +251,23 @@ impl ProgramId {
             path: path.to_owned(),
         }
     }
+
+    /// Identify a program from its short path, `File.short_path` in
+    /// Starlark, which is never a system tool: `main.js` is in the main
+    /// repository and `../repo/main.js` in `repo`. A `.` segment, which an
+    /// npm package's `bin` tends to leave, is dropped.
+    pub fn of_short_path(short_path: &str) -> ProgramId {
+        let short_path = short_path
+            .split('/')
+            .filter(|segment| *segment != ".")
+            .collect::<Vec<_>>()
+            .join("/");
+        if short_path.contains('/') {
+            ProgramId::of(&short_path)
+        } else {
+            ProgramId::main(&short_path)
+        }
+    }
 }
 
 /// Parse the form [`Display`](fmt::Display) produces, so a program can be
@@ -631,6 +648,34 @@ mod tests {
         );
         assert_eq!(id.origin, module("rules_rust"));
         assert_eq!(id.path, "util/process_wrapper/process_wrapper");
+    }
+
+    #[test]
+    fn a_short_path_is_never_a_system_tool() {
+        assert_eq!(
+            ProgramId::of_short_path("main.js"),
+            ProgramId::main("main.js"),
+        );
+        assert_eq!(
+            ProgramId::of_short_path("src/main.js"),
+            ProgramId::main("src/main.js"),
+        );
+        assert_eq!(
+            ProgramId::of_short_path("../aspect_rules_js+/js/main.js"),
+            ProgramId::module("aspect_rules_js", "js/main.js"),
+        );
+    }
+
+    #[test]
+    fn a_short_path_is_stripped_of_dot_segments() {
+        assert_eq!(
+            ProgramId::of_short_path("node_modules/typescript/./bin/tsc"),
+            ProgramId::main("node_modules/typescript/bin/tsc"),
+        );
+        assert_eq!(
+            ProgramId::of_short_path("./main.js"),
+            ProgramId::main("main.js"),
+        );
     }
 
     #[test]

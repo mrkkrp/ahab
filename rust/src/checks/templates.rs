@@ -3,25 +3,36 @@
 use std::collections::{BTreeSet, HashMap};
 
 use analysis_v2_proto::analysis::{
-    ActionGraphContainer, DepSetOfFiles, PathFragment,
+    Action, ActionGraphContainer, DepSetOfFiles, PathFragment,
 };
 
 use super::artifact_path;
+use crate::param_files::expanded_command_line;
 use crate::reproducibility_spec::{
-    library::Library, program_id::ProgramId,
+    library::{Library, Resolution, Substitutions},
+    program_id::ProgramId,
 };
 
 /// The mnemonic of the action `ctx.actions.expand_template` registers.
 const TEMPLATE_EXPAND: &str = "TemplateExpand";
 
-/// The template each file a `TemplateExpand` action writes was expanded
-/// from, both as execution-root-relative paths.
-#[derive(Debug, Default)]
-pub(crate) struct Templates(HashMap<String, String>);
+/// How a file a `TemplateExpand` action writes came about.
+#[derive(Debug)]
+struct Expansion<'a> {
+    /// The template, as an execution-root-relative path.
+    template: String,
+    /// What was substituted into it.
+    substitutions: Substitutions<'a>,
+}
 
-impl Templates {
+/// The expansion behind each file a `TemplateExpand` action writes, keyed
+/// by its execution-root-relative path.
+#[derive(Debug, Default)]
+pub(crate) struct Templates<'a>(HashMap<String, Expansion<'a>>);
+
+impl<'a> Templates<'a> {
     /// Collect the expansions `container` describes.
-    pub(crate) fn of(container: &ActionGraphContainer) -> Templates {
+    pub(crate) fn of(container: &'a ActionGraphContainer) -> Templates<'a> {
         let fragments: HashMap<u32, &PathFragment> = container
             .path_fragments
             .iter()
@@ -56,24 +67,61 @@ impl Templates {
             if let (Some(template), Some(output)) =
                 (path(*template), path(*output))
             {
-                expanded.insert(output, template);
+                let substitutions = action
+                    .substitutions
+                    .iter()
+                    .map(|pair| (pair.key.as_str(), pair.value.as_str()))
+                    .collect();
+                expanded.insert(
+                    output,
+                    Expansion {
+                        template,
+                        substitutions,
+                    },
+                );
             }
         }
         Templates(expanded)
     }
 
-    /// The program `executable` names: the template it was expanded from if
-    /// `library` knows that template, otherwise the executable itself.
-    pub(crate) fn program(
+    /// What `action`'s program resolves to, `None` when it has no command
+    /// line.
+    pub(crate) fn resolve_action(
+        &self,
+        action: &'a Action,
+        library: &Library,
+    ) -> Option<Resolution<'a>> {
+        let command_line = expanded_command_line(action);
+        let (executable, args) = command_line.split_first()?;
+        Some(self.resolve(executable, args.to_vec(), library))
+    }
+
+    /// What running `executable` with `args` resolves to in `library`.
+    /// The executable is known by the template it was expanded from when
+    /// `library` knows that template and not the executable itself.
+    pub(crate) fn resolve(
         &self,
         executable: &str,
+        args: Vec<&'a str>,
         library: &Library,
-    ) -> ProgramId {
-        self.0
+    ) -> Resolution<'a> {
+        let program = ProgramId::of(executable);
+        let known = self
+            .0
             .get(executable)
-            .map(|template| ProgramId::of(template))
-            .filter(|template| library.knows(template))
-            .unwrap_or_else(|| ProgramId::of(executable))
+            .filter(|_| !library.knows(&program))
+            .map(|expansion| {
+                (ProgramId::of(&expansion.template), expansion)
+            })
+            .filter(|(template, _)| library.knows(template));
+        match known {
+            Some((template, expansion)) => library.resolve_expanded(
+                template,
+                args,
+                &expansion.substitutions,
+            ),
+            None => library.resolve(program, args),
+        }
     }
 }
 
@@ -100,20 +148,38 @@ fn direct_and_transitive(
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::checks::LeakSite;
     use crate::checks::tests::{
-        action_with_args, assert_abs_path, check_absolute_paths, container,
+        HOST_SENTINEL, USER_SENTINEL, action_with_args, assert_abs_path,
+        check_absolute_paths, check_environment_leaks,
+        check_reproducibility, container,
     };
-    use analysis_v2_proto::analysis::{Action, Artifact};
+    use crate::checks::{
+        ActionRef, EnvSource, LeakSite, Violation, target_labels,
+    };
+    use crate::reproducibility_spec::library::{Entry, Transition};
+    use crate::reproducibility_spec::{
+        Reproducibility, ReproducibilitySpec,
+    };
+    use analysis_v2_proto::analysis::{Action, Artifact, KeyValuePair};
 
     const SCRIPT: &str = "bazel-out/k8-fastbuild/bin/app/image_app.sh";
 
-    /// A container in which `template` is expanded into [`SCRIPT`], which
-    /// `run` then runs.
-    fn expanded(template: &str, run: Action) -> ActionGraphContainer {
+    const LAUNCHER: &str = "bazel-out/k8-fastbuild/bin/app/gen_/gen";
+
+    const JS_BINARY: &str =
+        "external/aspect_rules_js+/js/private/js_binary.sh.tpl";
+
+    /// A container in which `template` is expanded into `script` with
+    /// `substitutions`, and `run` is then run.
+    fn expanded(
+        template: &str,
+        script: &str,
+        substitutions: &[(&str, &str)],
+        run: Action,
+    ) -> ActionGraphContainer {
         let mut fragments = Vec::new();
         let mut artifacts = Vec::new();
-        for path in [template, SCRIPT] {
+        for path in [template, script] {
             let mut parent = 0;
             for segment in path.split('/') {
                 let id = fragments.len() as u32 + 1;
@@ -135,6 +201,13 @@ mod tests {
             target_id: 1,
             input_dep_set_ids: vec![1],
             output_ids: vec![2],
+            substitutions: substitutions
+                .iter()
+                .map(|(key, value)| KeyValuePair {
+                    key: (*key).to_owned(),
+                    value: (*value).to_owned(),
+                })
+                .collect(),
             ..Default::default()
         };
         ActionGraphContainer {
@@ -155,14 +228,32 @@ mod tests {
         action_with_args("OCIImage", 1, &argv)
     }
 
+    /// What the second action in `c` resolves to.
+    fn resolve<'a>(
+        c: &'a ActionGraphContainer,
+        library: &Library,
+    ) -> Resolution<'a> {
+        let (executable, args) = c.actions[1]
+            .arguments
+            .split_first()
+            .expect("a command line");
+        Templates::of(c).resolve(
+            executable,
+            args.iter().map(String::as_str).collect(),
+            library,
+        )
+    }
+
     #[test]
     fn a_script_is_known_by_the_template_it_was_expanded_from() {
         let c = expanded(
             "external/rules_oci+/oci/private/image.sh",
+            SCRIPT,
+            &[],
             image(&[]),
         );
         assert_eq!(
-            Templates::of(&c).program(SCRIPT, &Library::builtin(None)),
+            resolve(&c, &Library::builtin(None)).program,
             ProgramId::module("rules_oci", "oci/private/image.sh"),
         );
     }
@@ -170,19 +261,259 @@ mod tests {
     #[test]
     fn a_template_the_library_does_not_know_leaves_the_script_as_it_is() {
         let c = expanded(
-            "external/aspect_rules_js+/js/private/js_binary.sh.tpl",
+            "external/rules_acme+/acme/private/image.sh.tpl",
+            SCRIPT,
+            &[],
             image(&[]),
         );
         assert_eq!(
-            Templates::of(&c).program(SCRIPT, &Library::builtin(None)),
+            resolve(&c, &Library::builtin(None)).program,
             ProgramId::of(SCRIPT),
         );
+    }
+
+    #[test]
+    fn a_script_the_library_knows_keeps_its_own_name() {
+        let tsc = "bazel-out/k8-opt-exec/bin/external\
+                   /aspect_rules_ts++typescript+npm_typescript/tsc_/tsc";
+        let c = expanded(
+            JS_BINARY,
+            tsc,
+            &[("{{entry_point_path}}", "../typescript/bin/tsc")],
+            action_with_args("TsProject", 1, &[tsc, "--project", "x"]),
+        );
+        let resolved = resolve(&c, &Library::builtin(None));
+        assert_eq!(
+            resolved.program,
+            ProgramId::extension(
+                "aspect_rules_ts",
+                "typescript",
+                "tsc_/tsc"
+            ),
+        );
+        assert!(resolved.wrappers.is_empty());
+    }
+
+    #[test]
+    fn a_js_binary_launcher_runs_its_entry_point_with_the_fixed_args() {
+        let c = expanded(
+            JS_BINARY,
+            LAUNCHER,
+            &[
+                ("{{entry_point_path}}", "app/gen.mjs"),
+                ("{{fixed_args}}", "--config-file app/gen.json  --quiet"),
+            ],
+            action_with_args("JsRunBinary", 1, &[LAUNCHER, "out.txt"]),
+        );
+        let resolved = resolve(&c, &Library::builtin(None));
+        assert_eq!(resolved.program, ProgramId::main("app/gen.mjs"));
+        assert_eq!(
+            resolved.args,
+            vec!["--config-file", "app/gen.json", "--quiet", "out.txt"],
+        );
+        assert_eq!(
+            resolved.wrappers,
+            vec![ProgramId::module(
+                "aspect_rules_js",
+                "js/private/js_binary.sh.tpl",
+            )],
+        );
+    }
+
+    #[test]
+    fn launchers_of_one_entry_point_are_one_program() {
+        let entry_point = "../npm+/node_modules/rollup/dist/bin/rollup";
+        let programs: Vec<ProgramId> = ["app/a_/a", "lib/b_/b"]
+            .map(|launcher| {
+                let launcher =
+                    format!("bazel-out/k8-fastbuild/bin/{launcher}");
+                let c = expanded(
+                    JS_BINARY,
+                    &launcher,
+                    &[("{{entry_point_path}}", entry_point)],
+                    action_with_args("Rollup", 1, &[&launcher]),
+                );
+                resolve(&c, &Library::builtin(None)).program
+            })
+            .into();
+        assert_eq!(programs[0], programs[1]);
+        assert_eq!(
+            programs[0],
+            ProgramId::module("npm", "node_modules/rollup/dist/bin/rollup"),
+        );
+    }
+
+    #[test]
+    fn a_launcher_with_no_entry_point_is_the_template() {
+        let c = expanded(
+            JS_BINARY,
+            LAUNCHER,
+            &[],
+            action_with_args("JsRunBinary", 1, &[LAUNCHER]),
+        );
+        let resolved = resolve(&c, &Library::builtin(None));
+        assert_eq!(
+            resolved.program,
+            ProgramId::module(
+                "aspect_rules_js",
+                "js/private/js_binary.sh.tpl"
+            ),
+        );
+        assert!(resolved.spec.is_none());
+    }
+
+    #[test]
+    fn an_absolute_path_substituted_for_the_program_is_a_system_program() {
+        let template = ProgramId::module("rules_acme", "acme/run.sh.tpl");
+        let mut library = Library::default();
+        library.extend([(
+            template.clone(),
+            Entry::Wraps(Transition::Substituted {
+                program: "{{program}}".to_owned(),
+                args: None,
+            }),
+        )]);
+        let c = expanded(
+            "external/rules_acme+/acme/run.sh.tpl",
+            LAUNCHER,
+            &[("{{program}}", "/usr/bin/python3")],
+            action_with_args("Acme", 1, &[LAUNCHER, "gen.py"]),
+        );
+        assert_eq!(
+            check_reproducibility(&c, &library),
+            vec![Violation::SystemProgram {
+                action: ActionRef::of(&c.actions[1], &target_labels(&c)),
+                program: ProgramId::of("/usr/bin/python3"),
+                wrappers: vec![template],
+            }],
+        );
+    }
+
+    /// The absolute-path site of `value` among the words `js_binary`
+    /// substituted for `{{fixed_args}}`.
+    fn fixed_arg(value: &str) -> LeakSite {
+        LeakSite::Substitution {
+            template: ProgramId::module(
+                "aspect_rules_js",
+                "js/private/js_binary.sh.tpl",
+            ),
+            key: "{{fixed_args}}".to_owned(),
+            value: value.to_owned(),
+        }
+    }
+
+    #[test]
+    fn an_absolute_path_among_the_fixed_args_is_reported() {
+        let c = expanded(
+            JS_BINARY,
+            LAUNCHER,
+            &[
+                ("{{entry_point_path}}", "app/gen.mjs"),
+                ("{{fixed_args}}", "--quiet --cache-dir=/tmp/js"),
+            ],
+            action_with_args("JsRunBinary", 1, &[LAUNCHER, "out.txt"]),
+        );
+        let found = check_absolute_paths(&c, &Library::builtin(None));
+        assert_eq!(found.len(), 1, "{found:?}");
+        assert_abs_path(
+            &found[0],
+            "JsRunBinary",
+            1,
+            "/tmp/js",
+            fixed_arg("--cache-dir=/tmp/js"),
+        );
+    }
+
+    #[test]
+    fn a_fixed_arg_the_program_declares_a_path_with_is_not_reported() {
+        let mut library = Library::builtin(None);
+        library.extend([(
+            ProgramId::main("app/gen.mjs"),
+            Entry::Spec(
+                ReproducibilitySpec::of(Reproducibility::Always)
+                    .with_declared_paths(["--workdir=*"]),
+            ),
+        )]);
+        let c = expanded(
+            JS_BINARY,
+            LAUNCHER,
+            &[
+                ("{{entry_point_path}}", "app/gen.mjs"),
+                ("{{fixed_args}}", "--workdir=/root --from=/tmp/base"),
+            ],
+            action_with_args("JsRunBinary", 1, &[LAUNCHER]),
+        );
+        let found = check_absolute_paths(&c, &library);
+        assert_eq!(found.len(), 1, "{found:?}");
+        assert_abs_path(
+            &found[0],
+            "JsRunBinary",
+            1,
+            "/tmp/base",
+            fixed_arg("--from=/tmp/base"),
+        );
+    }
+
+    #[test]
+    fn substitutions_the_program_is_not_given_are_not_scanned() {
+        let c = expanded(
+            JS_BINARY,
+            LAUNCHER,
+            &[
+                ("{{entry_point_path}}", "app/gen.mjs"),
+                ("{{node}}", "/opt/node/bin/node"),
+            ],
+            action_with_args("JsRunBinary", 1, &[LAUNCHER]),
+        );
+        let found = check_absolute_paths(&c, &Library::builtin(None));
+        assert!(found.is_empty(), "{found:?}");
+    }
+
+    #[test]
+    fn a_sentinel_among_the_fixed_args_is_a_leak() {
+        let home = format!("--home=home/{USER_SENTINEL}");
+        let fixed = format!("--quiet {home}");
+        let c = expanded(
+            JS_BINARY,
+            LAUNCHER,
+            &[
+                ("{{entry_point_path}}", "app/gen.mjs"),
+                ("{{fixed_args}}", &fixed),
+            ],
+            action_with_args("JsRunBinary", 1, &[LAUNCHER]),
+        );
+        assert_eq!(
+            check_environment_leaks(&c, USER_SENTINEL, HOST_SENTINEL),
+            vec![Violation::EnvironmentLeak {
+                action: ActionRef::of(&c.actions[1], &target_labels(&c)),
+                source: EnvSource::User,
+                sentinel: USER_SENTINEL.to_owned(),
+                site: fixed_arg(&home),
+            }],
+        );
+    }
+
+    #[test]
+    fn a_sentinel_in_a_substitution_the_program_is_not_given_is_not_a_leak()
+    {
+        let envs = format!("export BUILD_HOST={HOST_SENTINEL}");
+        let c = expanded(
+            JS_BINARY,
+            LAUNCHER,
+            &[("{{entry_point_path}}", "app/gen.mjs"), ("{{envs}}", &envs)],
+            action_with_args("JsRunBinary", 1, &[LAUNCHER]),
+        );
+        let found =
+            check_environment_leaks(&c, USER_SENTINEL, HOST_SENTINEL);
+        assert!(found.is_empty(), "{found:?}");
     }
 
     #[test]
     fn the_working_directory_of_an_image_is_not_an_absolute_path() {
         let c = expanded(
             "external/rules_oci+/oci/private/image.sh",
+            SCRIPT,
+            &[],
             image(&["--workdir=/root", "--from=/tmp/base"]),
         );
         let found = check_absolute_paths(&c, &Library::builtin(None));

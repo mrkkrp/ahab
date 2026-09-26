@@ -40,6 +40,18 @@
   `--workdir`, is no longer reported as an absolute path. The scripts behind
   `oci_image_index` and `oci_load` are vouched for the same way.
 
+* A new class of wrappers: a template whose expansion runs a program that
+  was substituted into it. Such a template is declared with the new `wraps`
+  form `substituted`, naming the substitution that holds the program's short
+  path and, optionally, the one that holds arguments it is always given.
+  Ahab then judges and reports the substituted program, with the template as
+  its wrapper, rather than the expanded script, whose path names only the
+  target that wrote it. The substituted arguments are checked for absolute
+  paths and environment leaks like any other, and reported at the new
+  location `substitution`. The first built-in entry of this kind is
+  `@aspect_rules_js//js/private/js_binary.sh.tpl`, the launcher of every
+  `js_binary`, which is now judged by its entry point.
+
 ## Ahab 0.3.0
 
 * A `/` roots a path only where something in the text says a value begins

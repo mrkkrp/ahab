@@ -1186,9 +1186,19 @@
               "extension": null
             }
           },
-          "path": "js/private/test/node-patches/babel_mjs2js__js_binary_/babel_mjs2js__js_binary"
+          "path": "node_modules/.aspect_rules_js/@babel+cli@7.28.3_@babel+core@7.28.5/node_modules/@babel/cli/bin/babel.js"
         },
-        "wrappers": []
+        "wrappers": [
+          {
+            "origin": {
+              "module": {
+                "name": "aspect_rules_js",
+                "extension": null
+              }
+            },
+            "path": "js/private/js_binary.sh.tpl"
+          }
+        ]
       }
     },
     {
@@ -1206,9 +1216,19 @@
               "extension": null
             }
           },
-          "path": "js/private/test/data/write-genrule_/write-genrule"
+          "path": "js/private/test/data/write.data.js"
         },
-        "wrappers": []
+        "wrappers": [
+          {
+            "origin": {
+              "module": {
+                "name": "aspect_rules_js",
+                "extension": null
+              }
+            },
+            "path": "js/private/js_binary.sh.tpl"
+          }
+        ]
       }
     },
     {
@@ -1226,9 +1246,19 @@
               "extension": null
             }
           },
-          "path": "js/private/test/data/write-genrule-filegroup-srcs_/write-genrule-filegroup-srcs"
+          "path": "js/private/test/data/write.data.js"
         },
-        "wrappers": []
+        "wrappers": [
+          {
+            "origin": {
+              "module": {
+                "name": "aspect_rules_js",
+                "extension": null
+              }
+            },
+            "path": "js/private/js_binary.sh.tpl"
+          }
+        ]
       }
     },
     {
@@ -1246,9 +1276,19 @@
               "extension": null
             }
           },
-          "path": "js/private/test/data/write-js_library-data_/write-js_library-data"
+          "path": "js/private/test/data/write.data.js"
         },
-        "wrappers": []
+        "wrappers": [
+          {
+            "origin": {
+              "module": {
+                "name": "aspect_rules_js",
+                "extension": null
+              }
+            },
+            "path": "js/private/js_binary.sh.tpl"
+          }
+        ]
       }
     },
     {
@@ -1266,9 +1306,19 @@
               "extension": null
             }
           },
-          "path": "js/private/test/data/write-js_library-srcs_/write-js_library-srcs"
+          "path": "js/private/test/data/write.data.js"
         },
-        "wrappers": []
+        "wrappers": [
+          {
+            "origin": {
+              "module": {
+                "name": "aspect_rules_js",
+                "extension": null
+              }
+            },
+            "path": "js/private/js_binary.sh.tpl"
+          }
+        ]
       }
     },
     {
@@ -1286,9 +1336,19 @@
               "extension": null
             }
           },
-          "path": "js/private/test/data/write-js_library-srcs_/write-js_library-srcs"
+          "path": "js/private/test/data/write.data.js"
         },
-        "wrappers": []
+        "wrappers": [
+          {
+            "origin": {
+              "module": {
+                "name": "aspect_rules_js",
+                "extension": null
+              }
+            },
+            "path": "js/private/js_binary.sh.tpl"
+          }
+        ]
       }
     },
     {
@@ -1306,9 +1366,19 @@
               "extension": null
             }
           },
-          "path": "js/private/test/fixed_args/args_bin_/args_bin"
+          "path": "js/private/test/fixed_args/fixed_args.mjs"
         },
-        "wrappers": []
+        "wrappers": [
+          {
+            "origin": {
+              "module": {
+                "name": "aspect_rules_js",
+                "extension": null
+              }
+            },
+            "path": "js/private/js_binary.sh.tpl"
+          }
+        ]
       }
     },
     {
@@ -1326,9 +1396,19 @@
               "extension": null
             }
           },
-          "path": "js/private/test/fixed_args/fixed_args_bin_/fixed_args_bin"
+          "path": "js/private/test/fixed_args/fixed_args.mjs"
         },
-        "wrappers": []
+        "wrappers": [
+          {
+            "origin": {
+              "module": {
+                "name": "aspect_rules_js",
+                "extension": null
+              }
+            },
+            "path": "js/private/js_binary.sh.tpl"
+          }
+        ]
       }
     },
     {
@@ -1346,9 +1426,19 @@
               "extension": null
             }
           },
-          "path": "js/private/test/fixed_args/locations_bin_/locations_bin"
+          "path": "js/private/test/fixed_args/fixed_args.mjs"
         },
-        "wrappers": []
+        "wrappers": [
+          {
+            "origin": {
+              "module": {
+                "name": "aspect_rules_js",
+                "extension": null
+              }
+            },
+            "path": "js/private/js_binary.sh.tpl"
+          }
+        ]
       }
     },
     {
@@ -1366,9 +1456,19 @@
               "extension": null
             }
           },
-          "path": "js/private/test/fixed_args/locations_bin_no_expand_/locations_bin_no_expand"
+          "path": "js/private/test/fixed_args/fixed_args.mjs"
         },
-        "wrappers": []
+        "wrappers": [
+          {
+            "origin": {
+              "module": {
+                "name": "aspect_rules_js",
+                "extension": null
+              }
+            },
+            "path": "js/private/js_binary.sh.tpl"
+          }
+        ]
       }
     },
     {
@@ -1386,9 +1486,19 @@
               "extension": null
             }
           },
-          "path": "js/private/test/js_binary_sh/compile_cache_bazel_run_/compile_cache_bazel_run"
+          "path": "js/private/test/js_binary_sh/compile_cache.js"
         },
-        "wrappers": []
+        "wrappers": [
+          {
+            "origin": {
+              "module": {
+                "name": "aspect_rules_js",
+                "extension": null
+              }
+            },
+            "path": "js/private/js_binary.sh.tpl"
+          }
+        ]
       }
     },
     {
@@ -1406,9 +1516,19 @@
               "extension": null
             }
           },
-          "path": "js/private/test/js_binary_sh/compile_cache_default_/compile_cache_default"
+          "path": "js/private/test/js_binary_sh/compile_cache.js"
         },
-        "wrappers": []
+        "wrappers": [
+          {
+            "origin": {
+              "module": {
+                "name": "aspect_rules_js",
+                "extension": null
+              }
+            },
+            "path": "js/private/js_binary.sh.tpl"
+          }
+        ]
       }
     },
     {
@@ -1426,9 +1546,19 @@
               "extension": null
             }
           },
-          "path": "js/private/test/js_binary_sh/compile_cache_explicit_disable_/compile_cache_explicit_disable"
+          "path": "js/private/test/js_binary_sh/compile_cache.js"
         },
-        "wrappers": []
+        "wrappers": [
+          {
+            "origin": {
+              "module": {
+                "name": "aspect_rules_js",
+                "extension": null
+              }
+            },
+            "path": "js/private/js_binary.sh.tpl"
+          }
+        ]
       }
     },
     {
@@ -1446,9 +1576,19 @@
               "extension": null
             }
           },
-          "path": "js/private/test/js_binary_sh/compile_cache_optin_/compile_cache_optin"
+          "path": "js/private/test/js_binary_sh/compile_cache.js"
         },
-        "wrappers": []
+        "wrappers": [
+          {
+            "origin": {
+              "module": {
+                "name": "aspect_rules_js",
+                "extension": null
+              }
+            },
+            "path": "js/private/js_binary.sh.tpl"
+          }
+        ]
       }
     },
     {
@@ -1466,9 +1606,19 @@
               "extension": null
             }
           },
-          "path": "js/private/test/js_binary_sh/env_json_/env_json"
+          "path": "js/private/test/js_binary_sh/env_json.js"
         },
-        "wrappers": []
+        "wrappers": [
+          {
+            "origin": {
+              "module": {
+                "name": "aspect_rules_js",
+                "extension": null
+              }
+            },
+            "path": "js/private/js_binary.sh.tpl"
+          }
+        ]
       }
     },
     {
@@ -1486,9 +1636,19 @@
               "extension": null
             }
           },
-          "path": "js/private/test/js_binary_sh/regexy_/regexy"
+          "path": "js/private/test/js_binary_sh/regexy.js"
         },
-        "wrappers": []
+        "wrappers": [
+          {
+            "origin": {
+              "module": {
+                "name": "aspect_rules_js",
+                "extension": null
+              }
+            },
+            "path": "js/private/js_binary.sh.tpl"
+          }
+        ]
       }
     },
     {
@@ -1506,9 +1666,19 @@
               "extension": null
             }
           },
-          "path": "js/private/test/js_binary_sh/one_/one"
+          "path": "js/private/test/js_binary_sh/one.js"
         },
-        "wrappers": []
+        "wrappers": [
+          {
+            "origin": {
+              "module": {
+                "name": "aspect_rules_js",
+                "extension": null
+              }
+            },
+            "path": "js/private/js_binary.sh.tpl"
+          }
+        ]
       }
     },
     {
@@ -1526,9 +1696,19 @@
               "extension": null
             }
           },
-          "path": "js/private/test/js_run_binary/read_file_/read_file"
+          "path": "js/private/test/js_run_binary/read_file.mjs"
         },
-        "wrappers": []
+        "wrappers": [
+          {
+            "origin": {
+              "module": {
+                "name": "aspect_rules_js",
+                "extension": null
+              }
+            },
+            "path": "js/private/js_binary.sh.tpl"
+          }
+        ]
       }
     },
     {
@@ -1546,9 +1726,19 @@
               "extension": null
             }
           },
-          "path": "js/private/test/js_run_binary/find_cfg_probe_/find_cfg_probe"
+          "path": "js/private/test/js_run_binary/find_cfg_probe.mjs"
         },
-        "wrappers": []
+        "wrappers": [
+          {
+            "origin": {
+              "module": {
+                "name": "aspect_rules_js",
+                "extension": null
+              }
+            },
+            "path": "js/private/js_binary.sh.tpl"
+          }
+        ]
       }
     },
     {
@@ -1566,9 +1756,19 @@
               "extension": null
             }
           },
-          "path": "js/private/test/js_run_binary/find_cfg_probe_/find_cfg_probe"
+          "path": "js/private/test/js_run_binary/find_cfg_probe.mjs"
         },
-        "wrappers": []
+        "wrappers": [
+          {
+            "origin": {
+              "module": {
+                "name": "aspect_rules_js",
+                "extension": null
+              }
+            },
+            "path": "js/private/js_binary.sh.tpl"
+          }
+        ]
       }
     },
     {
@@ -1586,9 +1786,19 @@
               "extension": null
             }
           },
-          "path": "js/private/test/js_run_binary/find_cfg_probe_/find_cfg_probe"
+          "path": "js/private/test/js_run_binary/find_cfg_probe.mjs"
         },
-        "wrappers": []
+        "wrappers": [
+          {
+            "origin": {
+              "module": {
+                "name": "aspect_rules_js",
+                "extension": null
+              }
+            },
+            "path": "js/private/js_binary.sh.tpl"
+          }
+        ]
       }
     },
     {
@@ -1606,9 +1816,19 @@
               "extension": null
             }
           },
-          "path": "js/private/test/launcher/exit_plain_bin_/exit_plain_bin"
+          "path": "js/private/test/launcher/exit_with.mjs"
         },
-        "wrappers": []
+        "wrappers": [
+          {
+            "origin": {
+              "module": {
+                "name": "aspect_rules_js",
+                "extension": null
+              }
+            },
+            "path": "js/private/js_binary.sh.tpl"
+          }
+        ]
       }
     },
     {
@@ -1626,9 +1846,19 @@
               "extension": null
             }
           },
-          "path": "js/private/test/launcher/stdout_stderr_bin_/stdout_stderr_bin"
+          "path": "js/private/test/launcher/stdout_stderr.mjs"
         },
-        "wrappers": []
+        "wrappers": [
+          {
+            "origin": {
+              "module": {
+                "name": "aspect_rules_js",
+                "extension": null
+              }
+            },
+            "path": "js/private/js_binary.sh.tpl"
+          }
+        ]
       }
     },
     {
@@ -1686,9 +1916,19 @@
               "extension": null
             }
           },
-          "path": "contrib/nextjs/test/fake_next_binary_/fake_next_binary"
+          "path": "contrib/nextjs/test/fake_next.js"
         },
-        "wrappers": []
+        "wrappers": [
+          {
+            "origin": {
+              "module": {
+                "name": "aspect_rules_js",
+                "extension": null
+              }
+            },
+            "path": "js/private/js_binary.sh.tpl"
+          }
+        ]
       }
     },
     {
@@ -1706,9 +1946,19 @@
               "extension": null
             }
           },
-          "path": "contrib/nextjs/test/fake_next_binary_/fake_next_binary"
+          "path": "contrib/nextjs/test/fake_next.js"
         },
-        "wrappers": []
+        "wrappers": [
+          {
+            "origin": {
+              "module": {
+                "name": "aspect_rules_js",
+                "extension": null
+              }
+            },
+            "path": "js/private/js_binary.sh.tpl"
+          }
+        ]
       }
     },
     {
@@ -1726,9 +1976,19 @@
               "extension": null
             }
           },
-          "path": "contrib/nextjs/test/fake_next_binary_/fake_next_binary"
+          "path": "contrib/nextjs/test/fake_next.js"
         },
-        "wrappers": []
+        "wrappers": [
+          {
+            "origin": {
+              "module": {
+                "name": "aspect_rules_js",
+                "extension": null
+              }
+            },
+            "path": "js/private/js_binary.sh.tpl"
+          }
+        ]
       }
     },
     {
@@ -1746,9 +2006,19 @@
               "extension": null
             }
           },
-          "path": "js/private/coverage/bundle/bundle__js_binary_/bundle__js_binary"
+          "path": "node_modules/.aspect_rules_js/rollup@4.55.2/node_modules/rollup/dist/bin/rollup"
         },
-        "wrappers": []
+        "wrappers": [
+          {
+            "origin": {
+              "module": {
+                "name": "aspect_rules_js",
+                "extension": null
+              }
+            },
+            "path": "js/private/js_binary.sh.tpl"
+          }
+        ]
       }
     },
     {
@@ -1766,9 +2036,19 @@
               "extension": null
             }
           },
-          "path": "js/private/devserver/src/js_run_devserver_bundle__js_binary_/js_run_devserver_bundle__js_binary"
+          "path": "node_modules/.aspect_rules_js/rollup@4.55.2/node_modules/rollup/dist/bin/rollup"
         },
-        "wrappers": []
+        "wrappers": [
+          {
+            "origin": {
+              "module": {
+                "name": "aspect_rules_js",
+                "extension": null
+              }
+            },
+            "path": "js/private/js_binary.sh.tpl"
+          }
+        ]
       }
     },
     {
@@ -1786,9 +2066,19 @@
               "extension": null
             }
           },
-          "path": "js/private/worker/src/bundle__js_binary_/bundle__js_binary"
+          "path": "node_modules/.aspect_rules_js/rollup@4.55.2/node_modules/rollup/dist/bin/rollup"
         },
-        "wrappers": []
+        "wrappers": [
+          {
+            "origin": {
+              "module": {
+                "name": "aspect_rules_js",
+                "extension": null
+              }
+            },
+            "path": "js/private/js_binary.sh.tpl"
+          }
+        ]
       }
     },
     {
@@ -1806,9 +2096,19 @@
               "extension": null
             }
           },
-          "path": "npm/private/lifecycle/src/bundle__js_binary_/bundle__js_binary"
+          "path": "node_modules/.aspect_rules_js/rollup@4.55.2/node_modules/rollup/dist/bin/rollup"
         },
-        "wrappers": []
+        "wrappers": [
+          {
+            "origin": {
+              "module": {
+                "name": "aspect_rules_js",
+                "extension": null
+              }
+            },
+            "path": "js/private/js_binary.sh.tpl"
+          }
+        ]
       }
     },
     {
@@ -1826,9 +2126,19 @@
               "extension": null
             }
           },
-          "path": "npm/private/test/__rollup-target__js_binary_/__rollup-target__js_binary"
+          "path": "node_modules/.aspect_rules_js/rollup@4.55.2/node_modules/rollup/dist/bin/rollup"
         },
-        "wrappers": []
+        "wrappers": [
+          {
+            "origin": {
+              "module": {
+                "name": "aspect_rules_js",
+                "extension": null
+              }
+            },
+            "path": "js/private/js_binary.sh.tpl"
+          }
+        ]
       }
     },
     {
@@ -1846,9 +2156,19 @@
               "extension": null
             }
           },
-          "path": "js/private/node-bootstrap/src/compile__js_binary_/compile__js_binary"
+          "path": "node_modules/.aspect_rules_js/typescript@5.8.2/node_modules/typescript/bin/tsc"
         },
-        "wrappers": []
+        "wrappers": [
+          {
+            "origin": {
+              "module": {
+                "name": "aspect_rules_js",
+                "extension": null
+              }
+            },
+            "path": "js/private/js_binary.sh.tpl"
+          }
+        ]
       }
     },
     {
@@ -1866,9 +2186,19 @@
               "extension": null
             }
           },
-          "path": "js/private/watch/src/compile__js_binary_/compile__js_binary"
+          "path": "node_modules/.aspect_rules_js/typescript@5.8.2/node_modules/typescript/bin/tsc"
         },
-        "wrappers": []
+        "wrappers": [
+          {
+            "origin": {
+              "module": {
+                "name": "aspect_rules_js",
+                "extension": null
+              }
+            },
+            "path": "js/private/js_binary.sh.tpl"
+          }
+        ]
       }
     },
     {
