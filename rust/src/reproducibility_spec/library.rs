@@ -36,34 +36,65 @@ pub enum Transition {
     /// script, as `python3 precompiler --src …`. Does not fire on an option,
     /// `python3 -c` and `python3 -m` naming no program to judge.
     FirstArgument,
+    /// The wrapped command was substituted into a script expanded from a
+    /// template: its program is the short path substituted for `program`,
+    /// and its arguments the words substituted for `args`, if any, followed
+    /// by the wrapper's own. What a `js_binary` launcher runs.
+    Substituted {
+        program: String,
+        args: Option<String>,
+    },
 }
 
 impl Transition {
-    /// Extract the wrapped command from the wrapper's `argv[1..]`. `None`
-    /// when the arguments do not match the rule, which leaves the wrapper
-    /// itself as the program—reported unknown rather than passed.
+    /// Extract the wrapped command from the wrapper's `argv[1..]` and the
+    /// substitutions it was expanded with. `None` when they do not match
+    /// the rule, which leaves the wrapper itself as the program—reported
+    /// unknown rather than passed.
     fn apply<'a>(
         &self,
         args: &[&'a str],
-    ) -> Option<(&'a str, Vec<&'a str>)> {
+        substitutions: &Substitutions<'a>,
+    ) -> Option<(ProgramId, Vec<&'a str>)> {
         match self {
             Transition::AfterSeparator { separator } => {
                 let at = args
                     .iter()
                     .position(|arg| *arg == separator.as_str())?;
                 let (program, rest) = args[at + 1..].split_first()?;
-                Some((program, rest.to_vec()))
+                Some((ProgramId::of(program), rest.to_vec()))
             }
             Transition::FirstArgument => {
                 let (program, rest) = args.split_first()?;
                 if program.starts_with('-') {
                     return None;
                 }
-                Some((program, rest.to_vec()))
+                Some((ProgramId::of(program), rest.to_vec()))
+            }
+            Transition::Substituted {
+                program,
+                args: fixed,
+            } => {
+                let program = substitutions.get(program.as_str())?;
+                if program.is_empty() {
+                    return None;
+                }
+                // Substituted into a bash array, hence split into words.
+                let mut wrapped: Vec<&'a str> = fixed
+                    .as_ref()
+                    .and_then(|fixed| substitutions.get(fixed.as_str()))
+                    .map(|fixed| fixed.split_whitespace().collect())
+                    .unwrap_or_default();
+                wrapped.extend(args);
+                Some((ProgramId::of_short_path(program), wrapped))
             }
         }
     }
 }
+
+/// What a script expanded from a template had substituted into it, keyed
+/// by the text replaced.
+pub type Substitutions<'a> = HashMap<&'a str, &'a str>;
 
 /// How many entries to follow before giving up, counting synonyms and
 /// wrapper transitions alike. Bounds a library that accidentally loops.
@@ -356,6 +387,19 @@ impl Library {
         program: ProgramId,
         args: Vec<&'a str>,
     ) -> Resolution<'a> {
+        self.resolve_expanded(program, args, &Substitutions::new())
+    }
+
+    /// [`resolve`](Self::resolve) a program expanded from a template with
+    /// `substitutions`, which only it, not a program it wraps, was.
+    pub fn resolve_expanded<'a>(
+        &self,
+        program: ProgramId,
+        args: Vec<&'a str>,
+        substitutions: &Substitutions<'a>,
+    ) -> Resolution<'a> {
+        let none = Substitutions::new();
+        let mut substitutions = substitutions;
         let mut program = self.attribute(program);
         let mut key = program.clone();
         let mut args = args;
@@ -383,14 +427,16 @@ impl Library {
                 }
                 Entry::SameAs(target) => key = target.clone(),
                 Entry::Wraps(transition) => {
-                    let Some((wrapped, rest)) = transition.apply(&args)
+                    let Some((wrapped, rest)) =
+                        transition.apply(&args, substitutions)
                     else {
                         break;
                     };
                     wrappers.push(program);
-                    program = self.attribute(ProgramId::of(wrapped));
+                    program = self.attribute(wrapped);
                     key = program.clone();
                     args = rest;
+                    substitutions = &none;
                 }
             }
         }
@@ -505,6 +551,14 @@ enum TransitionFile {
     AfterSeparator(String),
     /// The wrapped command is the first argument.
     FirstArgument,
+    /// The wrapped command was substituted into the program's template.
+    Substituted {
+        /// The text replaced by the wrapped program's short path.
+        program: String,
+        /// The text replaced by the arguments it is always given.
+        #[serde(default)]
+        args: Option<String>,
+    },
 }
 
 /// Parse the entries a `--repro-specs` file declares. Errors name the
@@ -548,6 +602,12 @@ pub fn parse_entries(
                     separator,
                 )) => {
                     Entry::Wraps(Transition::AfterSeparator { separator })
+                }
+                EntryFile::Wraps(TransitionFile::Substituted {
+                    program,
+                    args,
+                }) => {
+                    Entry::Wraps(Transition::Substituted { program, args })
                 }
             };
             Ok((id, entry))

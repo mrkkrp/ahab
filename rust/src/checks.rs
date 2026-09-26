@@ -820,10 +820,10 @@ fn check_path(
 }
 
 /// Each action's program against the library of specs.
-fn check_reproducibility(
-    container: &ActionGraphContainer,
+fn check_reproducibility<'a>(
+    container: &'a ActionGraphContainer,
     targets: &HashMap<u32, &str>,
-    templates: &Templates,
+    templates: &Templates<'a>,
     library: &Library,
 ) -> Vec<Violation> {
     let mut violations = Vec::new();
@@ -834,9 +834,10 @@ fn check_reproducibility(
             continue;
         };
 
-        let resolved = library.resolve(
-            templates.program(executable.value, library),
+        let resolved = templates.resolve(
+            executable.value,
             args.iter().map(|sourced| sourced.value).collect(),
+            library,
         );
         let action_ref = || ActionRef::of(action, targets);
         let wrappers = resolved.wrappers.clone();

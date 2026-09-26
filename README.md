@@ -281,8 +281,14 @@ A script the build expands from a template is named by the template, when a
 specification names that template. `oci_image` writes one per image into
 the image's own package, where its path says nothing about where it came
 from; `@rules_oci//oci/private/image.sh` does. A template nobody has named
-leaves the script to be named by its path, because the substitutions may be
-what tells two expansions apart—every `js_binary` launcher is one template.
+leaves the script to be named by its path, and so does a specification for
+the script itself.
+
+Where the substitutions are what tells two expansions apart, the template
+is a wrapper. Every `js_binary` launcher is expanded from
+`@aspect_rules_js//js/private/js_binary.sh.tpl`, and what it runs is its
+entry point, so that is what Ahab judges and reports, with the launcher as
+its wrapper.
 
 The path may be a pattern, with the same `*` and `?` the exceptions use:
 
@@ -479,6 +485,14 @@ Two other entry shapes save repeating yourself:
       "wraps": {
         "after_separator": "--"
       }
+    },
+    "@acme//tools/launcher.sh.tpl": {
+      "wraps": {
+        "substituted": {
+          "program": "{{entry_point}}",
+          "args": "{{fixed_args}}"
+        }
+      }
     }
   }
 }
@@ -488,7 +502,10 @@ Two other entry shapes save repeating yourself:
 behavior, not identity, and the report still says what actually ran, and
 which program answered for it. `wraps` says the real command follows a
 separator in this one's arguments, so Ahab unwraps and judges what is
-underneath. That is how e.g. `process_wrapper` is handled.
+underneath. That is how e.g. `process_wrapper` is handled. `substituted` is
+for a template: the real command's short path is what was substituted for
+`program`, and the words substituted for `args`, if given, come before the
+arguments the script was run with.
 
 ## Exceptions
 

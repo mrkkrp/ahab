@@ -201,16 +201,17 @@ fn shell_script_operand(action: &Action) -> Option<&str> {
 /// not the sequence the program sees.
 fn declared_path_strings<'a>(
     action: &'a Action,
-    templates: &Templates,
+    templates: &Templates<'a>,
     library: &Library,
 ) -> HashSet<&'a str> {
     let command_line = expanded_command_line(action);
     let Some((executable, args)) = command_line.split_first() else {
         return HashSet::new();
     };
-    let resolved = library.resolve(
-        templates.program(executable.value, library),
+    let resolved = templates.resolve(
+        executable.value,
         args.iter().map(|sourced| sourced.value).collect(),
+        library,
     );
     let Some((_, spec)) = &resolved.spec else {
         return HashSet::new();
@@ -223,10 +224,10 @@ fn declared_path_strings<'a>(
 /// One [`Violation`] per absolute path in an action's command line, param
 /// files and environment values. `PATH` is skipped—[`super::check_path`]
 /// governs it—as are the [`ALLOWED_ABSOLUTE_PATHS`].
-pub(super) fn check(
-    container: &ActionGraphContainer,
+pub(super) fn check<'a>(
+    container: &'a ActionGraphContainer,
     targets: &HashMap<u32, &str>,
-    templates: &Templates,
+    templates: &Templates<'a>,
     library: &Library,
 ) -> Vec<Violation> {
     let mut violations = Vec::new();
