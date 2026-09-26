@@ -40,6 +40,14 @@
   `--workdir`, is no longer reported as an absolute path. The scripts behind
   `oci_image_index` and `oci_load` are vouched for the same way.
 
+* A `js_binary` launcher is no longer an unknown program named after the
+  target that wrote it, `//<package>/<target>_/<target>`. It is recognized
+  by its template, `@aspect_rules_js//js/private/js_binary.sh.tpl`, and
+  unwrapped: what is judged is its entry point, run with the launcher's
+  fixed arguments ahead of the action's. Launchers of one entry point are
+  therefore one program. A reproducibility spec may declare such a template
+  with the new `wraps` form `substituted`.
+
 ## Ahab 0.3.0
 
 * A `/` roots a path only where something in the text says a value begins
