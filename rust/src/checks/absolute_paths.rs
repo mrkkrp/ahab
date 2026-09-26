@@ -2,11 +2,10 @@
 
 use std::collections::{HashMap, HashSet};
 
-use analysis_v2_proto::analysis::{Action, ActionGraphContainer};
+use analysis_v2_proto::analysis::Action;
 
-use super::{ActionRef, LeakSite, Templates, Violation};
-use crate::param_files::{analyzable_strings, expanded_command_line};
-use crate::reproducibility_spec::library::Library;
+use super::{ActionRef, LeakSite, ResolvedAction, Violation};
+use crate::reproducibility_spec::library::Resolution;
 
 /// Whether `byte` may follow the `/` that roots a path. Glob
 /// metacharacters are absent, though [`continues_path_run`] admits them:
@@ -196,50 +195,44 @@ fn shell_script_operand(action: &Action) -> Option<&str> {
     args.get(at + 1).map(String::as_str)
 }
 
-/// The strings with which this action's program declares a path inside the
-/// artifact it produces. Matched by value, not position: the scan order is
-/// not the sequence the program sees.
+/// The strings with which a program declares a path inside the artifact it
+/// produces. Matched by value, not position: the scan order is not the
+/// sequence the program sees.
 fn declared_path_strings<'a>(
-    action: &'a Action,
-    templates: &Templates,
-    library: &Library,
+    resolved: Option<&Resolution<'a>>,
 ) -> HashSet<&'a str> {
-    let command_line = expanded_command_line(action);
-    let Some((executable, args)) = command_line.split_first() else {
+    let Some(Resolution {
+        args,
+        spec: Some((_, spec)),
+        ..
+    }) = resolved
+    else {
         return HashSet::new();
     };
-    let resolved = library.resolve(
-        templates.program(executable.value, library),
-        args.iter().map(|sourced| sourced.value).collect(),
-    );
-    let Some((_, spec)) = &resolved.spec else {
-        return HashSet::new();
-    };
-    spec.declared_path_args(&resolved.args)
-        .into_iter()
-        .collect()
+    spec.declared_path_args(args).into_iter().collect()
 }
 
 /// One [`Violation`] per absolute path in an action's command line, param
-/// files and environment values. `PATH` is skipped—[`super::check_path`]
-/// governs it—as are the [`ALLOWED_ABSOLUTE_PATHS`].
+/// files, the arguments a template substituted for its program and its
+/// environment values. `PATH` is skipped—[`super::check_path`] governs it—as are
+/// the [`ALLOWED_ABSOLUTE_PATHS`].
 pub(super) fn check(
-    container: &ActionGraphContainer,
+    resolved: &[ResolvedAction<'_>],
     targets: &HashMap<u32, &str>,
-    templates: &Templates,
-    library: &Library,
 ) -> Vec<Violation> {
     let mut violations = Vec::new();
 
-    for action in &container.actions {
-        // Resolved at the first path we would report, so that the actions
-        // with none never pay for resolving their program a second time.
+    for resolved in resolved {
+        let action = resolved.action;
+        // Built at the first path we would report, so that the actions with
+        // none never pay for it.
         let mut declared: Option<HashSet<&str>> = None;
         let shell_script = shell_script_operand(action);
 
         // argv[0] is the program, which the reproducibility check reports.
         let program = usize::from(!action.arguments.is_empty());
-        for sourced in analyzable_strings(action).into_iter().skip(program)
+        for sourced in
+            resolved.analyzable_strings().into_iter().skip(program)
         {
             let kind = if shell_script == Some(sourced.value) {
                 SiteKind::Shell
@@ -252,7 +245,7 @@ pub(super) fn check(
             }
             if declared
                 .get_or_insert_with(|| {
-                    declared_path_strings(action, templates, library)
+                    declared_path_strings(resolved.resolution.as_ref())
                 })
                 .contains(sourced.value)
             {
@@ -300,6 +293,7 @@ mod tests {
         action_with_args, action_with_env, assert_abs_path,
         check_absolute_paths as check, container,
     };
+    use crate::reproducibility_spec::library::Library;
 
     fn plain(text: &str) -> Vec<String> {
         absolute_paths(text, SiteKind::Plain)

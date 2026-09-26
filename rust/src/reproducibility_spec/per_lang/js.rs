@@ -5,7 +5,7 @@
 //! function of its inputs. TypeScript shares this module because its
 //! compiler is an npm package reached the same way.
 
-use super::super::library::{Entry, always, never};
+use super::super::library::{Entry, Transition, always, never};
 use super::super::program_id::ProgramId;
 use super::super::{Reproducibility, ReproducibilitySpec};
 
@@ -49,6 +49,17 @@ pub(in crate::reproducibility_spec) fn entries() -> Vec<(ProgramId, Entry)>
     // because the code it runs is not in the build at all.
     let mut entries =
         vec![rules_js_tool("npm/private/lifecycle/min/bin_/bin")];
+
+    // The launcher `js_binary` expands into the consuming package. It only
+    // sets up node and its fs patches, so what the action runs is the entry
+    // point, handed the fixed arguments ahead of the action's own.
+    entries.push((
+        ProgramId::module("aspect_rules_js", "js/private/js_binary.sh.tpl"),
+        Entry::Wraps(Transition::Substituted {
+            program: "{{entry_point_path}}".to_owned(),
+            args: Some("{{fixed_args}}".to_owned()),
+        }),
+    ));
 
     // Dispatches the Closure compiler, its library checker and the webfiles
     // validator, each reading the sources, manifests and options named by

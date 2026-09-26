@@ -7,18 +7,18 @@ use analysis_v2_proto::analysis::{
 };
 use serde::{Deserialize, Serialize};
 
-use crate::param_files::{
-    ArgSource, Sourced, analyzable_strings, expanded_command_line,
-};
 use crate::reproducibility_spec::{
     Conformance, Unmet,
-    library::Library,
+    library::{Library, Resolution},
     program_id::{Origin, ProgramId},
 };
 use crate::terminal_color::Palette;
 
 mod absolute_paths;
+mod scanned;
 mod templates;
+
+use scanned::{ArgSource, Sourced, analyzable_strings};
 
 pub(crate) use templates::Templates;
 
@@ -145,6 +145,14 @@ pub(crate) enum LeakSite {
         key: String,
         value: String,
     },
+    /// Among the arguments a wrapper's template substituted ahead of the
+    /// wrapped program's own.
+    Substitution {
+        template: ProgramId,
+        key: String,
+        /// The argument the finding was in.
+        value: String,
+    },
 }
 
 impl LeakSite {
@@ -158,6 +166,13 @@ impl LeakSite {
                 exec_path: exec_path.to_owned(),
                 value: sourced.value.to_owned(),
             },
+            ArgSource::Substitution { template, key } => {
+                LeakSite::Substitution {
+                    template: template.clone(),
+                    key: key.to_owned(),
+                    value: sourced.value.to_owned(),
+                }
+            }
         }
     }
 
@@ -173,6 +188,17 @@ impl LeakSite {
             LeakSite::EnvVar { key, value } => {
                 (format!("environment variable {key:?}"), value.as_str())
             }
+            LeakSite::Substitution {
+                template,
+                key,
+                value,
+            } => (
+                format!(
+                    "substitution {key:?} of {:?}",
+                    template.to_string()
+                ),
+                value.as_str(),
+            ),
         }
     }
 }
@@ -539,25 +565,57 @@ pub(crate) fn check_all(
     library: &Library,
 ) -> BTreeMap<Violation, usize> {
     let targets = target_labels(container);
-    let templates = Templates::of(container);
+    let resolved = ResolvedAction::all(container, library);
 
     let mut violations =
-        check_environment_leaks(container, &targets, user, hostname);
+        check_environment_leaks(&resolved, &targets, user, hostname);
     violations.extend(check_path(container, &targets));
-    violations.extend(absolute_paths::check(
-        container, &targets, &templates, library,
-    ));
+    violations.extend(absolute_paths::check(&resolved, &targets));
     violations.extend(check_execution_requirements(container, &targets));
     violations.extend(check_workspace_status(container, &targets));
-    violations.extend(check_reproducibility(
-        container, &targets, &templates, library,
-    ));
+    violations.extend(check_reproducibility(&resolved, &targets));
 
     let mut counted = BTreeMap::new();
     for violation in violations {
         *counted.entry(violation).or_insert(0) += 1;
     }
     counted
+}
+
+/// An action with what its program resolves to, which the checks reading
+/// its command line share.
+struct ResolvedAction<'a> {
+    action: &'a Action,
+    /// `None` when the action has no command line.
+    resolution: Option<Resolution<'a>>,
+}
+
+impl<'a> ResolvedAction<'a> {
+    /// Every action in `container`, resolved against `library`.
+    fn all(
+        container: &'a ActionGraphContainer,
+        library: &Library,
+    ) -> Vec<ResolvedAction<'a>> {
+        let templates = Templates::of(container);
+        container
+            .actions
+            .iter()
+            .map(|action| ResolvedAction {
+                action,
+                resolution: templates.resolve_action(action, library),
+            })
+            .collect()
+    }
+
+    /// The strings worth scanning for leaks; see [`analyzable_strings`].
+    fn analyzable_strings(&self) -> Vec<Sourced<'_>> {
+        analyzable_strings(
+            self.action,
+            self.resolution
+                .as_ref()
+                .and_then(|resolution| resolution.substituted.as_ref()),
+        )
+    }
 }
 
 /// The workspace status files, relative to the output path.
@@ -750,17 +808,19 @@ fn check_execution_requirements(
 }
 
 /// One [`Violation`] per sentinel leaked into an action's command line, its
-/// param files or its environment values.
+/// param files, its environment values or the arguments a template
+/// substituted for its program.
 fn check_environment_leaks(
-    container: &ActionGraphContainer,
+    resolved: &[ResolvedAction<'_>],
     targets: &HashMap<u32, &str>,
     user: &str,
     hostname: &str,
 ) -> Vec<Violation> {
     let mut violations = Vec::new();
 
-    for action in &container.actions {
-        let scanned = analyzable_strings(action);
+    for resolved in resolved {
+        let action = resolved.action;
+        let scanned = resolved.analyzable_strings();
 
         for (sentinel, source) in
             [(user, EnvSource::User), (hostname, EnvSource::Hostname)]
@@ -821,23 +881,15 @@ fn check_path(
 
 /// Each action's program against the library of specs.
 fn check_reproducibility(
-    container: &ActionGraphContainer,
+    resolved: &[ResolvedAction<'_>],
     targets: &HashMap<u32, &str>,
-    templates: &Templates,
-    library: &Library,
 ) -> Vec<Violation> {
     let mut violations = Vec::new();
 
-    for action in &container.actions {
-        let command_line = expanded_command_line(action);
-        let Some((executable, args)) = command_line.split_first() else {
+    for ResolvedAction { action, resolution } in resolved {
+        let Some(resolved) = resolution else {
             continue;
         };
-
-        let resolved = library.resolve(
-            templates.program(executable.value, library),
-            args.iter().map(|sourced| sourced.value).collect(),
-        );
         let action_ref = || ActionRef::of(action, targets);
         let wrappers = resolved.wrappers.clone();
 
@@ -846,17 +898,17 @@ fn check_reproducibility(
         if resolved.program.origin == Origin::System {
             violations.push(Violation::SystemProgram {
                 action: action_ref(),
-                program: resolved.program,
+                program: resolved.program.clone(),
                 wrappers,
             });
             continue;
         }
 
         let synonym = resolved.synonym().cloned();
-        let Some((_, spec)) = resolved.spec else {
+        let Some((_, spec)) = &resolved.spec else {
             violations.push(Violation::UnknownProgram {
                 action: action_ref(),
-                program: resolved.program,
+                program: resolved.program.clone(),
                 wrappers,
             });
             continue;
@@ -866,14 +918,14 @@ fn check_reproducibility(
             Conformance::HostDerived => {
                 violations.push(Violation::HostDerivedProgram {
                     action: action_ref(),
-                    program: resolved.program,
+                    program: resolved.program.clone(),
                     wrappers,
                 });
             }
             Conformance::NeverReproducible => {
                 violations.push(Violation::NeverReproducible {
                     action: action_ref(),
-                    program: resolved.program,
+                    program: resolved.program.clone(),
                     wrappers,
                     synonym,
                 });
@@ -881,7 +933,7 @@ fn check_reproducibility(
             Conformance::Conditional { unmet } => {
                 violations.push(Violation::ConditionalReproducibility {
                     action: action_ref(),
-                    program: resolved.program,
+                    program: resolved.program.clone(),
                     wrappers,
                     synonym,
                     unmet,
@@ -899,15 +951,16 @@ pub(crate) mod tests {
     use crate::reproducibility_spec::program_id::Origin;
     use analysis_v2_proto::analysis::KeyValuePair;
 
-    // Each test exercises one check on its own, so these shims build
-    // the label index the way `check_all` does before handing it over.
-    fn check_environment_leaks(
+    // Each test exercises one check on its own, so these shims build the
+    // label index and resolve the actions the way `check_all` does before
+    // handing them over.
+    pub(crate) fn check_environment_leaks(
         container: &ActionGraphContainer,
         user: &str,
         hostname: &str,
     ) -> Vec<Violation> {
         super::check_environment_leaks(
-            container,
+            &ResolvedAction::all(container, &Library::builtin(None)),
             &target_labels(container),
             user,
             hostname,
@@ -933,15 +986,13 @@ pub(crate) mod tests {
         super::check_workspace_status(container, &target_labels(container))
     }
 
-    fn check_reproducibility(
+    pub(crate) fn check_reproducibility(
         container: &ActionGraphContainer,
         library: &Library,
     ) -> Vec<Violation> {
         super::check_reproducibility(
-            container,
+            &ResolvedAction::all(container, library),
             &target_labels(container),
-            &Templates::of(container),
-            library,
         )
     }
 
@@ -950,15 +1001,13 @@ pub(crate) mod tests {
         library: &Library,
     ) -> Vec<Violation> {
         absolute_paths::check(
-            container,
+            &ResolvedAction::all(container, library),
             &target_labels(container),
-            &Templates::of(container),
-            library,
         )
     }
 
-    const USER_SENTINEL: &str = "ahab-user-SENTINEL";
-    const HOST_SENTINEL: &str = "ahab-host-SENTINEL";
+    pub(crate) const USER_SENTINEL: &str = "ahab-user-SENTINEL";
+    pub(crate) const HOST_SENTINEL: &str = "ahab-host-SENTINEL";
 
     /// Build an [`Action`] with the given mnemonic, target id, and environment
     /// variables (as `(key, value)` pairs).
@@ -1760,6 +1809,32 @@ pub(crate) mod tests {
                 program: ProgramId::of("/bin/bash"),
                 wrappers: Vec::new(),
             }
+        );
+    }
+
+    #[test]
+    fn renders_an_absolute_path_a_template_substituted() {
+        let v = Violation::AbsolutePath {
+            action: ActionRef {
+                mnemonic: "JsRunBinary".to_owned(),
+                target: test_label(1),
+            },
+            path: "/tmp/js".to_owned(),
+            site: LeakSite::Substitution {
+                template: ProgramId::module(
+                    "aspect_rules_js",
+                    "js/private/js_binary.sh.tpl",
+                ),
+                key: "{{fixed_args}}".to_owned(),
+                value: "--cache-dir=/tmp/js".to_owned(),
+            },
+        };
+        let r = v.render(Palette::plain());
+        assert!(
+            r.ends_with(
+                r#"in substitution "{{fixed_args}}" of "@aspect_rules_js//js/private/js_binary.sh.tpl": --cache-dir=/tmp/js"#
+            ),
+            "{r}"
         );
     }
 

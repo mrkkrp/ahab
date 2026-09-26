@@ -105,17 +105,23 @@ enum Location {
     Argument,
     ParamFile,
     EnvVar,
+    Substitution,
 }
 
 impl Location {
-    const ALL: [Location; 3] =
-        [Location::Argument, Location::ParamFile, Location::EnvVar];
+    const ALL: [Location; 4] = [
+        Location::Argument,
+        Location::ParamFile,
+        Location::EnvVar,
+        Location::Substitution,
+    ];
 
     fn as_str(self) -> &'static str {
         match self {
             Location::Argument => "argument",
             Location::ParamFile => "param_file",
             Location::EnvVar => "env_var",
+            Location::Substitution => "substitution",
         }
     }
 
@@ -125,6 +131,7 @@ impl Location {
             LeakSite::Argument { .. } => Location::Argument,
             LeakSite::ParamFile { .. } => Location::ParamFile,
             LeakSite::EnvVar { .. } => Location::EnvVar,
+            LeakSite::Substitution { .. } => Location::Substitution,
         }
     }
 }
@@ -748,6 +755,29 @@ mod tests {
         let exception = good(r#"{"env_var": "HOME"}"#);
         assert!(exception.matches(&leak("Genrule", "//a:a", "HOME")));
         assert!(!exception.matches(&leak("Genrule", "//a:a", "TMPDIR")));
+    }
+
+    #[test]
+    fn a_location_predicate_tells_a_substitution_from_an_argument() {
+        let exception = good(r#"{"location": "substitution"}"#);
+        let substituted = Violation::AbsolutePath {
+            action: action("JsRunBinary", "//a:a"),
+            path: "/tmp/js".to_owned(),
+            site: LeakSite::Substitution {
+                template: ProgramId::module(
+                    "aspect_rules_js",
+                    "js/private/js_binary.sh.tpl",
+                ),
+                key: "{{fixed_args}}".to_owned(),
+                value: "--cache-dir=/tmp/js".to_owned(),
+            },
+        };
+        assert!(exception.matches(&substituted));
+        assert!(!exception.matches(&absolute_path(
+            "JsRunBinary",
+            "//a:a",
+            "/tmp/js"
+        )));
     }
 
     #[test]

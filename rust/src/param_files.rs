@@ -4,8 +4,7 @@
 //! holding only a reference such as `@bazel-out/…/foo-2.params`. A check
 //! reading only `arguments` misses whatever the file holds, and misses it
 //! quietly: the action looks clean precisely because it is the large one.
-//! So param files are first-class here, every string tagged with
-//! [`ArgSource`] so a violation can say where it came from.
+//! So the command line is rebuilt here with its param files spliced in.
 //!
 //! `param_files` "will be only set if explicitly requested", per
 //! `analysis_v2.proto`, so [`crate::aquery::run_aquery`] always passes
@@ -18,10 +17,10 @@
 //! * **Content files** — attached but never referenced, holding data the
 //!   program reads as a *file*. C++ module maps are the common case.
 //!
-//! Hence the two views below. [`expanded_command_line`] is `argv`, and what
-//! a reproducibility spec should judge; feeding it module-map text would
-//! invite a recognizer to read a module graph as flags. [`analyzable_strings`]
-//! is everything worth scanning for leaked paths, content files included.
+//! Hence [`expanded_command_line`] splices only the former. It is `argv`,
+//! and what a reproducibility spec should judge; feeding it module-map text
+//! would invite a recognizer to read a module graph as flags. The leak
+//! checks scan every param file instead, content files included.
 //!
 //! There is no single spelling of a reference: the format comes from the
 //! rule's `param_file_arg`, `@%s` for native C++ and Java actions and
@@ -32,22 +31,6 @@
 //! refusing to follow a reference found inside one rules out a cycle.
 
 use analysis_v2_proto::analysis::Action;
-
-/// Where within an action a string Ahab analyzed came from.
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
-pub(crate) enum ArgSource<'a> {
-    /// Directly on the action's command line (its `arguments`).
-    CommandLine,
-    /// A line of the param file at this exec path.
-    ParamFile(&'a str),
-}
-
-/// One analyzed string together with its provenance.
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
-pub(crate) struct Sourced<'a> {
-    pub value: &'a str,
-    pub source: ArgSource<'a>,
-}
 
 /// Whether `arg` is a reference to the param file at `exec_path`: the path
 /// verbatim at the end, preceded by something ending in `@` (`@path`,
@@ -60,7 +43,7 @@ pub(crate) struct Sourced<'a> {
 ///
 /// The asymmetry is deliberate. Splicing a content file corrupts what a
 /// spec judges; missing a reference only leaves those arguments unassessed,
-/// since [`analyzable_strings`] scans them either way.
+/// since the leak checks scan them either way.
 ///
 /// An empty `exec_path` never matches, so a param file with no path cannot
 /// swallow every argument.
@@ -80,7 +63,7 @@ fn references(arg: &str, exec_path: &str) -> bool {
 /// A reference to an empty param file is left as it stands, because aquery
 /// reports such a file on some runs and leaves it out on others, and the
 /// verdict must not depend on which.
-pub(crate) fn expanded_command_line(action: &Action) -> Vec<Sourced<'_>> {
+pub(crate) fn expanded_command_line(action: &Action) -> Vec<&str> {
     let mut expanded = Vec::with_capacity(action.arguments.len());
 
     for arg in &action.arguments {
@@ -90,43 +73,13 @@ pub(crate) fn expanded_command_line(action: &Action) -> Vec<Sourced<'_>> {
         });
 
         match referenced {
-            Some(param_file) => {
-                expanded.extend(param_file.arguments.iter().map(|line| {
-                    Sourced {
-                        value: line,
-                        source: ArgSource::ParamFile(&param_file.exec_path),
-                    }
-                }))
-            }
-            None => expanded.push(Sourced {
-                value: arg,
-                source: ArgSource::CommandLine,
-            }),
+            Some(param_file) => expanded
+                .extend(param_file.arguments.iter().map(String::as_str)),
+            None => expanded.push(arg.as_str()),
         }
     }
 
     expanded
-}
-
-/// Every string worth scanning for leaked sentinels and absolute paths: the
-/// raw command line followed by *every* param file, referenced or not. Raw
-/// rather than expanded, so each file's lines appear exactly once however
-/// many arguments reference it.
-pub(crate) fn analyzable_strings(action: &Action) -> Vec<Sourced<'_>> {
-    let command_line = action.arguments.iter().map(|arg| Sourced {
-        value: arg,
-        source: ArgSource::CommandLine,
-    });
-
-    let param_file_lines =
-        action.param_files.iter().flat_map(|param_file| {
-            param_file.arguments.iter().map(move |line| Sourced {
-                value: line,
-                source: ArgSource::ParamFile(&param_file.exec_path),
-            })
-        });
-
-    command_line.chain(param_file_lines).collect()
 }
 
 #[cfg(test)]
@@ -155,10 +108,6 @@ mod tests {
                 .collect(),
             ..Default::default()
         }
-    }
-
-    fn values<'a>(sourced: &[Sourced<'a>]) -> Vec<&'a str> {
-        sourced.iter().map(|s| s.value).collect()
     }
 
     #[test]
@@ -211,10 +160,9 @@ mod tests {
     #[test]
     fn a_command_line_without_param_files_is_unchanged() {
         let a = action(&["/usr/bin/gcc", "-c", "foo.c"], &[]);
-        let expanded = expanded_command_line(&a);
-        assert_eq!(values(&expanded), ["/usr/bin/gcc", "-c", "foo.c"]);
-        assert!(
-            expanded.iter().all(|s| s.source == ArgSource::CommandLine)
+        assert_eq!(
+            expanded_command_line(&a),
+            ["/usr/bin/gcc", "-c", "foo.c"]
         );
     }
 
@@ -225,7 +173,7 @@ mod tests {
             &[("out/empty_mtree.txt", &[])],
         );
         assert_eq!(
-            values(&expanded_command_line(&a)),
+            expanded_command_line(&a),
             ["tar", "--create", "@out/empty_mtree.txt"],
         );
     }
@@ -237,22 +185,8 @@ mod tests {
             &[("out/foo.params", &["-O2", "-DNDEBUG"])],
         );
         assert_eq!(
-            values(&expanded_command_line(&a)),
+            expanded_command_line(&a),
             ["gcc", "-O2", "-DNDEBUG", "-o", "foo.o"]
-        );
-    }
-
-    #[test]
-    fn spliced_lines_are_attributed_to_their_param_file() {
-        let a = action(
-            &["gcc", "@out/foo.params"],
-            &[("out/foo.params", &["-O2"])],
-        );
-        let expanded = expanded_command_line(&a);
-        assert_eq!(expanded[0].source, ArgSource::CommandLine);
-        assert_eq!(
-            expanded[1].source,
-            ArgSource::ParamFile("out/foo.params")
         );
     }
 
@@ -263,7 +197,7 @@ mod tests {
             &[("out/m.cppmap", &["module \"crosstool\" [system] {"])],
         );
         assert_eq!(
-            values(&expanded_command_line(&a)),
+            expanded_command_line(&a),
             ["clang", "-fmodule-map-file=out/m.cppmap"]
         );
     }
@@ -275,7 +209,7 @@ mod tests {
             &[("out/a.params", &["-O2"]), ("out/b.params", &["-DFOO"])],
         );
         assert_eq!(
-            values(&expanded_command_line(&a)),
+            expanded_command_line(&a),
             ["gcc", "-O2", "-x", "-DFOO"]
         );
     }
@@ -290,49 +224,8 @@ mod tests {
             ],
         );
         assert_eq!(
-            values(&expanded_command_line(&a)),
+            expanded_command_line(&a),
             ["gcc", "@out/a.params", "-O2"]
-        );
-    }
-
-    #[test]
-    fn analyzable_strings_cover_the_command_line_and_every_param_file() {
-        let a = action(
-            &["clang", "@out/foo.params", "-fmodule-map-file=out/m.cppmap"],
-            &[
-                ("out/foo.params", &["-O2"]),
-                ("out/m.cppmap", &["module \"crosstool\" {"]),
-            ],
-        );
-        assert_eq!(
-            values(&analyzable_strings(&a)),
-            [
-                "clang",
-                "@out/foo.params",
-                "-fmodule-map-file=out/m.cppmap",
-                "-O2",
-                "module \"crosstool\" {",
-            ]
-        );
-    }
-
-    #[test]
-    fn a_param_file_referenced_twice_is_scanned_once() {
-        let a = action(
-            &["gcc", "@out/foo.params", "@out/foo.params"],
-            &[("out/foo.params", &["-O2"])],
-        );
-        let scanned = values(&analyzable_strings(&a));
-        assert_eq!(scanned.iter().filter(|v| **v == "-O2").count(), 1);
-    }
-
-    #[test]
-    fn param_file_lines_are_attributed_to_their_file() {
-        let a = action(&["gcc"], &[("out/foo.params", &["-O2"])]);
-        let scanned = analyzable_strings(&a);
-        assert_eq!(
-            scanned[1].source,
-            ArgSource::ParamFile("out/foo.params")
         );
     }
 }
