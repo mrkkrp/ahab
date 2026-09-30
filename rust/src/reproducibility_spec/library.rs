@@ -619,6 +619,9 @@ enum TransitionFile {
 
 /// Parse the entries a `--repro-specs` file declares. Errors name the
 /// program at fault, a serde error alone giving only a position.
+///
+/// A program outside the build is refused: it is reported as a system
+/// program before any spec is consulted, so one would be silently ignored.
 pub fn parse_entries(
     json: &str,
 ) -> Result<Vec<(ProgramId, Entry)>, String> {
@@ -629,8 +632,17 @@ pub fn parse_entries(
         .into_iter()
         .map(|(program, entry)| {
             let named = |what: &str, text: &str| {
-                text.parse::<ProgramId>()
-                    .map_err(|why| format!("{program}: {what}: {why}"))
+                let id = text
+                    .parse::<ProgramId>()
+                    .map_err(|why| format!("{program}: {what}: {why}"))?;
+                if id.origin == Origin::System {
+                    return Err(format!(
+                        "{program}: {what}: {text:?} is outside the build, \
+                         so it is always reported as a system program and \
+                         no spec applies to it"
+                    ));
+                }
+                Ok(id)
             };
             let id = named("program", &program)?;
             let entry = match entry {
@@ -981,6 +993,16 @@ mod tests {
             ProgramId::module("acme", "tools/gen")
         );
         assert_eq!(resolved.spec.map(|(_, spec)| spec), Some(never()));
+    }
+
+    #[test]
+    fn nothing_in_the_library_is_outside_the_build() {
+        for (key, entry) in entries() {
+            assert_ne!(key.origin, Origin::System, "{key}");
+            if let Entry::SameAs(target) = entry {
+                assert_ne!(target.origin, Origin::System, "{key}");
+            }
+        }
     }
 
     #[test]

@@ -998,6 +998,29 @@ mod tests {
     }
 
     #[test]
+    fn a_program_outside_the_build_is_refused() {
+        for (name, text) in [
+            (
+                "absolute.json",
+                r#"{"programs": {"/usr/bin/gcc": {"spec":
+                     {"reproducibility": "always"}}}}"#,
+            ),
+            (
+                "bare.json",
+                r#"{"programs": {"gcc": {"spec":
+                     {"reproducibility": "always"}}}}"#,
+            ),
+            (
+                "synonym.json",
+                r#"{"programs": {"//a": {"same_as": "/usr/bin/gcc"}}}"#,
+            ),
+        ] {
+            let message = specs_from(name, text).unwrap_err().to_string();
+            assert!(message.contains("outside the build"), "{message}");
+        }
+    }
+
+    #[test]
     fn a_misspelled_spec_field_is_rejected() {
         let message = specs_from(
             "typo.json",
