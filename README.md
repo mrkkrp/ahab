@@ -52,7 +52,7 @@ seconds.
 Ahab is a Bazel module. Add it to your `MODULE.bazel`:
 
 ```starlark
-bazel_dep(name = "ahab", version = "0.3.0")
+bazel_dep(name = "ahab", version = "0.4.0")
 ```
 
 Then declare a target for whatever you want analyzed:

@@ -1,4 +1,4 @@
-## Unreleased
+## Ahab 0.4.0
 
 * A reproducibility spec file naming a program outside the build, such as
   `/usr/bin/gcc` or `gcc`, is refused. Such a program is always reported as
