@@ -55,12 +55,7 @@ jobs:
           if [ -n "$BAZEL_PLATFORM" ]; then
             flags+=("--platforms=$BAZEL_PLATFORM")
           fi
-          bazel build "${flags[@]}" //rust:ahab
-          built="$(bazel cquery "${flags[@]}" --output=files //rust:ahab |
-            grep -v -- '-exec/' | head -1)"
-          mkdir -p dist
-          cp "$(bazel info execution_root)/$built" dist/ahab
-          chmod +x dist/ahab
+          .github/workflows/build_ahab.sh dist/ahab "${flags[@]}"
           reported="$(./dist/ahab --version)"
           if [ "$reported" != "ahab ${TAG#v}" ]; then
             echo "binary reports \"$reported\", expected \"ahab ${TAG#v}\"" >&2

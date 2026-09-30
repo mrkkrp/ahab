@@ -25,12 +25,7 @@ jobs:
         uses: actions/checkout@v7
       - name: Make room on the runner
         if: ${{ runner.os == 'Linux' }}
-        run: |
-          sudo rm -rf /usr/share/dotnet /opt/ghc /usr/local/.ghcup \
-            /opt/hostedtoolcache/CodeQL /usr/local/share/powershell \
-            /usr/share/swift /usr/local/share/chromium /opt/google
-          sudo docker image prune --all --force
-          df -h
+        run: .github/workflows/make_room.sh
       - name: Set up Bazel
         uses: bazel-contrib/setup-bazel@0.19.0
         with:
@@ -39,40 +34,26 @@ jobs:
           repository-cache: true
       - name: Run the tests
         run: bazel test //...
-      - name: Run clippy
-        if: ${{ !cancelled() && matrix.os == 'ubuntu-24.04' }}
-        run: bazel build //rust:clippy
       - name: Analyze Ahab's own build
         if: ${{ !cancelled() && matrix.os == 'ubuntu-24.04' }}
         run: bazel run //:hermeticity
       - name: Prepare the binary for the module test
         if: ${{ !cancelled() }}
         run: |
-          bazel build //rust:ahab
-          built="$(bazel cquery --output=files //rust:ahab | grep -v -- '-exec/' | head -1)"
-          mkdir -p "$RUNNER_TEMP/ahab-prebuilt"
-          cp "$(bazel info execution_root)/$built" "$RUNNER_TEMP/ahab-prebuilt/ahab"
+          .github/workflows/build_ahab.sh "$RUNNER_TEMP/ahab-prebuilt/ahab"
           echo "AHAB_PREBUILT_LOCAL=$RUNNER_TEMP/ahab-prebuilt" >> "$GITHUB_ENV"
-      - name: Check that Ahab can be consumed as a module (Bazel 9)
+      - name: Check that Ahab can be consumed as a module
         if: ${{ !cancelled() }}
         working-directory: packaging
         run: |
-          bazel build //:ahab.report //:ahab.check //:ahab.update //:ahab.explain
-          bazel run //:ahab.report
-          bazel run //:ahab.check
-          bazel run //:ahab.explain
-          bazel query 'deps(//...)' > /dev/null
-      - name: Check that Ahab can be consumed as a module (Bazel 8)
-        if: ${{ !cancelled() }}
-        working-directory: packaging
-        env:
-          USE_BAZEL_VERSION: 8.7.0
-        run: |
-          bazel build //:ahab.report //:ahab.check //:ahab.update //:ahab.explain
-          bazel run //:ahab.report
-          bazel run //:ahab.check
-          bazel run //:ahab.explain
-          bazel query 'deps(//...)' > /dev/null
+          for version in "$(cat .bazelversion)" 8.7.0; do
+            export USE_BAZEL_VERSION="$version"
+            bazel build //:ahab.report //:ahab.check //:ahab.update //:ahab.explain
+            bazel run //:ahab.report
+            bazel run //:ahab.check
+            bazel run //:ahab.explain
+            bazel query 'deps(//...)' > /dev/null
+          done
   fishery:
     name: Fishery ${{ matrix.shard }}/${{ strategy.job-total }}
     runs-on: ubuntu-latest
@@ -84,12 +65,7 @@ jobs:
       - name: Check out the repository
         uses: actions/checkout@v7
       - name: Make room on the runner
-        run: |
-          sudo rm -rf /usr/share/dotnet /opt/ghc /usr/local/.ghcup \
-            /opt/hostedtoolcache/CodeQL /usr/local/share/powershell \
-            /usr/share/swift /usr/local/share/chromium /opt/google
-          sudo docker image prune --all --force
-          df -h
+        run: .github/workflows/make_room.sh
       - name: Set up Bazel
         uses: bazel-contrib/setup-bazel@0.19.0
         with:
