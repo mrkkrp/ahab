@@ -12,12 +12,10 @@
   * [Reproducibility](#reproducibility)
 * [Reproducibility specifications](#reproducibility-specifications)
   * [Naming a program](#naming-a-program)
-  * [Writing one](#writing-one)
-  * [When a rule only sometimes applies](#when-a-rule-only-sometimes-applies)
-  * [Saying it another way](#saying-it-another-way)
+  * [Specification format](#specification-format)
+  * [Tools with several different modes](#tools-with-several-different-modes)
+  * [Synonyms and wrappers](#synonyms-and-wrappers)
 * [Exceptions](#exceptions)
-  * [How they match](#how-they-match)
-  * [What they will not let you do](#what-they-will-not-let-you-do)
 * [Development](#development)
 * [The fishery](#the-fishery)
 * [License](#license)
@@ -36,8 +34,8 @@ Bazel's aquery instead describes what *would* run, which costs an analysis
 phase and no build at all. Ahab reads that description and reports what it
 finds there: values that leaked in from the environment, absolute paths,
 actions declaring that they need the network or must not be sandboxed,
-actions reading workspace status, and programs whose reproducibility nobody
-has vouched for.
+actions reading workspace status, and programs whose reproducibility is
+unknown.
 
 The two answer different questions, and Ahab does not replace execution log
 comparison. Comparing logs is empirical—it catches a compiler embedding a
@@ -47,7 +45,7 @@ runs, and it is only ever as good as what it has been told about the tools
 involved. What it buys is a check that covers everything and finishes in
 seconds.
 
-[comparing-execlogs]: https://bazel.build/versions/8.6.0/remote/cache-remote#comparing-the-execution-logs
+[comparing-execlogs]: https://bazel.build/remote/cache-local
 
 ## Quickstart
 
@@ -76,31 +74,24 @@ That prints every violation found and exits non-zero if there were any. One
 has to use `bazel run` and not `bazel test` with Ahab, since invoking Bazel
 commands inside a Bazel build is not permitted.
 
-Ahab is not built from source when you use it. Ahab is written in Rust and
-its build needs a Rust toolchain, a set of crates and a protobuf compiler; a
-module that made you build it would put all of that in your graph, where it
-can collide with whatever else you build Rust with. So the release publishes
-a binary per platform, the module declares its build-time dependencies as
-development ones, and what a consumer's graph gains is Ahab, `platforms` and
-`bazel_skylib`. The binary is downloaded on first use and checked against a
-digest recorded in the module.
-
-Binaries are published for Linux and macOS, on x86-64 and arm64. The Linux
-ones are static, so they do not care what libc the machine has. Windows is
-not supported. A platform without a binary is an error that says so, and
-asking for one is a reasonable thing to open an issue about.
+Ahab is not built from source when you use it—it downloads pre-built
+binaries. It is written in Rust and its build needs a Rust toolchain, a set
+of crates, and a protobuf compiler. If all of this were added to your build
+graph it could collide with whatever else you build Rust with. Binaries are
+published for Linux and macOS, on x86-64 and arm64. The Linux ones are
+static, so they do not care what libc the machine has. Windows is not
+supported.
 
 One consequence is worth knowing: this works when Ahab comes from a
 registry, which is what `bazel_dep` does. Pointing a `git_override` at the
 repository gets you a module whose release never happened and which
-therefore lists no binaries. `AHAB_PREBUILT_LOCAL`, naming a directory that
-holds one, is the way through that if you need it.
+therefore lists no binaries. In that case you can specify the directory that
+contains a pre-built Ahab binary by setting `AHAB_PREBUILT_LOCAL`.
 
 ### Recording what you find
 
 A real codebase will not reach zero violations on the first day. The way to
-make that tractable is to record what you have and fail only on what is
-new:
+make that tractable is to record what you have and fail only on what is new:
 
 ```starlark
 load("@ahab//:defs.bzl", "ahab_check", "ahab_update")
@@ -151,37 +142,32 @@ which matters when the thing worth analyzing is a particular configuration.
 `compilation_mode` sets the compilation mode to `fastbuild`, `dbg` or `opt`
 rather than the default.
 
-The binary is also usable directly—`bazel run @ahab//:ahab_bin -- --help` lists
-the flags the macros set for you.
+The binary is also usable directly—`bazel run @ahab//:ahab_bin -- --help`
+lists the flags the macros set for you.
 
 ## Checks
 
 Ahab reports two kinds of finding. A **hermeticity violation** says the
 action's behaviour can depend on the machine it runs on. A **reproducibility
-violation** says the action runs a program that will not produce the same
-output twice.
+violation** says the action runs a program that will not necessarily produce
+the same output given the same inputs.
 
 ### Environment leaks
 
-Ahab runs `aquery` with `USER` and `HOSTNAME` replaced by long,
-distinctive sentinels, then looks for those sentinels anywhere in the
-resulting graph: command lines, param file contents, and environment
-variable values. Anything that comes back is a value the build copied out
-of the invoking environment.
-
-The sentinels are fixed rather than random, because a different `USER` on
-every run changes every action key and makes Bazel redo its analysis every
-time—and because the sentinel is recorded in the violation, so a changing
-one could never be compared against a saved report.
+Ahab runs `aquery` with `USER` and `HOSTNAME` replaced by distinctive
+sentinels, then looks for those sentinels anywhere in the resulting graph:
+command lines, param file contents, and environment variable values. The
+sentinels are fixed rather than random, because a different `USER` on every
+run changes every action key and makes Bazel redo its analysis every time.
+Using fixed sentinels also keeps violation reports reproducible.
 
 ### `PATH`
 
 Every absolute entry of an action's `PATH` is required to be one of `/bin`,
 `/usr/bin`, and `/usr/local/bin`, the directories of the `PATH` Bazel uses
-when nothing interferes. They may come in any order and any combination,
-and relative entries—directories in the execution root—are fine too. Any
-other absolute entry is a directory the build chose, and a build that
-chooses its own directories on `PATH` is choosing the machine's tools.
+when nothing interferes. They may come in any order and any combination, and
+relative entries—directories in the execution root—are fine too. Any other
+absolute paths are reported.
 
 ### Execution requirements
 
@@ -191,7 +177,7 @@ declarations—are read straight out of the graph, and these are reported:
 | requirement                   | reading                                     |
 | ----------------------------- | ------------------------------------------- |
 | `requires-network`            | the output can depend on anything out there |
-| `no-sandbox`, `local`         | the action sees the whole filesystem, so it can read inputs it never declared |
+| `no-sandbox`, `local`         | the action can read inputs it never declared |
 
 Everything else—`supports-workers`, `cpu:4`, `resources:…`,
 `supports-path-mapping`—is scheduling advice and is ignored.
@@ -212,7 +198,7 @@ img manifest --working-dir /app --entrypoint /app/bin/server
 
 `/app` is a directory the image will have, not an input path on the system
 where we are running the build. Ahab has the necessary knowledge in order
-make a distinction. See [`declared_paths`](#writing-one) below.
+make a distinction. See [`declared_paths`](#specification-format) below.
 
 ### Workspace status
 
@@ -224,8 +210,8 @@ declared as an input.
 
 Reading these files is often deliberate: it is how a release binary carries
 a version. Like a `local` tag, that makes it a fact worth having on the
-record rather than a mistake, and [exceptions](#exceptions) are how you say
-so.
+record rather than a mistake. [Exceptions](#exceptions) allow you to
+disregard these findings if you consider them benign.
 
 ### Reproducibility
 
@@ -240,10 +226,6 @@ out of that:
 | unknown program             | Ahab has no specification for it, and says so rather than assuming the best |
 | never reproducible          | the program cannot be made deterministic by any flags |
 | conditional reproducibility | the program is deterministic only under conditions this invocation does not meet |
-
-Unknown programs are reported rather than passed over. A tool nobody has
-described is not evidence of anything, and treating silence as approval is
-how a total check stops being total.
 
 ## Reproducibility specifications
 
@@ -282,11 +264,10 @@ which is exactly what normalization drops.
 
 A script the build expands from a template can be handled in various ways.
 When there is a direct reproducibility spec for that particular script, or
-for the template it was expanded from, in the library, that will be its
-identity, and that's how it will be analyzed and referred to. If, however,
-we recognize the template as a `substituted` wrapper (see below) the
-analysis will follow the wrapped program and look for that program's
-reproducibility spec instead.
+for the template it was expanded from, that will be its identity, and that's
+how it will be analyzed and referred to. If, however, we recognize the
+template as a `substituted` wrapper (see below) the analysis will follow the
+wrapped program and look for that program's reproducibility spec instead.
 
 The path may be a pattern, with the same `*` and `?` the exceptions use:
 
@@ -304,10 +285,9 @@ release, and would have stopped matching at the next bump of either.
 Naming a program outright always beats a pattern that covers it, so a
 pattern can be narrowed for one program without disturbing the rest. Where
 two patterns match, the one written later wins, which is what lets a project
-correct one Ahab ships with. A `same_as` target is always an exact name: it
-says which program answers, so it has to name one.
+correct Ahab's built-in library. A `same_as` target is always an exact name.
 
-### Writing one
+### Specification format
 
 Pass specifications with `repro_specs`, either as a label naming a JSON
 file or written out in the `BUILD.bazel` file directly:
@@ -354,15 +334,15 @@ The fields live directly under `spec`, and only the first is required:
 | `sometimes`    | deterministic under the conditions below        |
 | `host_derived` | this program was derived by inspecting the host |
 
-Only `sometimes` looks at the invocation at all; for the other three there
-is nothing an invocation could say to change the answer.
+Only `sometimes` looks at the invocation; for the other three there is
+nothing an invocation could say to change the answer.
 
 `required_flags` and `breaking_flags` are lists of patterns, matched against
 the invocation's arguments. `*` matches any run of characters and `?`
 exactly one; a pattern with neither is an exact argument. A specification is
-met when every required pattern matches some argument and no breaking one
-matches any—unconditionally, which is not always what one wants to say; see
-[below](#when-a-rule-only-sometimes-applies).
+met when every required pattern matches some argument and no breaking
+pattern matches any—unconditionally, which is not always what one wants to
+say; see [below](#tools-with-several-different-modes).
 
 They are patterns rather than names because what makes an invocation
 reproducible is usually a flag *and* its value. `--remap-path-prefix` says
@@ -399,19 +379,19 @@ is not an [absolute-path](#absolute-paths) violation:
 }
 ```
 
-`recognize` is applied to each argument before the patterns see it, which is
-what lets one specification cover a tool with several spellings for the same
-thing. In the example above an invocation passing `-d` satisfies the
-required `--deterministic`, as though it had been written out. Anything
+Finally, `recognize` is applied to each argument before the patterns see it,
+which is what lets one specification cover a tool with several spellings for
+the same thing. In the example above an invocation passing `-d` satisfies
+the required `--deterministic`, as though it had been written out. Anything
 unlisted stands for itself, so a table only has to name the exceptions.
 
-### When a rule only sometimes applies
+### Tools with several different modes
 
 `required_flags` is unconditional and a program that does more than one job
 cannot be described that way. Clang compiles, links, and preprocesses; a
-rule about compiling, stated over every invocation, is a rule stated about
-the wrong ones. `requirements` and `prohibitions` are the same idea with a
-condition attached, and a sentence explaining themselves:
+rule about compiling, stated over every invocation, is simply incorrect.
+`requirements` and `prohibitions` are the same idea with a condition
+attached, and a sentence explaining themselves:
 
 ```json
 {
@@ -450,11 +430,11 @@ the family appears, which is all the first clause needs.
 **Alternatives.** `any_of` is satisfied by any one of its patterns, not all
 of them. There is more than one way to keep the execution root out of the
 DWARF—`-ffile-prefix-map` covers it, and naming the compilation directory
-outright addresses the same field from the other end—and a specification
-that demanded a particular one would report a build that had done the job
+outright addresses the same field from the other end. A specification that
+demanded a particular one would report a build that had done the job
 differently. For the conjunction, write more clauses.
 
-`because` is not decoration. It is what the report says when the clause goes
+`because` is not decoration. It is what the report says when the clause is
 unmet, so it should finish the sentence "this is not reproducible because…":
 
 ```
@@ -465,11 +445,10 @@ records the directory it was compiled in, but none of
 -fdebug-compilation-dir=* -ffile-prefix-map=* was passed
 ```
 
-`required_flags` and `breaking_flags` remain the short way to say the
-unconditional case, and mean exactly what a clause with no `when` and a
-single pattern means.
+`required_flags` and `breaking_flags` remain the short way to write the
+unconditional case.
 
-### Saying it another way
+### Synonyms and wrappers
 
 Two other entry shapes save repeating yourself:
 
@@ -518,8 +497,6 @@ can change what a check looks at—only whether you hear about it.
 *Heads up: the JSON format described below is subject to change before
 1.0.0.*
 
-### How they match
-
 An exception is a set of conditions that **all** have to hold. A field left
 out is not a condition:
 
@@ -536,21 +513,24 @@ exceptions = [
 A lone `mnemonic` would excuse everything that mnemonic's actions do. With a
 `path` beside it, only that path is excused.
 
-Every field except `reason` and `kind` is a pattern, with the same `*` and
-`?` as everywhere else.
+Every field except `reason`, `kind`, `source`, and `location` is a pattern,
+with the same `*` and `?` as everywhere else; those three are matched
+exactly.
 
-| field                | applies to              | matches                      |
-| -------------------- | ----------------------- | ---------------------------- |
-| `reason`             | —                       | nothing; it is documentation |
-| `kind`               | all                     | the finding's kind, exactly  |
-| `mnemonic`, `target` | all                     | the action                   |
-| `program`            | the program findings    | the label form above         |
-| `path`               | absolute paths          | the path found               |
-| `actual`             | `PATH` findings         | the offending `PATH`         |
-| `requirement`        | execution requirements  | the declared tag             |
-| `source`             | environment leaks       | `user` or `hostname`         |
-| `location`           | leaks, absolute paths   | `argument`, `param_file`, `env_var`, `substitution` |
-| `env_var`            | the same, in an env var | the variable's name          |
+| field                | applies to                        | matches                      |
+| -------------------- | --------------------------------- | ---------------------------- |
+| `reason`             | —                                 | nothing; it is documentation |
+| `kind`               | all                               | the finding's kind           |
+| `mnemonic`, `target` | all                               | the action                   |
+| `program`            | the program findings              | the [label form][naming]     |
+| `path`               | absolute paths, workspace status  | the path found               |
+| `actual`             | `PATH` findings                   | the offending `PATH`         |
+| `requirement`        | execution requirements            | the declared tag             |
+| `source`             | environment leaks                 | `user` or `hostname`         |
+| `location`           | leaks, absolute paths             | `argument`, `param_file`, `env_var`, `substitution` |
+| `env_var`            | the same, in an env var           | the variable's name          |
+
+[naming]: #naming-a-program
 
 The kinds are `environment_leak`, `bad_path`, `execution_requirement`,
 `absolute_path`, `workspace_status`, `system_program`,
@@ -558,11 +538,9 @@ The kinds are `environment_leak`, `bad_path`, `execution_requirement`,
 `conditional_reproducibility`.
 
 Fields that only some kinds carry narrow an exception on their own: `path`
-can only match an absolute-path or a workspace-status finding, so naming one
-already rules out the rest. Naming a field the stated kind cannot carry is
-refused when the file loads, rather than quietly matching nothing.
-
-### What they will not let you do
+can only match an `absolute_path` or a `workspace_status` finding, so naming
+one already rules out the rest. Naming a field the stated kind cannot carry
+is refused when the file loads, rather than quietly matching nothing.
 
 An exception with no conditions is refused, since it would suppress
 everything. Unknown fields are refused too—a misspelled condition would
@@ -577,9 +555,6 @@ nothing is reported:
 warning: 1 exception matched nothing:
   - "clang finds its own headers through the sysroot" (exceptions.json)
 ```
-
-It is a warning rather than an error, because turning good news into a
-failed build teaches people to stop fixing things.
 
 ## Development
 
