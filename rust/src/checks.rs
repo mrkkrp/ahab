@@ -313,12 +313,78 @@ pub(crate) enum Violation {
     },
 }
 
+/// The variant of a [`Violation`], named as the JSON report names it.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
+pub(crate) enum Kind {
+    EnvironmentLeak,
+    BadPath,
+    ExecutionRequirement,
+    AbsolutePath,
+    SystemProgram,
+    HostDerivedProgram,
+    UnknownProgram,
+    NeverReproducible,
+    WorkspaceStatus,
+    ConditionalReproducibility,
+}
+
+impl Kind {
+    /// Every kind, in the order [`Violation`] declares them.
+    pub(crate) const ALL: [Kind; 10] = [
+        Kind::EnvironmentLeak,
+        Kind::BadPath,
+        Kind::ExecutionRequirement,
+        Kind::AbsolutePath,
+        Kind::SystemProgram,
+        Kind::HostDerivedProgram,
+        Kind::UnknownProgram,
+        Kind::NeverReproducible,
+        Kind::WorkspaceStatus,
+        Kind::ConditionalReproducibility,
+    ];
+
+    /// The tag [`Violation`]'s serialization uses.
+    pub(crate) fn as_str(self) -> &'static str {
+        match self {
+            Kind::EnvironmentLeak => "environment_leak",
+            Kind::BadPath => "bad_path",
+            Kind::ExecutionRequirement => "execution_requirement",
+            Kind::AbsolutePath => "absolute_path",
+            Kind::SystemProgram => "system_program",
+            Kind::HostDerivedProgram => "host_derived_program",
+            Kind::UnknownProgram => "unknown_program",
+            Kind::NeverReproducible => "never_reproducible",
+            Kind::WorkspaceStatus => "workspace_status",
+            Kind::ConditionalReproducibility => {
+                "conditional_reproducibility"
+            }
+        }
+    }
+
+    /// Whether a violation of this kind carries a program.
+    pub(crate) fn has_program(self) -> bool {
+        matches!(
+            self,
+            Kind::SystemProgram
+                | Kind::HostDerivedProgram
+                | Kind::UnknownProgram
+                | Kind::NeverReproducible
+                | Kind::ConditionalReproducibility
+        )
+    }
+
+    /// Whether a violation of this kind records where in the action it was
+    /// found.
+    pub(crate) fn has_site(self) -> bool {
+        matches!(self, Kind::EnvironmentLeak | Kind::AbsolutePath)
+    }
+}
+
 /// A violation flattened into the dimensions an exception can match, with
 /// absent fields left as `None`. Producing it is one exhaustive `match`, so
 /// a variant added later cannot be quietly left out.
 pub(crate) struct Facets<'a> {
-    /// The variant's serialization tag, e.g. `absolute_path`.
-    pub kind: &'static str,
+    pub kind: Kind,
     pub action: &'a ActionRef,
     /// The program judged, for the variants that judge one.
     pub program: Option<&'a ProgramId>,
@@ -361,45 +427,45 @@ impl Violation {
             } => Facets {
                 source: Some(*source),
                 site: Some(site),
-                ..bare("environment_leak", action)
+                ..bare(Kind::EnvironmentLeak, action)
             },
             Violation::BadPath { action, actual } => Facets {
                 actual: Some(actual),
-                ..bare("bad_path", action)
+                ..bare(Kind::BadPath, action)
             },
             Violation::ExecutionRequirement {
                 action,
                 requirement,
             } => Facets {
                 requirement: Some(requirement),
-                ..bare("execution_requirement", action)
+                ..bare(Kind::ExecutionRequirement, action)
             },
             Violation::WorkspaceStatus { action, path } => Facets {
                 path: Some(path),
-                ..bare("workspace_status", action)
+                ..bare(Kind::WorkspaceStatus, action)
             },
             Violation::AbsolutePath { action, path, site } => Facets {
                 path: Some(path),
                 site: Some(site),
-                ..bare("absolute_path", action)
+                ..bare(Kind::AbsolutePath, action)
             },
             Violation::SystemProgram {
                 action, program, ..
-            } => ran("system_program", action, program),
+            } => ran(Kind::SystemProgram, action, program),
             Violation::HostDerivedProgram {
                 action, program, ..
-            } => ran("host_derived_program", action, program),
+            } => ran(Kind::HostDerivedProgram, action, program),
             Violation::UnknownProgram {
                 action, program, ..
-            } => ran("unknown_program", action, program),
+            } => ran(Kind::UnknownProgram, action, program),
             Violation::NeverReproducible {
                 action, program, ..
-            } => ran("never_reproducible", action, program),
+            } => ran(Kind::NeverReproducible, action, program),
             Violation::ConditionalReproducibility {
                 action,
                 program,
                 ..
-            } => ran("conditional_reproducibility", action, program),
+            } => ran(Kind::ConditionalReproducibility, action, program),
         }
     }
 
@@ -1243,7 +1309,7 @@ pub(crate) mod tests {
     ///
     /// Written out rather than generated, because the point is that a new
     /// variant is not covered until somebody adds it here—and the test
-    /// below fails until they do.
+    /// below fails until they do, [`Kind::ALL`] listing every kind.
     pub(crate) fn one_of_each_kind() -> Vec<Violation> {
         let at = || ActionRef {
             mnemonic: "A".to_owned(),
@@ -1311,22 +1377,19 @@ pub(crate) mod tests {
 
     #[test]
     fn the_sample_covers_every_variant() {
-        // Exhaustive, so a new variant cannot go unnoticed here.
-        let ordinal = |violation: &Violation| match violation {
-            Violation::EnvironmentLeak { .. } => 0,
-            Violation::BadPath { .. } => 1,
-            Violation::ExecutionRequirement { .. } => 2,
-            Violation::AbsolutePath { .. } => 3,
-            Violation::SystemProgram { .. } => 4,
-            Violation::HostDerivedProgram { .. } => 5,
-            Violation::UnknownProgram { .. } => 6,
-            Violation::NeverReproducible { .. } => 7,
-            Violation::WorkspaceStatus { .. } => 8,
-            Violation::ConditionalReproducibility { .. } => 9,
-        };
-        let ordinals: BTreeSet<usize> =
-            one_of_each_kind().iter().map(ordinal).collect();
-        assert_eq!(ordinals, (0..10).collect());
+        let kinds: Vec<Kind> = one_of_each_kind()
+            .iter()
+            .map(|violation| violation.facets().kind)
+            .collect();
+        assert_eq!(kinds, Kind::ALL);
+    }
+
+    #[test]
+    fn every_kind_is_named_as_the_report_tags_it() {
+        for violation in one_of_each_kind() {
+            let json = serde_json::to_value(&violation).unwrap();
+            assert_eq!(json["kind"], violation.facets().kind.as_str());
+        }
     }
 
     /// The label [`container`] gives the target with this id.
