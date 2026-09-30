@@ -1,19 +1,9 @@
 # The fishery
 
 The fishery keeps a set of real open-source Bazel projects, fetches each at
-a pinned commit, runs this working copy of Ahab on it, and records what Ahab
-has to say.
-
-The recorded report is the point. A change to a check can then be judged by
-what it does to somebody else's build—the diff of `expectation.json` is what
-review looks at, and a check that quietly starts flagging four hundred more
-things says so in the diff rather than in production.
-
-Ahab is built once and then pointed at each project in turn. The project is
-fetched and analyzed, never modified: it gains no dependency on Ahab, so its
-own dependency versions, toolchains and build graph are exactly what its
-authors pinned. What Ahab reports is therefore about that project rather
-than about what depending on Ahab did to it.
+a pinned commit, runs Ahab on it, and records what it has to say. This is
+both a mechanism to do integration testing and to discover what is out there
+in the ecosystem.
 
 ## Layout
 
@@ -102,18 +92,17 @@ a workspace that declares no module—a scratch `e2e/` often does not.
 
 `flags` are handed to `bazel aquery` as they stand, through Ahab's
 `--bazel-flag`. `configs` covers a project that has already written the
-configuration down; this is for the rest, and for a build a Linux runner can
-only reach by being told how—see `rules_apple` below. `{target}` in a flag
-expands to the target's own directory, which is how a flag can name a file
-that lives in the fishery: an absolute path differs on every machine, and a
-relative one would be resolved against the project.
+configuration down; this is for the rest. `{target}` in a flag expands to
+the target's own directory, which is how a flag can name a file that lives
+in the fishery: an absolute path differs on every machine, and a relative
+one would be resolved against the project.
 
 `weight` is a scheduling hint and nothing else: it decides which CI shard a
-project lands in, never what Ahab reports. Most targets cost about the same
-and leave it out; set it only for one that is several times slower than the
-rest, so that two of those cannot land in the same shard. Shards are worked
-out from it at run time rather than written into the workflow, so adding a
-target cannot silently drop it from CI.
+project lands in. Most targets cost about the same and leave it out; set it
+only for one that is several times slower than the rest, so that two of
+those cannot land in the same shard. Shards are worked out from it at run
+time rather than written into the workflow, so adding a target cannot
+silently drop it from CI.
 
 Pin a full SHA rather than a branch—a fishery whose input moves cannot tell
 you what your own change did. `repo` need not be GitHub; it is handed
@@ -146,39 +135,6 @@ is there.
 Note that `expectation.json` records what survives filtering, so adding an
 exception shrinks it. That diff is the reviewable artifact—an exception and
 the findings it removes land in the same commit.
-
-## Apple, on Linux
-
-`rules_apple` is analyzed here from a Linux runner with no Xcode anywhere,
-which takes explaining, because building an Apple target that way is not
-possible at all.
-
-Analyzing one is, and the difference is what the fishery runs: `aquery`
-describes the actions rather than running them. Two things stand between a
-Linux host and that description, and the target's `flags` answer both. The
-cc toolchains `apple_support` registers are `exec_compatible_with =
-["@platforms//os:macos"]`, so toolchain resolution finds nowhere to run
-them—`--extra_execution_platforms` names a macOS platform, which is a claim
-about where the actions would run and costs nothing when none of them do.
-And on a non-Darwin host `xcode_configure` writes a `local_config_xcode`
-holding no Xcode versions, which `rules_swift` reports as "Could not
-determine Xcode version at all"—`--xcode_version_config` points at one
-written out by hand instead. `--platforms` puts the whole analysis on an
-Apple platform, which the bundling rules would otherwise only transition
-part of the graph onto.
-
-Both declared targets live in `rules_apple/xcode/`, a repository the
-analysis is handed with `--inject_repository` so that nothing has to be
-written into the fetched project. The Xcode version it names is a fiction.
-That is the point: it is the same fiction on every machine, where a real
-Xcode would be whatever the runner had installed that month. The recorded
-report holds no path, no Xcode version and no SDK version, and analyzing two
-checkouts at different paths produces it byte for byte.
-
-What this does not do is promise that a Mac would report exactly this. It is
-the same rules, the same toolchain configuration and the same action graph,
-with everything Xcode-specific still standing in `__BAZEL_XCODE_*`
-placeholders—but nobody has compared the two.
 
 ## Constraints worth knowing
 
