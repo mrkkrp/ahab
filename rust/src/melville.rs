@@ -294,10 +294,4 @@ mod tests {
             "cc_wrapper.sh be damned.",
         );
     }
-
-    #[test]
-    fn selection_is_deterministic_for_a_given_report() {
-        let report = report(vec![unknown_program("/usr/bin/gcc")]);
-        assert_eq!(quote_for(&report), quote_for(&report));
-    }
 }

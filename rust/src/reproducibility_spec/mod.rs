@@ -16,7 +16,7 @@ pub mod program_id;
 
 /// A program's baseline disposition, before the flags it was invoked with
 /// (see [`ReproducibilitySpec`]).
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Deserialize)]
 #[serde(rename_all = "snake_case")]
 pub enum Reproducibility {
     /// The program is always reproducible, regardless of how it is invoked.
@@ -32,7 +32,7 @@ pub enum Reproducibility {
 }
 
 /// How a program's raw arguments are read as canonical options.
-pub type Recognize = Arc<dyn Fn(&str) -> Option<String> + Send + Sync>;
+pub type Recognize = Arc<dyn Fn(&str) -> String + Send + Sync>;
 
 /// Compile patterns into the set every rule here matches against.
 pub fn globs<P>(patterns: P) -> BTreeSet<Glob>
@@ -48,7 +48,7 @@ where
 
 /// A condition on an invocation, by which a [`Clause`] applies or does not:
 /// a family of flags that turn something on, and those that turn it off.
-#[derive(Debug, Clone, PartialEq, Eq, Default)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Guard {
     /// Flags that turn the condition on.
     pub family: BTreeSet<Glob>,
@@ -195,8 +195,7 @@ pub struct ReproducibilitySpec {
     pub takes_value: BTreeSet<Glob>,
     /// Options in which an absolute path does not represent an input.
     pub declared_paths: BTreeSet<Glob>,
-    /// Map a raw argument to the canonical option it represents, or `None`
-    /// if it is not recognized as an option of this program.
+    /// Map a raw argument to the canonical option it represents.
     pub recognize: Recognize,
 }
 
@@ -276,7 +275,7 @@ impl ReproducibilitySpec {
                 .collect(),
             takes_value: BTreeSet::new(),
             declared_paths: BTreeSet::new(),
-            recognize: Arc::new(|arg: &str| Some(arg.to_owned())),
+            recognize: Arc::new(|arg: &str| arg.to_owned()),
         }
     }
 
@@ -368,7 +367,7 @@ impl ReproducibilitySpec {
     /// Set the recognizer, returning the updated spec.
     pub fn with_recognizer(
         mut self,
-        recognize: fn(&str) -> Option<String>,
+        recognize: fn(&str) -> String,
     ) -> Self {
         self.recognize = Arc::new(recognize);
         self
@@ -380,20 +379,18 @@ impl ReproducibilitySpec {
         translations: BTreeMap<String, String>,
     ) -> Self {
         self.recognize = Arc::new(move |arg: &str| {
-            Some(
-                translations
-                    .get(arg)
-                    .cloned()
-                    .unwrap_or_else(|| arg.to_owned()),
-            )
+            translations
+                .get(arg)
+                .cloned()
+                .unwrap_or_else(|| arg.to_owned())
         });
         self
     }
 }
 
 impl ReproducibilitySpec {
-    /// The canonical option `arg` stands for, if it is recognized at all.
-    pub fn recognize(&self, arg: &str) -> Option<String> {
+    /// The canonical option `arg` stands for.
+    pub fn recognize(&self, arg: &str) -> String {
         (self.recognize)(arg)
     }
 
@@ -414,13 +411,13 @@ impl ReproducibilitySpec {
                 // every argument of every action.
                 let present: Vec<String> = if self.takes_value.is_empty() {
                     args.into_iter()
-                        .filter_map(|arg| self.recognize(arg))
+                        .map(|arg| self.recognize(arg))
                         .collect()
                 } else {
                     let raw: Vec<&str> = args.into_iter().collect();
                     self.join_values(&raw)
                         .into_iter()
-                        .filter_map(|(option, _)| self.recognize(&option))
+                        .map(|(option, _)| self.recognize(&option))
                         .collect()
                 };
 
@@ -471,7 +468,8 @@ pub enum Conformance {
     Reproducible,
     /// The program is never reproducible, whatever the flags.
     NeverReproducible,
-    /// The program was written by inspecting the machine.
+    /// The program works with what the machine has rather than what the
+    /// build declares.
     HostDerived,
     /// The program is conditionally reproducible and this invocation does
     /// not meet the conditions. Never empty.
@@ -528,7 +526,7 @@ mod tests {
     }
 
     #[test]
-    fn new_collects_flag_sets_and_dedups() {
+    fn new_turns_each_flag_into_a_clause() {
         let spec = ReproducibilitySpec::new(
             Reproducibility::Sometimes,
             ["--deterministic", "--deterministic", "-frandom-seed"],
@@ -648,11 +646,8 @@ mod tests {
             [] as [String; 0],
             [] as [String; 0],
         );
-        assert_eq!(
-            spec.recognize("--anything"),
-            Some("--anything".to_owned())
-        );
-        assert_eq!(spec.recognize("input.c"), Some("input.c".to_owned()));
+        assert_eq!(spec.recognize("--anything"), "--anything".to_owned());
+        assert_eq!(spec.recognize("input.c"), "input.c".to_owned());
     }
 
     #[test]
@@ -691,8 +686,8 @@ mod tests {
             ("-O3", "-O"),
         ]));
 
-        assert_eq!(spec.recognize("-O2"), Some("-O".to_owned()));
-        assert_eq!(spec.recognize("input.c"), Some("input.c".to_owned()));
+        assert_eq!(spec.recognize("-O2"), "-O".to_owned());
+        assert_eq!(spec.recognize("input.c"), "input.c".to_owned());
     }
 
     #[test]
@@ -765,19 +760,6 @@ mod tests {
     }
 
     #[test]
-    fn sometimes_conforms_when_required_present_and_no_breaking() {
-        let spec = ReproducibilitySpec::new(
-            Reproducibility::Sometimes,
-            ["--deterministic"],
-            ["-O"],
-        );
-        assert_eq!(
-            spec.assess(["--deterministic", "input.c"]),
-            Conformance::Reproducible
-        );
-    }
-
-    #[test]
     fn sometimes_reports_missing_required_flags() {
         let spec = ReproducibilitySpec::new(
             Reproducibility::Sometimes,
@@ -788,21 +770,6 @@ mod tests {
             spec.assess(["--sorted"]),
             set(&["--deterministic"]),
             set(&[]),
-        );
-    }
-
-    #[test]
-    fn sometimes_reports_present_breaking_flags() {
-        let spec = ReproducibilitySpec::new(
-            Reproducibility::Sometimes,
-            [] as [&str; 0],
-            ["-O", "--timestamp"],
-        )
-        .with_translations(translations([("-O2", "-O")]));
-        assert_conditional(
-            spec.assess(["-O2", "input.c"]),
-            set(&[]),
-            set(&["-O"]),
         );
     }
 

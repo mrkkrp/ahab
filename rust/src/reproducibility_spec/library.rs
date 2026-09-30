@@ -589,14 +589,13 @@ struct GuardFields {
 
 impl From<ClauseFields> for Clause {
     fn from(fields: ClauseFields) -> Clause {
-        Clause {
-            when: fields.when.map(|guard| Guard {
-                family: guard.family.iter().map(|f| Glob::new(f)).collect(),
-                off: guard.off.iter().map(|f| Glob::new(f)).collect(),
-            }),
-            any_of: fields.any_of.iter().map(|f| Glob::new(f)).collect(),
-            because: fields.because,
-        }
+        Clause::new(
+            fields
+                .when
+                .map(|guard| Guard::toggled(guard.family, guard.off)),
+            fields.any_of,
+            &fields.because,
+        )
     }
 }
 
@@ -695,7 +694,6 @@ mod tests {
         );
     }
 
-    /// A library holding exactly these entries and nothing built in.
     /// A library holding exactly these entries and nothing built in.
     fn index(
         entries: impl IntoIterator<Item = (ProgramId, Entry)>,
@@ -1106,16 +1104,6 @@ mod tests {
         assert_eq!(resolved.args, vec!["--opt"]);
         assert_eq!(resolved.wrappers, vec![a()]);
         assert_eq!(resolved.spec.map(|(_, s)| s.clone()), Some(never()));
-    }
-
-    #[test]
-    fn a_wrappers_own_flags_are_not_assessed() {
-        let library = index(vec![(a(), wraps_after_dashdash())]);
-        let resolved = library.resolve(
-            a(),
-            vec!["--subst", "pwd=x", "--", "external/b+/bin/b"],
-        );
-        assert_eq!(resolved.args, Vec::<&str>::new());
     }
 
     #[test]

@@ -219,7 +219,7 @@ def ahab(
     """Defines a target that runs Ahab over part of this workspace.
 
     Run it with `bazel run`, not `bazel test`, since Ahab shells out to
-    Bazel
+    Bazel.
 
     `repro_specs` and `exceptions` each take a list whose elements are
     either a label naming a JSON file or a value written out in the BUILD

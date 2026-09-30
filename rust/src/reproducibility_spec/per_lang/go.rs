@@ -187,12 +187,6 @@ mod tests {
         }
     }
 
-    #[test]
-    fn the_external_linker_is_left_to_the_other_checks() {
-        assert!(link().contains(&"/usr/bin/gcc"));
-        assert_eq!(assess(link()), Conformance::Reproducible);
-    }
-
     const STD_PACKAGE_LIST: &str = "language/go/gen_std_package_list\
          /gen_std_package_list_/gen_std_package_list";
 

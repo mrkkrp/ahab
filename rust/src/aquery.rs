@@ -109,12 +109,7 @@ pub fn run_aquery(
         .with_context(|| {
             format!("output_base {output_base:?} has no parent directory")
         })?
-        .to_str()
-        .with_context(|| {
-            format!(
-                "output_base parent of {output_base:?} is not valid UTF-8"
-            )
-        })?;
+        .display();
 
     let mut command = Command::new("bazel");
 

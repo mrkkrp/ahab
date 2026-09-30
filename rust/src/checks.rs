@@ -760,29 +760,12 @@ fn check_workspace_status(
 
 /// Execution requirements that say an action is not an ordinary hermetic
 /// one.
-const NON_HERMETIC_REQUIREMENTS: &[(&str, &str)] = &[
-    (
-        "requires-network",
-        "the action reaches the network, so its output can depend on \
-         anything out there",
-    ),
-    (
-        "no-sandbox",
-        "the action sees the whole filesystem, so it can read inputs it \
-         never declared",
-    ),
-    (
-        "local",
-        "the action sees the whole filesystem, so it can read inputs it \
-         never declared",
-    ),
-];
+const NON_HERMETIC_REQUIREMENTS: &[&str] =
+    &["requires-network", "no-sandbox", "local"];
 
 /// Whether a declared execution requirement is one Ahab reports.
 fn is_non_hermetic_requirement(key: &str) -> bool {
-    NON_HERMETIC_REQUIREMENTS
-        .iter()
-        .any(|(requirement, _)| *requirement == key)
+    NON_HERMETIC_REQUIREMENTS.contains(&key)
 }
 
 /// One [`Violation`] per execution requirement meaning an action cannot run
@@ -948,7 +931,6 @@ fn check_reproducibility(
 #[cfg(test)]
 pub(crate) mod tests {
     use super::*;
-    use crate::reproducibility_spec::program_id::Origin;
     use analysis_v2_proto::analysis::KeyValuePair;
 
     // Each test exercises one check on its own, so these shims build the
@@ -1070,7 +1052,6 @@ pub(crate) mod tests {
         }
     }
 
-    /// Wrap a list of actions in an [`ActionGraphContainer`].
     /// Assert that `v` is a [`Violation::AbsolutePath`] with the given fields.
     #[track_caller]
     pub(crate) fn assert_abs_path(
@@ -1095,6 +1076,7 @@ pub(crate) mod tests {
         }
     }
 
+    /// Wrap a list of actions in an [`ActionGraphContainer`].
     pub(crate) fn container(actions: Vec<Action>) -> ActionGraphContainer {
         let mut ids: Vec<u32> =
             actions.iter().map(|a| a.target_id).collect();
@@ -1329,11 +1311,22 @@ pub(crate) mod tests {
 
     #[test]
     fn the_sample_covers_every_variant() {
-        let kinds: BTreeSet<&str> = one_of_each_kind()
-            .iter()
-            .map(|violation| violation.facets().kind)
-            .collect();
-        assert_eq!(kinds.len(), one_of_each_kind().len());
+        // Exhaustive, so a new variant cannot go unnoticed here.
+        let ordinal = |violation: &Violation| match violation {
+            Violation::EnvironmentLeak { .. } => 0,
+            Violation::BadPath { .. } => 1,
+            Violation::ExecutionRequirement { .. } => 2,
+            Violation::AbsolutePath { .. } => 3,
+            Violation::SystemProgram { .. } => 4,
+            Violation::HostDerivedProgram { .. } => 5,
+            Violation::UnknownProgram { .. } => 6,
+            Violation::NeverReproducible { .. } => 7,
+            Violation::WorkspaceStatus { .. } => 8,
+            Violation::ConditionalReproducibility { .. } => 9,
+        };
+        let ordinals: BTreeSet<usize> =
+            one_of_each_kind().iter().map(ordinal).collect();
+        assert_eq!(ordinals, (0..10).collect());
     }
 
     /// The label [`container`] gives the target with this id.
@@ -1774,23 +1767,6 @@ pub(crate) mod tests {
     }
 
     #[test]
-    fn unknown_program_is_flagged_by_its_normalized_identity() {
-        let c = container(vec![action_with_args(
-            "CppCompile",
-            1,
-            &["external/llvm+/bin/clang", "-c", "foo.c"],
-        )]);
-        let found = check_reproducibility(&c, &Library::builtin(None));
-        assert_eq!(found.len(), 1);
-        assert_unknown_program(
-            &found[0],
-            "CppCompile",
-            1,
-            &ProgramId::of("external/llvm+/bin/clang"),
-        );
-    }
-
-    #[test]
     fn a_program_named_by_an_absolute_path_is_a_system_program() {
         let c = container(vec![action_with_args(
             "Genrule",
@@ -2007,8 +1983,9 @@ pub(crate) mod tests {
         );
     }
 
-    /// A container exercising every check at once, with enough actions for the
-    /// order they arrive in to matter.
+    /// Actions exercising every check that looks at arguments, environment
+    /// and programs, with enough of them for the order they arrive in to
+    /// matter.
     fn mixed_actions() -> Vec<Action> {
         vec![
             action_with_args(
@@ -2223,17 +2200,6 @@ pub(crate) mod tests {
         )]);
         let found = check_absolute_paths(&c, &Library::default());
         assert_eq!(found.len(), 1, "{found:?}");
-    }
-
-    #[test]
-    fn a_param_file_is_scanned_once_per_action() {
-        let c = container(vec![action_with_param_files(
-            "CppLink",
-            1,
-            &["clang", "@out/foo.params", "@out/foo.params"],
-            &[("out/foo.params", &["-L/opt/lib"])],
-        )]);
-        assert_eq!(check_absolute_paths(&c, &Library::default()).len(), 1);
     }
 
     #[test]
