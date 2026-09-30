@@ -5,76 +5,8 @@ use std::fmt;
 
 use serde::Deserialize;
 
-use crate::checks::{EnvSource, LeakSite, Violation};
+use crate::checks::{EnvSource, Kind, LeakSite, Violation};
 use crate::glob::Glob;
-
-/// The kind of violation an exception applies to, named as the JSON report
-/// names it so that one can be copied straight out of the other.
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-enum Kind {
-    EnvironmentLeak,
-    BadPath,
-    ExecutionRequirement,
-    AbsolutePath,
-    WorkspaceStatus,
-    SystemProgram,
-    HostDerivedProgram,
-    UnknownProgram,
-    NeverReproducible,
-    ConditionalReproducibility,
-}
-
-impl Kind {
-    /// Every kind, in the order [`Violation`] declares them.
-    const ALL: [Kind; 10] = [
-        Kind::EnvironmentLeak,
-        Kind::BadPath,
-        Kind::ExecutionRequirement,
-        Kind::AbsolutePath,
-        Kind::SystemProgram,
-        Kind::HostDerivedProgram,
-        Kind::UnknownProgram,
-        Kind::NeverReproducible,
-        Kind::WorkspaceStatus,
-        Kind::ConditionalReproducibility,
-    ];
-
-    /// The tag [`Violation`]'s serialization uses.
-    fn as_str(self) -> &'static str {
-        match self {
-            Kind::EnvironmentLeak => "environment_leak",
-            Kind::BadPath => "bad_path",
-            Kind::ExecutionRequirement => "execution_requirement",
-            Kind::AbsolutePath => "absolute_path",
-            Kind::WorkspaceStatus => "workspace_status",
-            Kind::SystemProgram => "system_program",
-            Kind::HostDerivedProgram => "host_derived_program",
-            Kind::UnknownProgram => "unknown_program",
-            Kind::NeverReproducible => "never_reproducible",
-            Kind::ConditionalReproducibility => {
-                "conditional_reproducibility"
-            }
-        }
-    }
-
-    /// Whether a violation of this kind carries a program.
-    fn has_program(self) -> bool {
-        matches!(
-            self,
-            Kind::SystemProgram
-                | Kind::HostDerivedProgram
-                | Kind::UnknownProgram
-                | Kind::NeverReproducible
-                | Kind::ConditionalReproducibility
-        )
-    }
-
-    /// Whether a violation of this kind records where in the action it was
-    /// found.
-    fn has_site(self) -> bool {
-        matches!(self, Kind::EnvironmentLeak | Kind::AbsolutePath)
-    }
-}
 
 /// Parse `text` as one of a closed vocabulary, listing the alternatives
 /// when it is not one of them.
@@ -185,7 +117,7 @@ impl Exception {
             (Some(glob), Some(text)) => glob.matches(text),
         };
 
-        if self.kind.is_some_and(|kind| kind.as_str() != facets.kind) {
+        if self.kind.is_some_and(|kind| kind != facets.kind) {
             return false;
         }
         if !glob(&self.mnemonic, Some(&facets.action.mnemonic)) {
@@ -568,9 +500,7 @@ mod tests {
     fn every_field_applies_to_exactly_the_kinds_that_carry_it() {
         for violation in one_of_each_kind() {
             let facets = violation.facets();
-            let kind =
-                parse_one_of("kind", facets.kind, &Kind::ALL, Kind::as_str)
-                    .expect("every violation's kind is a Kind");
+            let kind = facets.kind;
 
             for (field, carried) in [
                 ("program", facets.program.is_some()),

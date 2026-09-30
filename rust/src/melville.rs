@@ -11,7 +11,7 @@
 use std::collections::BTreeMap;
 use std::hash::{Hash, Hasher};
 
-use crate::checks::Violation;
+use crate::checks::{Kind, Violation};
 
 /// Lines of command, impatience and displeasure, each paired with the words
 /// in it that name what the captain is cross about, or `None` where he is
@@ -99,7 +99,7 @@ const FAMILIAR_PLACES: &[(&str, &str)] = &[
 fn subject(violations: &BTreeMap<Violation, usize>) -> String {
     let mut places: BTreeMap<&str, usize> = BTreeMap::new();
     let mut programs: BTreeMap<&str, usize> = BTreeMap::new();
-    let mut kinds: BTreeMap<&str, usize> = BTreeMap::new();
+    let mut kinds: BTreeMap<Kind, usize> = BTreeMap::new();
 
     for (violation, count) in violations {
         let facets = violation.facets();
@@ -122,31 +122,31 @@ fn subject(violations: &BTreeMap<Violation, usize>) -> String {
     }
 
     if let Some(place) = most_common(&places) {
-        return place;
+        return place.to_owned();
     }
     if let Some(program) = most_common(&programs) {
-        return program;
+        return program.to_owned();
     }
 
-    match most_common(&kinds).as_deref() {
-        Some("environment_leak") => "the name of whoever built it",
-        Some("bad_path") => "that wayward PATH",
-        Some("execution_requirement") => "thy sandbox-shunning ways",
-        Some("absolute_path") => "these absolute paths",
+    match most_common(&kinds) {
+        Some(Kind::EnvironmentLeak) => "the name of whoever built it",
+        Some(Kind::BadPath) => "that wayward PATH",
+        Some(Kind::ExecutionRequirement) => "thy sandbox-shunning ways",
+        Some(Kind::AbsolutePath) => "these absolute paths",
         _ => "this build",
     }
     .to_owned()
 }
 
-/// The most frequent entry, ties broken by name so the answer does not
-/// depend on iteration order.
-fn most_common(counts: &BTreeMap<&str, usize>) -> Option<String> {
+/// The most frequent entry, ties broken by the first in order so the answer
+/// does not depend on iteration order.
+fn most_common<K: Ord + Clone>(counts: &BTreeMap<K, usize>) -> Option<K> {
     counts
         .iter()
-        .max_by(|(a_name, a_count), (b_name, b_count)| {
-            a_count.cmp(b_count).then(b_name.cmp(a_name))
+        .max_by(|(a_key, a_count), (b_key, b_count)| {
+            a_count.cmp(b_count).then(b_key.cmp(a_key))
         })
-        .map(|(name, _)| (*name).to_owned())
+        .map(|(key, _)| key.clone())
 }
 
 /// Put `subject` where the quote named its own grievance.
