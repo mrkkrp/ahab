@@ -1,5 +1,9 @@
 ## Unreleased
 
+* A reproducibility spec file naming a program outside the build, such as
+  `/usr/bin/gcc` or `gcc`, is refused. Such a program is always reported as
+  a system program, so the spec used to be silently ignored.
+
 * A `PATH` is no longer required to be exactly
   `/bin:/usr/bin:/usr/local/bin`. Any combination of these three
   directories and relative entries is accepted, and only an absolute entry
