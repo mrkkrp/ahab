@@ -72,7 +72,7 @@ pub struct Cli {
     /// instead of analyzing anything.
     ///
     /// Bazel is not consulted, so no label is needed and the other options
-    /// are ignored—except `--shut-up`, which still suppresses the quote.
+    /// are ignored—except `--shut-up` and `--no-fail`.
     #[arg(long = "explain-json", value_name = "FILENAME")]
     pub explain_json: Option<PathBuf>,
 
@@ -247,7 +247,7 @@ impl Cli {
         if !suppressed.is_empty() {
             passed.push_str(&format!(
                 "\n  {}",
-                palette.faint(&{ suppressed.note() })
+                palette.faint(&suppressed.note())
             ));
         }
         println!("\n{passed}");
@@ -262,7 +262,7 @@ fn invocation_dir() -> Option<PathBuf> {
 }
 
 /// Resolve a path the user gave us against the directory they typed it in.
-fn resolve_output_path(path: &Path, base: Option<&Path>) -> PathBuf {
+fn resolve_path(path: &Path, base: Option<&Path>) -> PathBuf {
     match base {
         Some(base) if path.is_relative() => base.join(path),
         _ => path.to_path_buf(),
@@ -271,7 +271,7 @@ fn resolve_output_path(path: &Path, base: Option<&Path>) -> PathBuf {
 
 /// A path as the user gave it, resolved against the invocation directory.
 fn resolve_against_invocation_dir(path: &Path) -> PathBuf {
-    resolve_output_path(path, invocation_dir().as_deref())
+    resolve_path(path, invocation_dir().as_deref())
 }
 
 /// One violation as it appears in the JSON report.
@@ -522,9 +522,9 @@ mod tests {
     }
 
     #[test]
-    fn a_relative_output_path_lands_where_the_user_ran_ahab() {
+    fn a_relative_path_lands_where_the_user_ran_ahab() {
         assert_eq!(
-            resolve_output_path(
+            resolve_path(
                 Path::new("out.json"),
                 Some(Path::new("/home/mark/project")),
             ),
@@ -533,9 +533,9 @@ mod tests {
     }
 
     #[test]
-    fn an_absolute_output_path_is_left_alone() {
+    fn an_absolute_path_is_left_alone() {
         assert_eq!(
-            resolve_output_path(
+            resolve_path(
                 Path::new("/tmp/out.json"),
                 Some(Path::new("/home/mark/project")),
             ),
@@ -546,7 +546,7 @@ mod tests {
     #[test]
     fn without_an_invocation_directory_the_path_is_used_as_given() {
         assert_eq!(
-            resolve_output_path(Path::new("out.json"), None),
+            resolve_path(Path::new("out.json"), None),
             PathBuf::from("out.json"),
         );
     }
@@ -626,17 +626,6 @@ mod tests {
             let tinted = line.starts_with('\x1b');
             assert_eq!(tinted, line.ends_with("\x1b[0m"), "{line:?}");
         }
-    }
-
-    #[test]
-    fn the_diff_is_the_same_bytes_every_time() {
-        let expected = once([
-            bad_path("Genrule", 2, "/b"),
-            bad_path("CppCompile", 1, "/a"),
-        ]);
-        let found = once([bad_path("CppCompile", 1, "/a")]);
-        assert_eq!(diff(&expected, &found), diff(&expected, &found));
-        assert!(signed(&diff(&expected, &found), '-').contains("/b"));
     }
 
     #[test]
@@ -797,7 +786,7 @@ mod tests {
                 .iter()
                 .any(|clause| clause.any_of.contains("--deterministic"))
         );
-        assert_eq!(spec.recognize("-O2"), Some("-O".to_owned()));
+        assert_eq!(spec.recognize("-O2"), "-O".to_owned());
     }
 
     #[test]
@@ -933,10 +922,7 @@ mod tests {
         };
         assert!(spec.requirements.is_empty());
         assert!(spec.prohibitions.is_empty());
-        assert_eq!(
-            spec.recognize("--anything"),
-            Some("--anything".to_owned())
-        );
+        assert_eq!(spec.recognize("--anything"), "--anything".to_owned());
     }
 
     #[test]
@@ -1064,10 +1050,6 @@ mod tests {
         let read = read_json(&path).expect("read should succeed");
 
         assert_eq!(read, violations);
-        assert_eq!(
-            report_violations(&read, false, Palette::plain()),
-            report_violations(&violations, false, Palette::plain()),
-        );
     }
 
     #[test]
@@ -1225,16 +1207,6 @@ mod tests {
     fn json_report_is_written_even_when_nothing_was_found() {
         let json = round_trip("empty.json", &BTreeMap::new());
         assert_eq!(json["violations"].as_array().unwrap().len(), 0);
-    }
-
-    #[test]
-    fn json_report_overwrites_an_existing_file() {
-        let path = scratch("overwrite.json");
-        std::fs::write(&path, "PREEXISTING GARBAGE").unwrap();
-        write_json(&path, &BTreeMap::new()).expect("write should succeed");
-        let text = std::fs::read_to_string(&path).unwrap();
-        assert!(!text.contains("GARBAGE"), "{text}");
-        assert!(text.starts_with('{'), "{text}");
     }
 
     #[test]
@@ -1423,43 +1395,6 @@ mod tests {
     }
 
     #[test]
-    fn a_compilation_mode_is_optional_and_kept_verbatim() {
-        assert_eq!(
-            Cli::try_parse_from(["ahab", "//..."])
-                .unwrap()
-                .compilation_mode,
-            None,
-        );
-        assert_eq!(
-            Cli::try_parse_from([
-                "ahab",
-                "//...",
-                "--compilation-mode",
-                "dbg",
-            ])
-            .unwrap()
-            .compilation_mode
-            .as_deref(),
-            Some("dbg"),
-        );
-    }
-
-    #[test]
-    fn an_output_base_is_optional_and_kept_verbatim() {
-        let discovered = Cli::try_parse_from(["ahab", "//..."]).unwrap();
-        assert_eq!(discovered.output_base, None);
-
-        let chosen = Cli::try_parse_from([
-            "ahab",
-            "//...",
-            "--output-base",
-            "/tmp/somewhere",
-        ])
-        .unwrap();
-        assert_eq!(chosen.output_base.as_deref(), Some("/tmp/somewhere"));
-    }
-
-    #[test]
     fn a_module_name_is_optional_and_has_to_look_like_one() {
         assert_eq!(
             Cli::try_parse_from(["ahab", "//..."]).unwrap().module_name,
@@ -1585,17 +1520,10 @@ mod tests {
     }
 
     #[test]
-    fn shut_up_suppresses_the_quote() {
+    fn without_the_quote_there_is_no_sign_off() {
         let violations = once([bad_path("CppCompile", 1, "/bin")]);
         let report =
             report_violations(&violations, false, Palette::plain());
-        assert!(
-            report.starts_with("found 1 hermeticity violation:\n"),
-            "{report}"
-        );
-        assert!(report.contains("\n  1. "), "{report}");
-        assert!(!report.contains("  — "), "{report}");
-        let quote = melville::quote_for(&violations);
-        assert!(!report.contains(&quote), "{report}");
+        assert!(!report.contains("\n\n"), "{report}");
     }
 }

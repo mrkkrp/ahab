@@ -103,13 +103,9 @@ pub(in crate::reproducibility_spec) fn entries() -> Vec<(ProgramId, Entry)>
     vec![(
         zig(),
         Entry::Spec(
-            ReproducibilitySpec::new(
-                Reproducibility::Sometimes,
-                [] as [&str; 0],
-                [] as [&str; 0],
-            )
-            .with_valued_flags(["-O"])
-            .with_clauses(zig_requirements(), zig_prohibitions()),
+            ReproducibilitySpec::of(Reproducibility::Sometimes)
+                .with_valued_flags(["-O"])
+                .with_clauses(zig_requirements(), zig_prohibitions()),
         ),
     )]
 }

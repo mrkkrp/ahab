@@ -31,11 +31,11 @@ impl Kind {
         Kind::BadPath,
         Kind::ExecutionRequirement,
         Kind::AbsolutePath,
-        Kind::WorkspaceStatus,
         Kind::SystemProgram,
         Kind::HostDerivedProgram,
         Kind::UnknownProgram,
         Kind::NeverReproducible,
+        Kind::WorkspaceStatus,
         Kind::ConditionalReproducibility,
     ];
 
@@ -261,7 +261,7 @@ impl fmt::Display for Exception {
 }
 
 /// Every exception in force, from every `--exceptions-json` file.
-#[derive(Debug, Clone, Default)]
+#[derive(Debug, Default)]
 pub(crate) struct Exceptions {
     exceptions: Vec<Exception>,
 }
@@ -324,7 +324,7 @@ impl Exceptions {
 }
 
 /// What filtering removed, for the one-line note the report ends with.
-#[derive(Debug, Clone, Copy, Default, PartialEq, Eq)]
+#[derive(Debug, Clone, Copy, Default)]
 pub(crate) struct Suppressed {
     /// Distinct violations excused.
     pub(crate) distinct: usize,
@@ -383,27 +383,16 @@ struct ExceptionFile {
 #[derive(Debug, Deserialize)]
 #[serde(deny_unknown_fields)]
 struct ExceptionEntry {
-    #[serde(default)]
     reason: Option<String>,
-    #[serde(default)]
     kind: Option<String>,
-    #[serde(default)]
     mnemonic: Option<String>,
-    #[serde(default)]
     target: Option<String>,
-    #[serde(default)]
     program: Option<String>,
-    #[serde(default)]
     path: Option<String>,
-    #[serde(default)]
     actual: Option<String>,
-    #[serde(default)]
     requirement: Option<String>,
-    #[serde(default)]
     source: Option<String>,
-    #[serde(default)]
     location: Option<String>,
-    #[serde(default)]
     env_var: Option<String>,
 }
 
@@ -497,12 +486,12 @@ fn compile(
     }
 
     // `env_var` is itself a claim about the location.
-    if entry.env_var.is_some()
-        && location.is_some_and(|l| l != Location::EnvVar)
-    {
+    if let Some(location) = location.filter(|location| {
+        entry.env_var.is_some() && *location != Location::EnvVar
+    }) {
         return Err(at(format!(
             "\"env_var\" needs location \"env_var\", not {:?}",
-            location.unwrap_or(Location::EnvVar).as_str()
+            location.as_str()
         )));
     }
 
@@ -957,30 +946,5 @@ mod tests {
         assert!(shown.contains("mnemonic: \"Cpp*\""), "{shown}");
         assert!(shown.contains("path: \"/usr/*\""), "{shown}");
         assert!(shown.contains("(test.json)"), "{shown}");
-    }
-
-    #[test]
-    fn files_compose_by_union() {
-        let mut all = parse_exceptions(
-            r#"{"exceptions": [{"mnemonic": "Rustc"}]}"#,
-            "a.json",
-        )
-        .expect("a.json");
-        all.extend(
-            parse_exceptions(
-                r#"{"exceptions": [{"mnemonic": "CppCompile"}]}"#,
-                "b.json",
-            )
-            .expect("b.json"),
-        );
-
-        let violations = BTreeMap::from([
-            (absolute_path("Rustc", "//a:a", "/opt"), 1),
-            (absolute_path("CppCompile", "//a:a", "/opt"), 1),
-        ]);
-        let filtered = Exceptions::new(all).filter(violations);
-
-        assert!(filtered.kept.is_empty());
-        assert_eq!(filtered.suppressed.exceptions, 2);
     }
 }

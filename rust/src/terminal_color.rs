@@ -15,7 +15,7 @@ fn supports_color(stream: impl IsTerminal) -> bool {
 }
 
 /// How to style a piece of output, or that it should not be styled.
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[derive(Debug, Clone, Copy)]
 pub(crate) struct Palette {
     enabled: bool,
 }

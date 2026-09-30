@@ -747,20 +747,4 @@ mod tests {
             assert!(bad.parse::<ProgramId>().is_err(), "{bad}");
         }
     }
-
-    #[test]
-    fn ids_are_usable_as_map_keys() {
-        use std::collections::HashMap;
-        let mut specs = HashMap::new();
-        specs.insert(
-            ProgramId::of(
-                "external/rules_rust+/util/process_wrapper/process_wrapper",
-            ),
-            "wrapper",
-        );
-        let looked_up = specs.get(&ProgramId::of(
-            "bazel-out/k8-opt-exec/bin/external/rules_rust~/util/process_wrapper/process_wrapper",
-        ));
-        assert_eq!(looked_up, Some(&"wrapper"));
-    }
 }

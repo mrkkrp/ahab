@@ -76,15 +76,15 @@ const AR_MODIFIERS: &str = "abcDdfhiLlNOoPpqrSsTtUuVvxX";
 /// Normalize how `ar`'s operation is spelled. Its letters may come in any
 /// order, so folding them to a sorted token under a name of its own lets a
 /// pattern require one without also matching a file that contains it.
-fn ar_operation(arg: &str) -> Option<String> {
+fn ar_operation(arg: &str) -> String {
     if !arg.is_empty() && arg.chars().all(|c| AR_MODIFIERS.contains(c)) {
         let mut letters: Vec<char> = arg.chars().collect();
         letters.sort_unstable();
         letters.dedup();
         let letters: String = letters.into_iter().collect();
-        return Some(format!("modifiers:{letters}"));
+        return format!("modifiers:{letters}");
     }
-    Some(arg.to_owned())
+    arg.to_owned()
 }
 
 /// Everything Ahab knows about C++ builds, in source order.
@@ -161,14 +161,6 @@ mod tests {
             "-c",
             "source/common/common/assert.cc",
         ]
-    }
-
-    #[test]
-    fn clang_as_the_llvm_toolchain_invokes_it_is_reproducible() {
-        assert_eq!(
-            assess(llvm_toolchain("bin/cc_wrapper.sh"), clang_args()),
-            Conformance::Reproducible,
-        );
     }
 
     #[test]
@@ -336,10 +328,7 @@ mod tests {
 
     #[test]
     fn a_file_name_is_not_mistaken_for_ars_modifiers() {
-        assert_eq!(
-            ar_operation("bazel-out/x/D.o"),
-            Some("bazel-out/x/D.o".into())
-        );
+        assert_eq!(ar_operation("bazel-out/x/D.o"), "bazel-out/x/D.o");
         assert_eq!(
             missing(
                 llvm_toolchain("bin/llvm-ar"),

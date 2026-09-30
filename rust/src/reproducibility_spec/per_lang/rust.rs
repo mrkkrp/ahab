@@ -19,10 +19,10 @@ const REQUIRED_REMAPS: [&str; 3] = [
 ];
 
 /// Normalize how one of `rustc`'s arguments is spelled.
-fn rustc_option(arg: &str) -> Option<String> {
+fn rustc_option(arg: &str) -> String {
     match arg.strip_prefix("--codegen=") {
-        Some(rest) => Some(format!("-C{rest}")),
-        None => Some(arg.to_owned()),
+        Some(rest) => format!("-C{rest}"),
+        None => arg.to_owned(),
     }
 }
 
@@ -356,14 +356,11 @@ mod tests {
             rustc_option("--codegen=debuginfo=0"),
             rustc_option("-Cdebuginfo=0"),
         );
-        assert_eq!(
-            rustc_option("-Cdebuginfo=0"),
-            Some("-Cdebuginfo=0".into()),
-        );
+        assert_eq!(rustc_option("-Cdebuginfo=0"), "-Cdebuginfo=0",);
         assert_eq!(
             rustc_option("--remap-path-prefix=${pwd}=."),
-            Some("--remap-path-prefix=${pwd}=.".into()),
+            "--remap-path-prefix=${pwd}=.",
         );
-        assert_eq!(rustc_option("--test"), Some("--test".into()));
+        assert_eq!(rustc_option("--test"), "--test");
     }
 }
