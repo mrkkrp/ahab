@@ -83,6 +83,15 @@ pub(in crate::reproducibility_spec) fn entries() -> Vec<(ProgramId, Entry)>
         Entry::Spec(always()),
     ));
 
+    // Recognize the J2CL test-suite tool
+    entries.push((
+        j2cl(
+            "tools/java/com/google/j2cl/tools/junit\
+             /j2cl_test_suite_tool",
+        ),
+        Entry::Spec(always()),
+    ));
+
     // The TypeScript compiler: what it emits follows from the sources and
     // the `tsconfig.json`, and rules_ts hands it relative paths throughout.
     //
@@ -267,6 +276,20 @@ mod tests {
                     "example.js",
                     "Example.java",
                 ],
+            ),
+            (
+                j2cl(
+                    "tools/java/com/google/j2cl/tools/junit\
+                     /j2cl_test_suite_tool",
+                ),
+                vec!["archive", "test-artifacts.jar", "suite.js.zip"],
+            ),
+            (
+                j2cl(
+                    "tools/java/com/google/j2cl/tools/junit\
+                     /j2cl_test_suite_tool",
+                ),
+                vec!["extract", "suite.js.zip", "suite.js"],
             ),
         ] {
             assert_eq!(
