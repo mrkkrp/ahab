@@ -163,6 +163,21 @@
         "kind": "system_program",
         "action": {
           "mnemonic": "Genrule",
+          "target": "@@apple_support+//crosstool:generate_layering_check_modulemap"
+        },
+        "program": {
+          "origin": "system",
+          "path": "/bin/bash"
+        },
+        "wrappers": []
+      }
+    },
+    {
+      "count": 1,
+      "violation": {
+        "kind": "system_program",
+        "action": {
+          "mnemonic": "Genrule",
           "target": "@@zlib+//:copy_public_headers"
         },
         "program": {
