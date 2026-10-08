@@ -1011,7 +1011,7 @@ mod tests {
                      {"reproducibility": "always"}}}}"#,
             ),
             (
-                "synonym.json",
+                "outside-synonym.json",
                 r#"{"programs": {"//a": {"same_as": "/usr/bin/gcc"}}}"#,
             ),
         ] {
