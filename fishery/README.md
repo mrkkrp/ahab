@@ -61,6 +61,7 @@ here; only the first two are required:
 {
   "repo": "https://gitlab.arm.com/bazel/rules_tar",
   "commit": "c7da674bdea961c1f8f955a3cad5837251e0cc38",
+  "bazel_version": "8.0.1",
   "module_name": "e2e",
   "label": "//...",
   "configs": [],
@@ -75,6 +76,7 @@ here; only the first two are required:
 | ------------------ | ------------------- | ------------------------------ |
 | `repo`             | required            | anything `git fetch` accepts   |
 | `commit`           | required            | a full 40-character SHA        |
+| `bazel_version`    | the project's own   | one release, e.g. `9.3.0`      |
 | `module_name`      | none                | the analyzed workspace's own   |
 | `label`            | `//...`             | what to analyze                |
 | `configs`          | `[]`                | `--config` values to forward   |
@@ -107,6 +109,12 @@ silently drop it from CI.
 Pin a full SHA rather than a branch—a fishery whose input moves cannot tell
 you what your own change did. `repo` need not be GitHub; it is handed
 straight to `git`.
+
+The same goes for the Bazel version, which is the analyzed workspace's own
+`.bazelversion` unless `bazel_version` says otherwise. A `.bazelversion`
+naming a range such as `9.x`, or none at all, lets Bazelisk pick the latest
+release, so the fishery refuses to analyze such a project until its spec
+names one.
 
 Then:
 

@@ -4,6 +4,8 @@
 
 import argparse
 import json
+import os
+import re
 import shutil
 import subprocess
 import sys
@@ -14,6 +16,9 @@ AHAB = FISHERY.parent
 
 # What a target expects before anyone has looked: nothing at all.
 NO_VIOLATIONS = '{\n  "violations": []\n}\n'
+
+# One Bazel release, which a range such as `9.x` or `latest` is not.
+RELEASE = re.compile(r"\d+\.\d+\.\d+\S*")
 
 class TargetError(Exception):
     """A target cannot proceed.
@@ -29,10 +34,10 @@ def fail(message):
 def report_error(error):
     print(f"fishery: {error}", file=sys.stderr)
 
-def run(args, cwd, check=True):
+def run(args, cwd, check=True, env=None):
     """Run a command, letting its output through to the terminal."""
     print(f"fishery: $ {' '.join(str(a) for a in args)}", file=sys.stderr)
-    return subprocess.run(args, cwd=cwd, check=check)
+    return subprocess.run(args, cwd=cwd, check=check, env=env)
 
 def targets():
     """Every directory under `fishery/` that is a target.
@@ -59,6 +64,9 @@ def read_spec(name):
     for required in ("repo", "commit"):
         if required not in spec:
             fail(f"{path}: missing {required!r}")
+    version = spec.get("bazel_version")
+    if version is not None and not RELEASE.fullmatch(version):
+        fail(f"{path}: {version!r} is not one Bazel release")
     return spec
 
 def expand(flag, name):
@@ -137,6 +145,31 @@ def output_base(name):
     """
     return Path.home() / ".cache" / "ahab-fishery" / name
 
+def bazel_version(name):
+    """The Bazel release a target is analyzed with, or `None` if it pins none.
+
+    `bazel_version` from `spec.json`, or else the first line of the analyzed
+    workspace's `.bazelversion`. A range there, or no `.bazelversion` at
+    all, leaves the choice to Bazelisk, which takes the latest release—an
+    input that moves as surely as a branch does.
+    """
+    spec = read_spec(name)
+    if "bazel_version" in spec:
+        return spec["bazel_version"]
+    pinned = analysis_dir(name) / ".bazelversion"
+    if pinned.is_file():
+        version = pinned.read_text().partition("\n")[0].strip()
+        if RELEASE.fullmatch(version):
+            return version
+    return None
+
+def bazel_env(name):
+    """The environment for a target's Bazel, `None` meaning ours."""
+    version = bazel_version(name)
+    if version is None:
+        return None
+    return os.environ | {"USE_BAZEL_VERSION": version}
+
 def bazel_stdout(args):
     """Ask Bazel something in the Ahab repository and return what it said."""
     return subprocess.run(
@@ -182,6 +215,12 @@ def ahab_run(name, args):
     to be copied back out.
     """
     spec = read_spec(name)
+    env = bazel_env(name)
+    if env is None:
+        fail(
+            f"{name} pins no Bazel release in its .bazelversion; "
+            "set `bazel_version` in its spec.json"
+        )
     command = [str(ahab_binary()), f"--output-base={output_base(name)}"]
     for config in spec.get("configs", []):
         command.append(f"--config={config}")
@@ -197,7 +236,7 @@ def ahab_run(name, args):
     if exceptions.is_file():
         command.append(f"--exceptions-json={exceptions}")
     command += args + [spec.get("label", "//...")]
-    completed = run(command, cwd=analysis_dir(name), check=False)
+    completed = run(command, cwd=analysis_dir(name), check=False, env=env)
     return completed.returncode
 
 def cmd_setup(name):
@@ -247,6 +286,7 @@ def cmd_clean(name):
         ["bazel", f"--output_base={output_base(name)}", "clean", "--expunge"],
         cwd=analysis_dir(name),
         check=False,
+        env=bazel_env(name),
     )
     shutil.rmtree(work, ignore_errors=True)
     if work.exists():
