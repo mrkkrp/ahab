@@ -46,7 +46,7 @@ jobs:
         if: ${{ !cancelled() }}
         working-directory: packaging
         run: |
-          for version in "$(cat .bazelversion)" 8.7.0; do
+          for version in "$(cat .bazelversion)" 8.8.1; do
             export USE_BAZEL_VERSION="$version"
             bazel build //:ahab.report //:ahab.check //:ahab.update //:ahab.explain
             bazel run //:ahab.report
