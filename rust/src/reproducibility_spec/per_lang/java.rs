@@ -14,10 +14,6 @@ fn java_tool(path: &str) -> ProgramId {
     ProgramId::extension("rules_java", "toolchains", path)
 }
 
-/// The flags without which `singlejar` does not produce the same jar twice.
-const SINGLEJAR_REQUIRED: [&str; 2] =
-    ["--normalize", "--exclude_build_data"];
-
 /// Turbine, which rules_java ships twice over.
 const TURBINE_JAR: &str = "java_tools/turbine_direct_binary_deploy.jar";
 
@@ -70,14 +66,15 @@ pub(in crate::reproducibility_spec) fn entries() -> Vec<(ProgramId, Entry)>
         // Strips a jar to its interface, normalizing what it writes.
         (java_tool("java_tools/ijar/ijar"), Entry::Spec(always())),
         // `--normalize` fixes the timestamp on every entry, which would
-        // otherwise be the moment the action ran; `--exclude_build_data`
-        // leaves out `build-data.properties`, which records the user and
-        // machine. rules_java passes both every time.
+        // otherwise be the moment the action ran. `build-data.properties`
+        // holds only what the command line and the `--build_info_file`
+        // inputs say; stamped ones are the workspace status check's
+        // business.
         (
             java_tool("java_tools/src/tools/singlejar/singlejar_local"),
             Entry::Spec(ReproducibilitySpec::new(
                 Reproducibility::Sometimes,
-                SINGLEJAR_REQUIRED,
+                ["--normalize"],
                 [] as [&str; 0],
             )),
         ),
@@ -89,10 +86,11 @@ mod tests {
     use super::*;
     use crate::reproducibility_spec::Conformance;
     use crate::reproducibility_spec::library::Library;
-    use crate::reproducibility_spec::per_lang::testing::assess;
+    use crate::reproducibility_spec::per_lang::testing::{assess, missing};
 
-    /// A `singlejar` command line as rules_java writes it.
-    fn singlejar_args() -> Vec<&'static str> {
+    /// A `singlejar` command line building a source jar, as rules_java
+    /// writes it.
+    fn source_jar_args() -> Vec<&'static str> {
         vec![
             "--output",
             "bazel-out/k8-fastbuild/bin/x/libx-src.jar",
@@ -101,6 +99,35 @@ mod tests {
             "--exclude_build_data",
             "--warn_duplicate_resources",
         ]
+    }
+
+    /// A `singlejar` command line building a deploy jar with `build_info`,
+    /// as rules_java writes it.
+    fn deploy_jar_args(build_info: &str) -> Vec<&str> {
+        vec![
+            "--output",
+            "bazel-out/k8-fastbuild/bin/x/x_deploy.jar",
+            "--build_target",
+            "@@//x:x",
+            "--normalize",
+            "--compression",
+            "--nocompress_suffixes",
+            "protobuf.meta",
+            "--main_class",
+            "com.example.Main",
+            "--build_info_file",
+            build_info,
+            "--sources",
+            "bazel-out/k8-fastbuild/bin/x/libx.jar,//x:x",
+        ]
+    }
+
+    /// The build info properties Bazel writes under the name `file`.
+    fn build_info(file: &str) -> String {
+        format!(
+            "bazel-out/k8-fastbuild/bin/external/bazel_tools/tools\
+             /build_defs/build_info/{file}.properties",
+        )
     }
 
     fn singlejar() -> ProgramId {
@@ -142,28 +169,38 @@ mod tests {
 
     #[test]
     fn singlejar_as_rules_java_invokes_it_is_reproducible() {
+        let redacted = build_info("redacted_file");
+        for args in [source_jar_args(), deploy_jar_args(&redacted)] {
+            assert_eq!(
+                assess(singlejar(), args),
+                Conformance::Reproducible,
+            );
+        }
+    }
+
+    #[test]
+    fn singlejar_leaves_stamping_to_the_workspace_status_check() {
+        let volatile = build_info("volatile_file");
         assert_eq!(
-            assess(singlejar(), singlejar_args()),
+            assess(singlejar(), deploy_jar_args(&volatile)),
             Conformance::Reproducible,
         );
     }
 
     #[test]
-    fn singlejar_without_its_normalizing_flags_is_not() {
-        for dropped in SINGLEJAR_REQUIRED {
-            let kept: Vec<&str> = singlejar_args()
+    fn singlejar_without_normalization_is_not_reproducible() {
+        let redacted = build_info("redacted_file");
+        for args in [source_jar_args(), deploy_jar_args(&redacted)] {
+            let kept = args
                 .into_iter()
-                .filter(|arg| *arg != dropped)
+                .filter(|arg| *arg != "--normalize")
                 .collect();
-            let verdict = assess(singlejar(), kept);
-            assert!(
-                matches!(verdict, Conformance::Conditional { .. }),
-                "expected {dropped} to matter, got {verdict:?}",
-            );
             assert_eq!(
-                verdict.missing_required().iter().collect::<Vec<_>>(),
-                vec![dropped],
-                "dropping {dropped}",
+                missing(singlejar(), kept)
+                    .iter()
+                    .map(String::as_str)
+                    .collect::<Vec<_>>(),
+                vec!["--normalize"],
             );
         }
     }

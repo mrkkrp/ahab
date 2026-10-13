@@ -1,3 +1,12 @@
+## Unreleased
+
+* `singlejar` is no longer required to be passed `--exclude_build_data`.
+  The `build-data.properties` it writes otherwise holds only what its
+  command line and build info files say, so an unstamped deploy jar, which
+  rules_java builds with Bazel's redacted build info, was reported for no
+  reason. Stamped build info is still reported, by the workspace status
+  check.
+
 ## Ahab 0.4.0
 
 * A reproducibility spec file naming a program outside the build, such as
