@@ -27,7 +27,7 @@ jobs:
         if: ${{ runner.os == 'Linux' }}
         run: .github/workflows/make_room.sh
       - name: Set up Bazel
-        uses: bazel-contrib/setup-bazel@0.19.0
+        uses: bazel-contrib/setup-bazel@0.19.1
         with:
           bazelisk-cache: true
           disk-cache: ${{ github.workflow }}
@@ -67,7 +67,7 @@ jobs:
       - name: Make room on the runner
         run: .github/workflows/make_room.sh
       - name: Set up Bazel
-        uses: bazel-contrib/setup-bazel@0.19.0
+        uses: bazel-contrib/setup-bazel@0.19.1
         with:
           bazelisk-cache: true
           disk-cache: ${{ github.workflow }}
