@@ -15,5 +15,5 @@ shift
 bazel build "$@" //rust:ahab
 BUILT="$(bazel cquery "$@" --output=files //rust:ahab | grep -v -- '-exec/' | head -1)"
 mkdir -p "$(dirname "$DEST")"
-cp "$(bazel info execution_root)/$BUILT" "$DEST"
+cp -f "$(bazel info execution_root)/$BUILT" "$DEST"
 chmod +x "$DEST"

@@ -1,6 +1,7 @@
-use super::super::library::{Entry, host_derived};
+use super::super::library::{Entry, Transition, host_derived};
 use super::super::program_id::ProgramId;
 use super::super::{Clause, Guard, Reproducibility, ReproducibilitySpec};
+use crate::glob::Glob;
 
 /// A program in the repository `cc_configure` generates from the host.
 fn local_config_cc(path: &str) -> ProgramId {
@@ -12,6 +13,30 @@ fn local_config_cc(path: &str) -> ProgramId {
 /// pinned artifact of the build, which is what makes it answerable at all.
 fn llvm_toolchain(path: &str) -> ProgramId {
     ProgramId::module("llvm_toolchain", path)
+}
+
+/// The prebuilt tools the newer `llvm` module's extension provides.
+fn minimal_llvm(path: &str) -> ProgramId {
+    ProgramId::extension("llvm", "llvm_toolchain_minimal", path)
+}
+
+/// Read deterministic-archive switches even in short-option groups such
+/// as `-pU`. A value-taking option ends the group; `-oU` names an output.
+fn strip_mode(arg: &str) -> String {
+    let Some(short) = arg.strip_prefix('-').filter(|s| !s.starts_with('-'))
+    else {
+        return arg.to_owned();
+    };
+    let mut mode = None;
+    for option in short.chars() {
+        match option {
+            'D' => mode = Some("--enable-deterministic-archives"),
+            'U' => mode = Some("--disable-deterministic-archives"),
+            'o' | 'R' | 'N' | 'K' => break,
+            _ => {}
+        }
+    }
+    mode.unwrap_or(arg).to_owned()
 }
 
 /// The flag clang needs however it is invoked.
@@ -123,6 +148,64 @@ pub(in crate::reproducibility_spec) fn entries() -> Vec<(ProgramId, Entry)>
                 .with_clauses(clang_clauses(), []),
             ),
         ),
+        (
+            minimal_llvm("bin/clang"),
+            Entry::SameAs(llvm_toolchain("bin/cc_wrapper.sh")),
+        ),
+        (
+            minimal_llvm("bin/clang++"),
+            Entry::SameAs(minimal_llvm("bin/clang")),
+        ),
+        // This wrapper forwards to LLVM_CLANGXX, but can also produce a
+        // dSYM or interface library. Those modes need their own specs.
+        (
+            ProgramId::module(
+                "llvm",
+                "tools/internal/link-wrapper-clang++/link-wrapper-clang++",
+            ),
+            Entry::Wraps(Transition::FromEnvironment {
+                program: "LLVM_CLANGXX".to_owned(),
+                unless: [
+                    ("LLVM_DSYM_PATH", "?*"),
+                    ("LLVM_GENERATE_INTERFACE_LIBRARY", "yes"),
+                ]
+                .into_iter()
+                .map(|(key, pattern)| (key.to_owned(), Glob::new(pattern)))
+                .collect(),
+            }),
+        ),
+        // llvm-strip zeroes archive header IDs and times by default.
+        // -U opts out; a later -D restores deterministic mode.
+        (
+            minimal_llvm("bin/llvm-strip"),
+            Entry::Spec(
+                ReproducibilitySpec::of(Reproducibility::Sometimes)
+                    .with_clauses(
+                        [],
+                        [Clause::new(
+                            Some(Guard::toggled(
+                                ["--disable-deterministic-archives"],
+                                ["--enable-deterministic-archives"],
+                            )),
+                            ["--disable-deterministic-archives"],
+                            "archive headers retain user IDs, group IDs \
+                             and timestamps",
+                        )],
+                    )
+                    .with_valued_flags([
+                        "-o",
+                        "-R",
+                        "-N",
+                        "-K",
+                        "--remove-section",
+                        "--strip-symbol",
+                        "--keep-section",
+                        "--keep-symbol",
+                        "--extract-section",
+                    ])
+                    .with_recognizer(strip_mode),
+            ),
+        ),
         // An archiver stores each member's modification time, user and
         // group, none of which is a property of the code. `D` zeroes all
         // three; Bazel asks for it as `rcsD`.
@@ -143,6 +226,11 @@ pub(in crate::reproducibility_spec) fn entries() -> Vec<(ProgramId, Entry)>
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::checks::Violation;
+    use crate::checks::tests::{
+        action_with_env, action_with_param_files, check_reproducibility,
+        container,
+    };
     use crate::reproducibility_spec::Conformance;
     use crate::reproducibility_spec::library::Library;
     use crate::reproducibility_spec::per_lang::testing::{assess, missing};
@@ -336,6 +424,199 @@ mod tests {
             )
             .len(),
             1,
+        );
+    }
+
+    #[test]
+    fn the_minimal_compilers_keep_every_clang_requirement() {
+        for tool in ["bin/clang", "bin/clang++"] {
+            let program = minimal_llvm(tool);
+            assert_eq!(
+                assess(program.clone(), clang_args()),
+                Conformance::Reproducible,
+            );
+            for flag in [
+                "-no-canonical-prefixes",
+                "-D__DATE__=",
+                "-D__TIME__=",
+                "-D__TIMESTAMP__=",
+            ] {
+                assert_eq!(
+                    missing(program.clone(), clang_without(flag)).len(),
+                    1,
+                    "{tool}: {flag}",
+                );
+            }
+            let mut debug = clang_args();
+            debug.push("-g");
+            assert_eq!(missing(program, debug), remedies());
+        }
+    }
+
+    #[test]
+    fn minimal_compiler_names_do_not_depend_on_platform_or_bazel_version() {
+        for path in [
+            "external/llvm++llvm_toolchain_minimal+llvm-toolchain-minimal-linux-amd64/bin/clang",
+            "external/llvm++llvm_toolchain_minimal+llvm-toolchain-minimal-macos-arm64/bin/clang++",
+            "external/llvm~0.8.19~llvm_toolchain_minimal~llvm-toolchain-minimal-linux-amd64/bin/clang",
+        ] {
+            assert_eq!(
+                assess(ProgramId::of(path), clang_args()),
+                Conformance::Reproducible,
+                "{path}",
+            );
+        }
+    }
+
+    #[test]
+    fn strip_defaults_to_deterministic_archives_and_the_last_switch_wins() {
+        for flags in [
+            vec![],
+            vec!["-S", "out/program"],
+            vec!["-D"],
+            vec!["--enable-deterministic-archives"],
+            vec!["-U", "-D"],
+            vec!["-UD"],
+            vec!["--disable-deterministic-archives", "-D"],
+            vec!["-o", "-Uoutput", "out/input"],
+            vec!["-RUserSection", "out/input"],
+            vec!["--strip-symbol", "-U", "out/input"],
+            vec!["out/UsesD.o"],
+        ] {
+            assert_eq!(
+                assess(minimal_llvm("bin/llvm-strip"), flags.clone()),
+                Conformance::Reproducible,
+                "{flags:?}",
+            );
+        }
+        for flags in [
+            vec!["-U"],
+            vec!["--disable-deterministic-archives"],
+            vec!["-pU"],
+            vec!["-DU"],
+            vec!["-D", "-U"],
+            vec!["--enable-deterministic-archives", "-U"],
+        ] {
+            let verdict =
+                assess(minimal_llvm("bin/llvm-strip"), flags.clone());
+            let Conformance::Conditional { unmet } = verdict else {
+                panic!("{flags:?}: {verdict:?}");
+            };
+            assert_eq!(unmet.len(), 1);
+            assert_eq!(
+                unmet[0].present,
+                BTreeSet::from([
+                    "--disable-deterministic-archives".to_owned()
+                ]),
+            );
+        }
+    }
+
+    const LINK_WRAPPER: &str = "bazel-out/darwin_arm64-fastbuild/bin/external/llvm+/tools/internal/link-wrapper-clang++/link-wrapper-clang++";
+    const CLANGXX: &str = "external/llvm++llvm_toolchain_minimal+llvm-toolchain-minimal-linux-amd64/bin/clang++";
+
+    fn link_action(
+        environment: &[(&str, &str)],
+    ) -> analysis_v2_proto::analysis::Action {
+        let mut action = action_with_env("CppLink", 1, environment);
+        action.arguments = [LINK_WRAPPER, "-no-canonical-prefixes", "a.o"]
+            .map(str::to_owned)
+            .into();
+        action
+    }
+
+    #[test]
+    fn the_link_wrapper_uses_the_declared_compiler_and_param_file_flags() {
+        let mut action = action_with_param_files(
+            "CppLink",
+            1,
+            &[LINK_WRAPPER, "@out/link.params"],
+            &[("out/link.params", &["-no-canonical-prefixes", "a.o"])],
+        );
+        action.environment_variables =
+            link_action(&[("LLVM_CLANGXX", CLANGXX)]).environment_variables;
+        let c = container(vec![action]);
+        assert!(
+            check_reproducibility(&c, &Library::builtin(None)).is_empty()
+        );
+
+        let mut c = c;
+        c.actions[0].param_files[0].arguments.remove(0);
+        let found = check_reproducibility(&c, &Library::builtin(None));
+        let [
+            Violation::ConditionalReproducibility {
+                program,
+                wrappers,
+                unmet,
+                ..
+            },
+        ] = found.as_slice()
+        else {
+            panic!("{found:?}");
+        };
+        assert_eq!(*program, minimal_llvm("bin/clang++"));
+        assert_eq!(*wrappers, [ProgramId::of(LINK_WRAPPER)]);
+        assert_eq!(
+            unmet[0].any_of,
+            BTreeSet::from(["-no-canonical-prefixes".to_owned()])
+        );
+    }
+
+    #[test]
+    fn optional_link_wrapper_tools_are_not_silently_accepted() {
+        for (key, value, unknown) in [
+            ("LLVM_DSYM_PATH", "out/program.dSYM", true),
+            ("LLVM_DSYM_PATH", "", false),
+            ("LLVM_GENERATE_INTERFACE_LIBRARY", "yes", true),
+            ("LLVM_GENERATE_INTERFACE_LIBRARY", "no", false),
+            ("LLVM_STRIP_DEBUG_SYMBOLS", "yes", false),
+        ] {
+            let c = container(vec![link_action(&[
+                ("LLVM_CLANGXX", CLANGXX),
+                (key, value),
+            ])]);
+            let found = check_reproducibility(&c, &Library::builtin(None));
+            if unknown {
+                assert!(
+                    matches!(
+                        found.as_slice(),
+                        [Violation::UnknownProgram { program, .. }]
+                            if *program == ProgramId::of(LINK_WRAPPER)
+                    ),
+                    "{key}={value}: {found:?}"
+                );
+            } else {
+                assert!(found.is_empty(), "{key}={value}: {found:?}");
+            }
+        }
+    }
+
+    #[test]
+    fn a_missing_or_host_linker_does_not_inherit_the_clang_spec() {
+        for environment in [vec![], vec![("LLVM_CLANGXX", "")]] {
+            let c = container(vec![link_action(&environment)]);
+            let found = check_reproducibility(&c, &Library::builtin(None));
+            assert!(
+                matches!(
+                    found.as_slice(),
+                    [Violation::UnknownProgram { .. }]
+                ),
+                "{found:?}"
+            );
+        }
+        let c = container(vec![link_action(&[(
+            "LLVM_CLANGXX",
+            "/usr/bin/clang++",
+        )])]);
+        let found = check_reproducibility(&c, &Library::builtin(None));
+        assert!(
+            matches!(
+                found.as_slice(),
+                [Violation::SystemProgram { program, wrappers, .. }]
+                    if *program == ProgramId::of("/usr/bin/clang++")
+                        && *wrappers == [ProgramId::of(LINK_WRAPPER)]
+            ),
+            "{found:?}"
         );
     }
 }

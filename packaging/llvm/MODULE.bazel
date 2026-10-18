@@ -1,0 +1,47 @@
+module(name = "ahab_llvm_packaging")
+
+bazel_dep(name = "ahab", version = "0.4.0")
+bazel_dep(name = "llvm", version = "0.8.19")
+bazel_dep(name = "rules_cc", version = "0.2.22")
+
+local_path_override(
+    module_name = "ahab",
+    path = "../..",
+)
+
+toolchains = use_extension("@llvm//extensions:toolchain.bzl", "toolchain")
+toolchains.exec(
+    arch = "x86_64",
+    os = "linux",
+)
+toolchains.exec(
+    arch = "aarch64",
+    os = "linux",
+)
+toolchains.exec(
+    arch = "x86_64",
+    os = "macos",
+)
+toolchains.exec(
+    arch = "aarch64",
+    os = "macos",
+)
+toolchains.target(
+    arch = "x86_64",
+    os = "linux",
+)
+toolchains.target(
+    arch = "aarch64",
+    os = "linux",
+)
+toolchains.target(
+    arch = "x86_64",
+    os = "macos",
+)
+toolchains.target(
+    arch = "aarch64",
+    os = "macos",
+)
+use_repo(toolchains, "llvm_toolchains")
+
+register_toolchains("@llvm_toolchains//:all")

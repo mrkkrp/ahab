@@ -20,12 +20,12 @@ pub enum Entry {
     /// declared the same as `clang` without being the same binary, and what
     /// the action ran is still what gets reported.
     SameAs(ProgramId),
-    /// The program runs another, named in its own arguments, and is as
-    /// reproducible as whatever that turns out to be.
+    /// The program forwards to another selected by its arguments, template
+    /// substitutions or action environment, and is judged by that program.
     Wraps(Transition),
 }
 
-/// How to find the wrapped command inside a wrapper's arguments.
+/// How a wrapper selects the program it runs.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum Transition {
     /// The wrapped command begins immediately after the first argument
@@ -44,17 +44,25 @@ pub enum Transition {
         program: String,
         args: Option<String>,
     },
+    /// The wrapped program is named by an action environment variable.
+    /// Matching `unless` means the wrapper does more than forward its
+    /// arguments, so it remains unknown instead of judging just one child.
+    FromEnvironment {
+        program: String,
+        unless: BTreeMap<String, Glob>,
+    },
 }
 
 impl Transition {
-    /// Extract the wrapped command from the wrapper's `argv[1..]` and the
-    /// substitutions it was expanded with. `None` when they do not match
+    /// Extract the wrapped command from the arguments, substitutions and
+    /// declared action environment. `None` when they do not match
     /// the rule, which leaves the wrapper itself as the program—reported
     /// unknown rather than passed.
     fn apply<'a>(
         &self,
         args: &[&'a str],
         substitutions: &Substitutions<'a>,
+        environment: &Environment<'a>,
     ) -> Option<Unwrapped<'a>> {
         match self {
             Transition::AfterSeparator { separator } => {
@@ -94,6 +102,23 @@ impl Transition {
                     substituted: fixed,
                 })
             }
+            Transition::FromEnvironment { program, unless } => {
+                if unless.iter().any(|(key, pattern)| {
+                    environment
+                        .get(key.as_str())
+                        .is_some_and(|value| pattern.matches(value))
+                }) {
+                    return None;
+                }
+                let executable = environment.get(program.as_str())?;
+                if executable.is_empty() {
+                    return None;
+                }
+                Some(Unwrapped::of(
+                    ProgramId::of(executable),
+                    args.to_vec(),
+                ))
+            }
         }
     }
 }
@@ -120,6 +145,9 @@ impl<'a> Unwrapped<'a> {
 /// What a script expanded from a template had substituted into it, keyed
 /// by the text replaced.
 pub type Substitutions<'a> = HashMap<&'a str, &'a str>;
+
+/// The environment declared on the build action, never the analyzer's own.
+pub type Environment<'a> = HashMap<&'a str, &'a str>;
 
 /// The arguments in a substituted `value`, which is spliced into a bash
 /// array and so split into words.
@@ -424,25 +452,30 @@ impl Library {
             .map(|held| (&held.key, &held.entry))
     }
 
-    /// Resolve what an action really runs, following [`Entry::Wraps`] and
-    /// [`Entry::SameAs`] until a program carries a spec, is unknown, or
-    /// comes from outside the build. An unknown program is a verdict for
-    /// the caller to report, not a failure here.
+    /// Resolve a test command without substitutions or action environment.
+    #[cfg(test)]
     pub fn resolve<'a>(
         &self,
         program: ProgramId,
         args: Vec<&'a str>,
     ) -> Resolution<'a> {
-        self.resolve_expanded(program, args, &Substitutions::new())
+        self.resolve_in_environment(
+            program,
+            args,
+            &Substitutions::new(),
+            &Environment::new(),
+        )
     }
 
-    /// [`resolve`](Self::resolve) a program expanded from a template with
-    /// `substitutions`, which only it, not a program it wraps, was.
-    pub fn resolve_expanded<'a>(
+    /// Follow wrappers and synonyms with the declared action environment.
+    /// Substitutions belong only to the initial template; child processes
+    /// inherit the environment. An unknown program is a verdict to report.
+    pub fn resolve_in_environment<'a>(
         &self,
         program: ProgramId,
         args: Vec<&'a str>,
         substitutions: &Substitutions<'a>,
+        environment: &Environment<'a>,
     ) -> Resolution<'a> {
         let none = Substitutions::new();
         let mut substitutions = substitutions;
@@ -476,7 +509,7 @@ impl Library {
                 Entry::SameAs(target) => key = target.clone(),
                 Entry::Wraps(transition) => {
                     let Some(unwrapped) =
-                        transition.apply(&args, substitutions)
+                        transition.apply(&args, substitutions, environment)
                     else {
                         break;
                     };
@@ -615,6 +648,16 @@ enum TransitionFile {
         #[serde(default)]
         args: Option<String>,
     },
+    /// The wrapped program is selected by the action's environment.
+    FromEnvironment(EnvironmentWrapperFields),
+}
+
+#[derive(Debug, Deserialize)]
+#[serde(deny_unknown_fields)]
+struct EnvironmentWrapperFields {
+    program: String,
+    #[serde(default)]
+    unless: BTreeMap<String, String>,
 }
 
 /// Parse the entries a `--repro-specs` file declares. Errors name the
@@ -677,6 +720,15 @@ pub fn parse_entries(
                 }) => {
                     Entry::Wraps(Transition::Substituted { program, args })
                 }
+                EntryFile::Wraps(TransitionFile::FromEnvironment(
+                    EnvironmentWrapperFields { program, unless },
+                )) => Entry::Wraps(Transition::FromEnvironment {
+                    program,
+                    unless: unless
+                        .into_iter()
+                        .map(|(key, pattern)| (key, Glob::new(&pattern)))
+                        .collect(),
+                }),
             };
             Ok((id, entry))
         })
@@ -687,6 +739,67 @@ pub fn parse_entries(
 mod tests {
     use super::*;
     use crate::reproducibility_spec::program_id::Origin;
+
+    #[test]
+    fn an_environment_wrappers_guard_cannot_be_misspelled_silently() {
+        let json = r#"{
+            "programs": {"@acme//runner": {
+                "wraps": {"from_environment": {
+                    "program": "COMPILER", "unles": {"EXTRA_OUTPUT": "?*"}
+                }}
+            }}
+        }"#;
+        assert!(
+            parse_entries(json)
+                .unwrap_err()
+                .contains("unknown field `unles`")
+        );
+    }
+
+    #[test]
+    fn an_environment_wrapper_uses_only_the_action_environment() {
+        let entries = parse_entries(
+            r#"{
+            "programs": {
+                "@acme//runner": {
+                    "wraps": {"from_environment": {
+                        "program": "COMPILER",
+                        "unless": {"EXTRA_OUTPUT": "?*"}
+                    }}
+                }
+            }
+        }"#,
+        )
+        .unwrap();
+        let mut library = Library::builtin(None);
+        library.extend(entries);
+        let wrapper = ProgramId::module("acme", "runner");
+        assert!(library.resolve(wrapper.clone(), vec![]).spec.is_none());
+
+        let compiler = "external/bazel_tools/tools/zip/zipper/zipper";
+        for (environment, forwards) in [
+            (vec![("COMPILER", compiler)], true),
+            (
+                vec![("COMPILER", compiler), ("EXTRA_OUTPUT", "out/extra")],
+                false,
+            ),
+            (vec![("COMPILER", compiler), ("EXTRA_OUTPUT", "")], true),
+        ] {
+            let resolution = library.resolve_in_environment(
+                wrapper.clone(),
+                vec![],
+                &Substitutions::new(),
+                &Environment::from_iter(environment),
+            );
+            assert_eq!(resolution.spec.is_some(), forwards);
+            if forwards {
+                assert_eq!(resolution.program, ProgramId::of(compiler));
+                assert_eq!(resolution.wrappers, [wrapper.clone()]);
+            } else {
+                assert_eq!(resolution.program, wrapper);
+            }
+        }
+    }
 
     #[test]
     fn the_zip_tool_is_vouched_for_however_it_is_asked_to_pack() {

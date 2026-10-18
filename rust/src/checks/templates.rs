@@ -9,7 +9,7 @@ use analysis_v2_proto::analysis::{
 use super::artifact_path;
 use crate::param_files::expanded_command_line;
 use crate::reproducibility_spec::{
-    library::{Library, Resolution, Substitutions},
+    library::{Environment, Library, Resolution, Substitutions},
     program_id::ProgramId,
 };
 
@@ -93,7 +93,12 @@ impl<'a> Templates<'a> {
     ) -> Option<Resolution<'a>> {
         let command_line = expanded_command_line(action);
         let (executable, args) = command_line.split_first()?;
-        Some(self.resolve(executable, args.to_vec(), library))
+        let environment = action
+            .environment_variables
+            .iter()
+            .map(|pair| (pair.key.as_str(), pair.value.as_str()))
+            .collect();
+        Some(self.resolve(executable, args.to_vec(), library, &environment))
     }
 
     /// What running `executable` with `args` resolves to in `library`.
@@ -104,6 +109,7 @@ impl<'a> Templates<'a> {
         executable: &str,
         args: Vec<&'a str>,
         library: &Library,
+        environment: &Environment<'a>,
     ) -> Resolution<'a> {
         let program = ProgramId::of(executable);
         let known = self
@@ -115,12 +121,18 @@ impl<'a> Templates<'a> {
             })
             .filter(|(template, _)| library.knows(template));
         match known {
-            Some((template, expansion)) => library.resolve_expanded(
+            Some((template, expansion)) => library.resolve_in_environment(
                 template,
                 args,
                 &expansion.substitutions,
+                environment,
             ),
-            None => library.resolve(program, args),
+            None => library.resolve_in_environment(
+                program,
+                args,
+                &Substitutions::new(),
+                environment,
+            ),
         }
     }
 }
@@ -233,15 +245,9 @@ mod tests {
         c: &'a ActionGraphContainer,
         library: &Library,
     ) -> Resolution<'a> {
-        let (executable, args) = c.actions[1]
-            .arguments
-            .split_first()
-            .expect("a command line");
-        Templates::of(c).resolve(
-            executable,
-            args.iter().map(String::as_str).collect(),
-            library,
-        )
+        Templates::of(c)
+            .resolve_action(&c.actions[1], library)
+            .expect("a command line")
     }
 
     #[test]

@@ -488,6 +488,29 @@ arguments the script was run with. Those arguments are checked for absolute
 paths and environment leaks as if the action had passed them, and a finding
 among them is at the location `substitution`.
 
+For a wrapper that selects its executable through the action's environment,
+use `from_environment`:
+
+```json
+{
+  "wraps": {
+    "from_environment": {
+      "program": "LLVM_CLANGXX",
+      "unless": {
+        "LLVM_DSYM_PATH": "?*",
+        "LLVM_GENERATE_INTERFACE_LIBRARY": "yes"
+      }
+    }
+  }
+}
+```
+
+The executable receives the wrapper's arguments. Ahab reads only environment
+variables declared on the action. If the executable is missing or empty, or
+any `unless` pattern matches its variable's value, the wrapper remains
+unknown. This lets the LLVM link wrapper forward to Clang without treating
+its optional dSYM and interface-library steps as already analyzed.
+
 ## Exceptions
 
 An exception excuses violations you have decided to live with. They are
