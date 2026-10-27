@@ -36,7 +36,7 @@
         devShells.default = pkgs.mkShell {
           nativeBuildInputs = [ bazel-env ];
           shellHook = ''
-            bazel-env
+            [ -n "$DIRENV_IN_ENVRC" ] || bazel-env
           '';
         };
       });
