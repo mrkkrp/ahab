@@ -54,6 +54,13 @@ jobs:
             bazel run //:ahab.explain
             bazel query 'deps(//...)' > /dev/null
           done
+      - name: Check the LLVM module consumer
+        if: ${{ !cancelled() }}
+        working-directory: packaging/llvm
+        run: |
+          bazel test //:c //:cpp
+          bazel build //:c.stripped //:cpp.stripped
+          bazel run //:check
   fishery:
     name: Fishery ${{ matrix.shard }}/${{ strategy.job-total }}
     runs-on: ubuntu-latest

@@ -1,0 +1,32 @@
+load("@ahab//:defs.bzl", "ahab_check")
+load("@rules_cc//cc:cc_test.bzl", "cc_test")
+
+cc_test(
+    name = "c",
+    srcs = ["main.c"],
+    copts = [
+        "-std=c17",
+        "-g",
+        "-fdebug-compilation-dir=.",
+    ],
+    linkopts = ["-no-canonical-prefixes"],
+)
+
+cc_test(
+    name = "cpp",
+    srcs = ["main.cc"],
+    copts = [
+        "-std=c++17",
+        "-g",
+        "-fdebug-compilation-dir=.",
+    ],
+    linkopts = ["-no-canonical-prefixes"],
+)
+
+# Include the strip actions as well as compilation and linking. This
+# consumer supplies no custom reproducibility specs or exceptions.
+ahab_check(
+    name = "check",
+    baseline = "expectation.json",
+    label = "set(//:c //:cpp //:c.stripped //:cpp.stripped)",
+)
