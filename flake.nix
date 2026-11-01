@@ -27,6 +27,9 @@
               pkgs.bazel-buildtools
               pkgs.zlib
             ];
+          profile = ''
+            export IN_BAZEL_ENV=1
+          '';
           extraBuildCommands = ''
             ln -s /usr/bin/bazelisk $out/usr/bin/bazel
           '';
@@ -36,7 +39,9 @@
         devShells.default = pkgs.mkShell {
           nativeBuildInputs = [ bazel-env ];
           shellHook = ''
-            [ -n "$DIRENV_IN_ENVRC" ] || bazel-env
+            if [ -z "''${IN_BAZEL_ENV-}" ] && [ -t 0 ] && [ -t 2 ]; then
+              bazel-env
+            fi
           '';
         };
       });
