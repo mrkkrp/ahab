@@ -35,7 +35,9 @@
 //!    the analyzed project, version- and platform-bearing. Dropped.
 //! 4. **Module and extension names**—fixed by the tool's author. Kept.
 //! 5. **The package and target tail**—the ruleset's own source layout, which
-//!    moves only when a spec should be revisited anyway. Kept.
+//!    moves only when a spec should be revisited anyway. Kept, less the
+//!    `.exe` Windows requires, so that a program is one program whichever
+//!    system built it.
 //!
 //! # Canonical repository names
 //!
@@ -218,14 +220,17 @@ impl ProgramId {
 impl ProgramId {
     /// Identify the program an action runs from its `argv[0]`.
     pub fn of(executable: &str) -> ProgramId {
-        if executable.starts_with('/') || !executable.contains('/') {
+        if executable.starts_with('/')
+            || on_a_drive(executable)
+            || !executable.contains('/')
+        {
             return ProgramId {
                 origin: Origin::System,
                 path: executable.to_owned(),
             };
         }
 
-        let path = strip_output_prefix(executable);
+        let path = without_exe(strip_output_prefix(executable));
 
         // In a runfiles tree the repository name is a plain path segment
         // rather than something under `external/`, so it has to be split
@@ -265,7 +270,7 @@ impl ProgramId {
         if short_path.contains('/') {
             ProgramId::of(&short_path)
         } else {
-            ProgramId::main(&short_path)
+            ProgramId::main(without_exe(&short_path))
         }
     }
 }
@@ -341,6 +346,19 @@ impl fmt::Display for ProgramId {
             } => write!(f, "@{name}+{extension}//{}", self.path),
         }
     }
+}
+
+/// `path` without the suffix Windows requires of an executable.
+fn without_exe(path: &str) -> &str {
+    path.strip_suffix(".exe").unwrap_or(path)
+}
+
+/// Whether `path` begins at a Windows drive, as `C:/…` or `C:\…`.
+fn on_a_drive(path: &str) -> bool {
+    matches!(
+        path.as_bytes(),
+        [drive, b':', b'/' | b'\\', ..] if drive.is_ascii_alphabetic()
+    )
 }
 
 /// Strip a leading `bazel-out/<configuration>/<root>/`, e.g.
@@ -433,6 +451,35 @@ mod tests {
         assert_eq!(id.origin, Origin::System);
         assert_eq!(id.path, "/usr/bin/gcc");
         assert_eq!(id.to_string(), "/usr/bin/gcc");
+    }
+
+    #[test]
+    fn paths_on_a_windows_drive_are_system_tools() {
+        for path in ["C:/Program Files/VC/bin/cl.exe", r"c:\msys64\bin\sh"]
+        {
+            let id = ProgramId::of(path);
+            assert_eq!(id.origin, Origin::System, "{path}");
+            assert_eq!(id.to_string(), path);
+        }
+    }
+
+    #[test]
+    fn the_suffix_windows_requires_is_not_part_of_the_name() {
+        assert_eq!(
+            ProgramId::of(
+                "bazel-out/x64_windows-opt-exec/bin/external/rules_rust+\
+                 /util/process_wrapper/process_wrapper.exe",
+            ),
+            ProgramId::module(
+                "rules_rust",
+                "util/process_wrapper/process_wrapper",
+            ),
+        );
+        assert_eq!(
+            ProgramId::of_short_path("gen.exe"),
+            ProgramId::main("gen")
+        );
+        assert_eq!(ProgramId::of("cl.exe").path, "cl.exe");
     }
 
     #[test]

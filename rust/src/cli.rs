@@ -12,7 +12,7 @@ use similar::TextDiff;
 
 use crate::aquery::{HOSTNAME_SENTINEL, USER_SENTINEL, run_aquery};
 
-use crate::checks::{Violation, check_all};
+use crate::checks::{PathStyle, Violation, check_all};
 use crate::exceptions::{
     Exception, Exceptions, Suppressed, parse_exceptions, stale_warning,
 };
@@ -171,6 +171,7 @@ impl Cli {
             USER_SENTINEL,
             HOSTNAME_SENTINEL,
             &library,
+            PathStyle::HOST,
         );
 
         let mut exceptions = Vec::new();
