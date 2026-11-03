@@ -1,0 +1,15 @@
+{
+  "exceptions": [
+    {
+      "reason": "autoconfigured C++ toolchain, which on Windows drives the MSVC the machine has",
+      "kind": "system_program",
+      "program": "*/MSVC/*"
+    },
+    {
+      "reason": "the MSVC toolchain hands its actions the machine's include, library and temporary directories",
+      "kind": "absolute_path",
+      "mnemonic": "Cpp*",
+      "location": "env_var"
+    }
+  ]
+}

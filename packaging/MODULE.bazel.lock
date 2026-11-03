@@ -194,7 +194,7 @@
   "moduleExtensions": {
     "@@ahab+//private:extensions.bzl%module_info": {
       "general": {
-        "bzlTransitiveDigest": "6jWqfkdeSe+dvMcp6H2sXpjcaI03rBStfKStHA9JMaU=",
+        "bzlTransitiveDigest": "l9K8ljSLBDUFv3kkZN2bP1MCRIWSLNJZRWIHQoh/hv0=",
         "usagesDigest": "XZmPlPfbyQAhLj1rrfZGTRGTU6e+ewnrL7FFM+NiYu4=",
         "recordedInputs": [
           "REPO_MAPPING:ahab+,bazel_tools bazel_tools"
@@ -212,7 +212,7 @@
     },
     "@@ahab+//private:extensions.bzl%prebuilt": {
       "general": {
-        "bzlTransitiveDigest": "6jWqfkdeSe+dvMcp6H2sXpjcaI03rBStfKStHA9JMaU=",
+        "bzlTransitiveDigest": "l9K8ljSLBDUFv3kkZN2bP1MCRIWSLNJZRWIHQoh/hv0=",
         "usagesDigest": "6HszfN8lOltneviosxNVUquOYZOtsJ4XlUBCWuZS6nU=",
         "recordedInputs": [
           "REPO_MAPPING:ahab+,bazel_tools bazel_tools"

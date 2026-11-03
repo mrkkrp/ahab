@@ -13,10 +13,15 @@ permissions:
   attestations: write
   contents: write
   id-token: write
+env:
+  MSYS_NO_PATHCONV: 1
 jobs:
   binaries:
     name: Binary (${{ matrix.platform }})
     runs-on: ${{ matrix.runner }}
+    defaults:
+      run:
+        shell: bash
     strategy:
       fail-fast: false
       matrix:
@@ -32,6 +37,9 @@ jobs:
             bazel_platform: ""
           - platform: darwin_x86_64
             runner: macos-15-intel
+            bazel_platform: ""
+          - platform: windows_x86_64
+            runner: windows-2025
             bazel_platform: ""
     steps:
       - name: Check out the repository
@@ -55,13 +63,14 @@ jobs:
           if [ -n "$BAZEL_PLATFORM" ]; then
             flags+=("--platforms=$BAZEL_PLATFORM")
           fi
-          .github/workflows/build_ahab.sh dist/ahab "${flags[@]}"
-          reported="$(./dist/ahab --version)"
+          .github/workflows/build_ahab.sh dist "${flags[@]}"
+          binary="$(ls dist)"
+          reported="$("dist/$binary" --version)"
           if [ "$reported" != "ahab ${TAG#v}" ]; then
             echo "binary reports \"$reported\", expected \"ahab ${TAG#v}\"" >&2
             exit 1
           fi
-          COPYFILE_DISABLE=1 tar -czf "ahab-${TAG#v}-$PLATFORM.tar.gz" -C dist ahab
+          COPYFILE_DISABLE=1 tar -czf "ahab-${TAG#v}-$PLATFORM.tar.gz" -C dist "$binary"
       - name: Upload the binary
         uses: actions/upload-artifact@v7
         with:
@@ -80,6 +89,9 @@ jobs:
     name: Smoke (${{ matrix.platform }})
     needs: [release]
     runs-on: ${{ matrix.runner }}
+    defaults:
+      run:
+        shell: bash
     strategy:
       fail-fast: false
       matrix:
@@ -92,6 +104,8 @@ jobs:
             runner: macos-15
           - platform: darwin_x86_64
             runner: macos-15-intel
+          - platform: windows_x86_64
+            runner: windows-2025
     steps:
       - name: Set up Bazel
         uses: bazel-contrib/setup-bazel@0.19.1

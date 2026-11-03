@@ -25,6 +25,7 @@ EXCLUDE=(
   ".envrc"
   "flake.lock"
   "flake.nix"
+  ".gitattributes"
   ".gitignore"
 )
 

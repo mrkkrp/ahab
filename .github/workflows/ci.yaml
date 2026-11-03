@@ -12,14 +12,24 @@ concurrency:
   cancel-in-progress: true
 permissions:
   contents: read
+env:
+  MSYS_NO_PATHCONV: 1
 jobs:
   build:
     name: Build and test (${{ matrix.os }})
     runs-on: ${{ matrix.os }}
+    defaults:
+      run:
+        shell: bash
     strategy:
       fail-fast: false
       matrix:
-        os: [ubuntu-24.04, ubuntu-24.04-arm, macos-15, macos-15-intel]
+        os:
+          - ubuntu-24.04
+          - ubuntu-24.04-arm
+          - macos-15
+          - macos-15-intel
+          - windows-2025
     steps:
       - name: Check out the repository
         uses: actions/checkout@v7
@@ -40,7 +50,7 @@ jobs:
       - name: Prepare the binary for the module test
         if: ${{ !cancelled() }}
         run: |
-          .github/workflows/build_ahab.sh "$RUNNER_TEMP/ahab-prebuilt/ahab"
+          .github/workflows/build_ahab.sh "$RUNNER_TEMP/ahab-prebuilt"
           echo "AHAB_PREBUILT_LOCAL=$RUNNER_TEMP/ahab-prebuilt" >> "$GITHUB_ENV"
       - name: Check that Ahab can be consumed as a module
         if: ${{ !cancelled() }}

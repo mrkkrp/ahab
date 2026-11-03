@@ -1,4 +1,7 @@
 common --lockfile_mode=error
+common --enable_platform_specific_config
+common:windows --host_platform=@rules_rs//rs/platforms:x86_64-pc-windows-gnullvm
+common:windows --extra_toolchains=@rust_toolchains//:all
 
 build --experimental_convenience_symlinks=ignore
 build --@protobuf//bazel/toolchains:prefer_prebuilt_protoc

@@ -78,9 +78,9 @@ Ahab is not built from source when you use it—it downloads pre-built
 binaries. It is written in Rust and its build needs a Rust toolchain, a set
 of crates, and a protobuf compiler. If all of this were added to your build
 graph it could collide with whatever else you build Rust with. Binaries are
-published for Linux and macOS, on x86-64 and arm64. The Linux ones are
-static, so they do not care what libc the machine has. Windows is not
-supported.
+published for Linux and macOS, on x86-64 and arm64, and for Windows on
+x86-64. The Linux ones are static, so they do not care what libc the machine
+has.
 
 One consequence is worth knowing: this works when Ahab comes from a
 registry, which is what `bazel_dep` does. Pointing a `git_override` at the
