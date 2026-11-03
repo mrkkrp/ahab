@@ -230,13 +230,13 @@ impl ProgramId {
         // In a runfiles tree the repository name is a plain path segment
         // rather than something under `external/`, so it has to be split
         // off first.
-        if let Some(rest) = strip_runfiles_prefix(path) {
-            if let Some((repo, tail)) = rest.split_once('/') {
-                return ProgramId {
-                    origin: decode_repo(repo),
-                    path: tail.to_owned(),
-                };
-            }
+        if let Some(rest) = strip_runfiles_prefix(path)
+            && let Some((repo, tail)) = rest.split_once('/')
+        {
+            return ProgramId {
+                origin: decode_repo(repo),
+                path: tail.to_owned(),
+            };
         }
 
         if let Some((repo, tail)) = split_external(path) {

@@ -60,7 +60,7 @@ toolchains = use_extension(
 )
 toolchains.toolchain(
     edition = "2024",
-    version = "1.86.0",
+    version = "1.92.0",
 )
 use_repo(toolchains, "default_rust_toolchains")
 
