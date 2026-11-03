@@ -14,6 +14,7 @@ alias(
     name = "host_exceptions",
     actual = select({
         "@platforms//os:macos": "//:exceptions_macos.json",
+        "@platforms//os:windows": "//:exceptions_windows.json",
         "//conditions:default": "//:exceptions_linux.json",
     }),
 )
@@ -54,5 +55,6 @@ ahab_explain(
 exports_files([
     "exceptions_linux.json",
     "exceptions_macos.json",
+    "exceptions_windows.json",
     "expectation.json",
 ])

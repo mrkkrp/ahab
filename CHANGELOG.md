@@ -1,5 +1,9 @@
 ## Unreleased
 
+* Windows is supported, on x86-64. Releases publish a binary for it, and the
+  targets the macros define run through a batch file there rather than
+  through bash.
+
 * On Windows, an absolute path is one rooted at a drive, `C:\` or `C:/`,
   and a `/`-rooted run is not one: there it begins a switch, as in
   `/nologo`. Entries of a `;`-separated list, such as `INCLUDE`, are found

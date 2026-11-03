@@ -7,11 +7,11 @@ module graph, where it can collide with whatever else they build Rust with.
 So the build-time dependencies are declared `dev_dependency` and a consumer
 takes the binary that the release built for their platform.
 
-`AHAB_PREBUILT_LOCAL` names a directory holding an `ahab` binary to use
-instead of downloading one. It exists so that Ahab's own tests can exercise
-the path a consumer takes—`packaging/` runs against a binary this repository
-just built—and it is the only way to get a binary before a release has
-published any.
+`AHAB_PREBUILT_LOCAL` names a directory holding an `ahab` binary, `ahab.exe`
+on Windows, to use instead of downloading one. It exists so that Ahab's own
+tests can exercise the path a consumer takes—`packaging/` runs against a
+binary this repository just built—and it is the only way to get a binary
+before a release has published any.
 """
 
 load("@bazel_tools//tools/build_defs/repo:http.bzl", "http_archive")
@@ -29,8 +29,8 @@ load("@bazel_skylib//rules:native_binary.bzl", "native_binary")
 
 native_binary(
     name = "binary",
-    src = "ahab",
-    out = "ahab_exe",
+    src = "{binary}",
+    out = "bin/{binary}",
     visibility = ["//visibility:public"],
 )
 """
@@ -41,10 +41,14 @@ load("@bazel_skylib//rules:native_binary.bzl", "native_binary")
 native_binary(
     name = "ahab",
     src = "ahab_local",
-    out = "ahab_exe",
+    out = "bin/{binary}",
     visibility = ["//visibility:public"],
 )
 """
+
+def _binary(windows):
+    """Ahab's file name, which on Windows has to end in `.exe`."""
+    return "ahab.exe" if windows else "ahab"
 
 _UNAVAILABLE = """\
 No prebuilt Ahab binary is available for version {version}.
@@ -53,23 +57,28 @@ Release automation records the published binaries in
 private/prebuilt_versions.bzl, and this version has none—which is a broken
 release rather than anything you did. Please report it at
 https://github.com/mrkkrp/ahab/issues. To carry on meanwhile, set
-{env}=<directory containing an `ahab` binary>. """
+{env}=<directory containing an `{binary}` binary>. """
 
 def _hub_impl(repository_ctx):
     version = repository_ctx.attr.version
     local = repository_ctx.os.environ.get(LOCAL_ENV_VAR)
+    binary = _binary(repository_ctx.os.name.startswith("windows"))
     if local:
         repository_ctx.symlink(
-            repository_ctx.path(local).get_child("ahab"),
+            repository_ctx.path(local).get_child(binary),
             "ahab_local",
         )
-        repository_ctx.file("BUILD.bazel", _LOCAL_BUILD)
+        repository_ctx.file(
+            "BUILD.bazel",
+            _LOCAL_BUILD.format(binary = binary),
+        )
         return
 
     if not AHAB_PREBUILT:
         fail(_UNAVAILABLE.format(
             version = version,
             env = LOCAL_ENV_VAR,
+            binary = binary,
         ))
 
     lines = ["""\
@@ -165,9 +174,12 @@ module_info = module_extension(
 def _prebuilt_impl(module_ctx):
     version = _ahab_module(module_ctx).version
     for platform, sha256 in AHAB_PREBUILT.items():
+        windows = "@platforms//os:windows" in AHAB_PLATFORMS[platform]
         http_archive(
             name = "ahab_prebuilt_" + platform,
-            build_file_content = _ARCHIVE_BUILD,
+            build_file_content = _ARCHIVE_BUILD.format(
+                binary = _binary(windows),
+            ),
             sha256 = sha256,
             urls = [AHAB_URL_TEMPLATE.format(
                 platform = platform,

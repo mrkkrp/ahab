@@ -28,6 +28,10 @@ AHAB_PLATFORMS = {
         "@platforms//os:linux",
         "@platforms//cpu:x86_64",
     ],
+    "windows_x86_64": [
+        "@platforms//os:windows",
+        "@platforms//cpu:x86_64",
+    ],
 }
 
 AHAB_URL_TEMPLATE = (

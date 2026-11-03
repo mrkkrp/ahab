@@ -297,7 +297,7 @@
   "moduleExtensions": {
     "//private:extensions.bzl%module_info": {
       "general": {
-        "bzlTransitiveDigest": "6jWqfkdeSe+dvMcp6H2sXpjcaI03rBStfKStHA9JMaU=",
+        "bzlTransitiveDigest": "l9K8ljSLBDUFv3kkZN2bP1MCRIWSLNJZRWIHQoh/hv0=",
         "usagesDigest": "H70yQLKgpHQ7EBGN84o70QVTt7S0VvjmiR5sOaECfSI=",
         "recordedInputs": [
           "REPO_MAPPING:,bazel_tools bazel_tools"
