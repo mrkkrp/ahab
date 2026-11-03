@@ -140,13 +140,6 @@ pub(in crate::reproducibility_spec) fn entries() -> Vec<(ProgramId, Entry)>
             img_tool(&go_binary("cmd/img", &name)),
             Entry::SameAs(canonical_img()),
         ));
-        // rules_go gives a Windows binary the suffix the platform expects.
-        if os == "windows" {
-            entries.push((
-                img_tool(&format!("cmd/img/{name}_/{name}.exe")),
-                Entry::SameAs(canonical_img()),
-            ));
-        }
     }
 
     entries.extend(distroless_tools());
@@ -213,10 +206,13 @@ mod tests {
     }
 
     #[test]
-    fn the_windows_builds_are_known_by_their_suffix_too() {
+    fn the_windows_builds_are_known_despite_their_suffix() {
         for arch in ["amd64", "arm64"] {
             let name = format!("img_windows_{arch}");
-            let program = img_tool(&format!("cmd/img/{name}_/{name}.exe"));
+            let program = ProgramId::of(&format!(
+                "bazel-out/x64_windows-opt-exec/bin/external/rules_img_tool+\
+                 /cmd/img/{name}_/{name}.exe",
+            ));
             assert!(
                 Library::builtin(None)
                     .resolve(program, vec![])

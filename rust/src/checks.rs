@@ -20,6 +20,7 @@ mod templates;
 
 use scanned::{ArgSource, Sourced, analyzable_strings};
 
+pub(crate) use absolute_paths::PathStyle;
 pub(crate) use templates::Templates;
 
 /// The absolute `PATH` entries an action may use, the ones Bazel's default
@@ -629,6 +630,7 @@ pub(crate) fn check_all(
     user: &str,
     hostname: &str,
     library: &Library,
+    style: PathStyle,
 ) -> BTreeMap<Violation, usize> {
     let targets = target_labels(container);
     let resolved = ResolvedAction::all(container, library);
@@ -636,7 +638,7 @@ pub(crate) fn check_all(
     let mut violations =
         check_environment_leaks(&resolved, &targets, user, hostname);
     violations.extend(check_path(container, &targets));
-    violations.extend(absolute_paths::check(&resolved, &targets));
+    violations.extend(absolute_paths::check(&resolved, &targets, style));
     violations.extend(check_execution_requirements(container, &targets));
     violations.extend(check_workspace_status(container, &targets));
     violations.extend(check_reproducibility(&resolved, &targets));
@@ -1051,6 +1053,7 @@ pub(crate) mod tests {
         absolute_paths::check(
             &ResolvedAction::all(container, library),
             &target_labels(container),
+            PathStyle::Unix,
         )
     }
 
@@ -2081,6 +2084,7 @@ pub(crate) mod tests {
             USER_SENTINEL,
             HOST_SENTINEL,
             &Library::builtin(None),
+            PathStyle::Unix,
         );
 
         let actions = mixed_actions();
@@ -2092,7 +2096,8 @@ pub(crate) mod tests {
                     &container(rotated),
                     USER_SENTINEL,
                     HOST_SENTINEL,
-                    &Library::builtin(None)
+                    &Library::builtin(None),
+                    PathStyle::Unix,
                 ),
                 expected,
                 "rotating the actions by {split} changed the report",
@@ -2115,6 +2120,7 @@ pub(crate) mod tests {
             USER_SENTINEL,
             HOST_SENTINEL,
             &Library::builtin(None),
+            PathStyle::Unix,
         );
         assert_eq!(
             combined.values().sum::<usize>(),
@@ -2157,6 +2163,7 @@ pub(crate) mod tests {
             USER_SENTINEL,
             HOST_SENTINEL,
             &Library::builtin(None),
+            PathStyle::Unix,
         );
 
         let absolute = violations
@@ -2184,12 +2191,14 @@ pub(crate) mod tests {
             USER_SENTINEL,
             HOST_SENTINEL,
             &Library::builtin(None),
+            PathStyle::Unix,
         );
         let three = check_all(
             &container(sibling_actions()),
             USER_SENTINEL,
             HOST_SENTINEL,
             &Library::builtin(None),
+            PathStyle::Unix,
         );
 
         assert_eq!(

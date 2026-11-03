@@ -1,5 +1,17 @@
 ## Unreleased
 
+* On Windows, an absolute path is one rooted at a drive, `C:\` or `C:/`,
+  and a `/`-rooted run is not one: there it begins a switch, as in
+  `/nologo`. Entries of a `;`-separated list, such as `INCLUDE`, are found
+  one by one.
+
+* A program named by a path on a Windows drive, such as
+  `C:/Program Files/…/cl.exe`, is a system program.
+
+* A program in the build is named without the `.exe` it has on Windows, so
+  `process_wrapper.exe` is `@rules_rust//util/process_wrapper/process_wrapper`
+  as it is elsewhere and the same specs apply to it.
+
 * `singlejar` is no longer required to be passed `--exclude_build_data`.
   The `build-data.properties` it writes otherwise holds only what its
   command line and build info files say, so an unstamped deploy jar, which

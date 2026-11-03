@@ -7,9 +7,48 @@ use analysis_v2_proto::analysis::Action;
 use super::{ActionRef, LeakSite, ResolvedAction, Violation};
 use crate::reproducibility_spec::library::Resolution;
 
-/// Whether `byte` may follow the `/` that roots a path. Glob
-/// metacharacters are absent, though [`continues_path_run`] admits them:
-/// `/*` is usually a C comment, not the root's children.
+/// How the system the actions run on roots a path.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub(crate) enum PathStyle {
+    /// At `/`.
+    Unix,
+    /// At a drive, `C:\` or `C:/`. A `/` begins a switch there, as in
+    /// `/nologo`, and `\` separates names rather than escaping.
+    Windows,
+}
+
+impl PathStyle {
+    /// The style of the system Ahab was built for, which is the one it
+    /// queries Bazel on.
+    pub(crate) const HOST: PathStyle = if cfg!(windows) {
+        PathStyle::Windows
+    } else {
+        PathStyle::Unix
+    };
+
+    /// The length of the root beginning at `at`, if one does. A drive may
+    /// be followed by several separators, as the escaped `C:\\` is.
+    fn root(self, bytes: &[u8], at: usize) -> Option<usize> {
+        match self {
+            PathStyle::Unix => (bytes[at] == b'/').then_some(1),
+            PathStyle::Windows => {
+                let [drive, b':', rest @ ..] = &bytes[at..] else {
+                    return None;
+                };
+                let separators = rest
+                    .iter()
+                    .take_while(|&&byte| byte == b'\\' || byte == b'/')
+                    .count();
+                (drive.is_ascii_alphabetic() && separators > 0)
+                    .then_some(2 + separators)
+            }
+        }
+    }
+}
+
+/// Whether `byte` may follow the root of a path. Glob metacharacters are
+/// absent, though [`continues_path_run`] admits them: `/*` is usually a C
+/// comment, not the root's children.
 fn starts_path_run(byte: u8) -> bool {
     byte.is_ascii_alphanumeric()
         || !byte.is_ascii()
@@ -53,16 +92,17 @@ fn escapes_a_metacharacter(byte: u8) -> bool {
 const GLUED_FLAG_PREFIXES: &[&str] =
     &["-I", "-L", "-isystem", "-iquote", "-idirafter"];
 
-/// Whether the `/` at `slash` ends one of the [`GLUED_FLAG_PREFIXES`] that
-/// itself begins at a boundary, which tells `-I/usr/include` from
-/// `-Irelative/include` and from a `-I` inside a longer word.
-fn glued_onto_flag(bytes: &[u8], slash: usize) -> bool {
+/// Whether the root at `root` is glued onto one of the
+/// [`GLUED_FLAG_PREFIXES`] that itself begins at a boundary, which tells
+/// `-I/usr/include` from `-Irelative/include` and from a `-I` inside a
+/// longer word.
+fn glued_onto_flag(bytes: &[u8], root: usize) -> bool {
     GLUED_FLAG_PREFIXES.iter().any(|flag| {
         let flag = flag.as_bytes();
-        slash >= flag.len()
-            && &bytes[slash - flag.len()..slash] == flag
-            && (slash == flag.len()
-                || !continues_path_run(bytes[slash - flag.len() - 1]))
+        root >= flag.len()
+            && &bytes[root - flag.len()..root] == flag
+            && (root == flag.len()
+                || !continues_path_run(bytes[root - flag.len() - 1]))
     })
 }
 
@@ -75,9 +115,9 @@ enum SiteKind {
     Shell,
 }
 
-/// The end of the run beginning at `start`, and whether it is a path.
-fn path_run(bytes: &[u8], start: usize) -> (usize, bool) {
-    let mut at = start + 1;
+/// The end of the run whose root ends at `start`, and whether it is a path.
+fn path_run(bytes: &[u8], start: usize, style: PathStyle) -> (usize, bool) {
+    let mut at = start;
     let mut depth = 0usize;
 
     while at < bytes.len() {
@@ -85,6 +125,7 @@ fn path_run(bytes: &[u8], start: usize) -> (usize, bool) {
             b'[' => depth += 1,
             b']' if depth > 0 => depth -= 1,
             b']' => break,
+            b'\\' if style == PathStyle::Windows => {}
             b'\\' => {
                 let pattern = bytes
                     .get(at + 1)
@@ -100,13 +141,19 @@ fn path_run(bytes: &[u8], start: usize) -> (usize, bool) {
     (at, true)
 }
 
-/// Extract every absolute path in `text`, read as a `kind` of site.
+/// Extract every absolute path in `text`, read as a `kind` of site written
+/// in `style`.
 ///
-/// A `/` roots a path only at a separator—start of text, whitespace, an
-/// opening quote, `=`, `:`, `,`, `[`, a shell operator—or glued onto a
-/// [`GLUED_FLAG_PREFIXES`] flag. That the list is closed is what leaves
-/// globs, regexes, expansions and markup alone.
-fn absolute_paths(text: &str, kind: SiteKind) -> Vec<String> {
+/// A root counts only at a separator—start of text, whitespace, an opening
+/// quote, `=`, `:`, `,`, `[`, a shell operator, and on Windows the `;` that
+/// separates a list—or glued onto a [`GLUED_FLAG_PREFIXES`] flag. That the
+/// list is closed is what leaves globs, regexes, expansions and markup
+/// alone.
+fn absolute_paths(
+    text: &str,
+    kind: SiteKind,
+    style: PathStyle,
+) -> Vec<String> {
     let bytes = text.as_bytes();
     let mut paths = Vec::new();
 
@@ -118,11 +165,13 @@ fn absolute_paths(text: &str, kind: SiteKind) -> Vec<String> {
         let byte = bytes[at];
 
         // A second `/` is not a name, so the label `//foo:bar` roots nothing.
-        if byte == b'/'
-            && bytes.get(at + 1).is_some_and(|&next| starts_path_run(next))
+        if let Some(root) = style.root(bytes, at)
+            && bytes
+                .get(at + root)
+                .is_some_and(|&next| starts_path_run(next))
             && (may_start || glued_onto_flag(bytes, at))
         {
-            let (end, is_path) = path_run(bytes, at);
+            let (end, is_path) = path_run(bytes, at + root, style);
             if is_path {
                 paths.push(text[at..end].to_owned());
             }
@@ -149,6 +198,7 @@ fn absolute_paths(text: &str, kind: SiteKind) -> Vec<String> {
                 };
             }
             b'=' | b':' | b',' | b'[' => may_start = true,
+            b';' if style == PathStyle::Windows => may_start = true,
             byte if byte.is_ascii_whitespace() => may_start = true,
             b'<' | b'>' | b'|' | b';' | b'&'
                 if kind == SiteKind::Shell && quote.is_none() =>
@@ -185,11 +235,11 @@ fn is_allowed_absolute_path(path: &str) -> bool {
 const SHELLS: &[&str] = &["sh", "bash", "dash", "zsh", "ksh"];
 
 /// The script this action hands a shell to run, if that is what it does.
+/// The shell is known by its file name, which on Windows ends in `.exe`.
 fn shell_script_operand(action: &Action) -> Option<&str> {
     let (executable, args) = action.arguments.split_first()?;
-    let shell = executable
-        .rsplit_once('/')
-        .map_or(executable.as_str(), |(_, name)| name);
+    let name = executable.rsplit(['/', '\\']).next().unwrap_or_default();
+    let shell = name.strip_suffix(".exe").unwrap_or(name);
     if !SHELLS.contains(&shell) {
         return None;
     }
@@ -221,6 +271,7 @@ fn declared_path_strings<'a>(
 pub(super) fn check(
     resolved: &[ResolvedAction<'_>],
     targets: &HashMap<u32, &str>,
+    style: PathStyle,
 ) -> Vec<Violation> {
     let mut violations = Vec::new();
 
@@ -241,7 +292,7 @@ pub(super) fn check(
             } else {
                 SiteKind::Plain
             };
-            let paths = absolute_paths(sourced.value, kind);
+            let paths = absolute_paths(sourced.value, kind, style);
             if paths.is_empty() {
                 continue;
             }
@@ -269,7 +320,7 @@ pub(super) fn check(
             if kv.key == "PATH" {
                 continue;
             }
-            for path in absolute_paths(&kv.value, SiteKind::Plain) {
+            for path in absolute_paths(&kv.value, SiteKind::Plain, style) {
                 if is_allowed_absolute_path(&path) {
                     continue;
                 }
@@ -298,11 +349,15 @@ mod tests {
     use crate::reproducibility_spec::library::Library;
 
     fn plain(text: &str) -> Vec<String> {
-        absolute_paths(text, SiteKind::Plain)
+        absolute_paths(text, SiteKind::Plain, PathStyle::Unix)
     }
 
     fn shell(text: &str) -> Vec<String> {
-        absolute_paths(text, SiteKind::Shell)
+        absolute_paths(text, SiteKind::Shell, PathStyle::Unix)
+    }
+
+    fn windows(text: &str) -> Vec<String> {
+        absolute_paths(text, SiteKind::Plain, PathStyle::Windows)
     }
 
     #[test]
@@ -467,6 +522,57 @@ mod tests {
         assert!(shell("awk '{print $1\"/\"$2}' x").is_empty());
     }
 
+    #[test]
+    fn a_drive_roots_a_path_on_windows() {
+        assert_eq!(windows(r"C:\Users\me\x.h"), [r"C:\Users\me\x.h"]);
+        assert_eq!(windows("d:/tools/bin"), ["d:/tools/bin"]);
+        assert_eq!(windows(r#"-DDIR="C:\\VC\\bin""#), [r"C:\\VC\\bin"]);
+    }
+
+    #[test]
+    fn a_slash_roots_nothing_on_windows() {
+        assert!(windows("/nologo").is_empty());
+        assert!(
+            windows("/Fobazel-out/x64_windows-opt/bin/a.obj").is_empty()
+        );
+        assert!(windows("--sysroot=/opt/toolchain").is_empty());
+    }
+
+    #[test]
+    fn a_drive_roots_nothing_unless_a_name_follows_it() {
+        assert!(windows(r"C:\").is_empty());
+        assert!(windows("C:relative").is_empty());
+        assert!(windows("https://example.com").is_empty());
+    }
+
+    #[test]
+    fn a_drive_inside_a_word_roots_nothing() {
+        assert!(windows(r"ab:\x").is_empty());
+        assert!(windows(r"x\C:\x").is_empty());
+        assert_eq!(windows(r"-IC:\include"), [r"C:\include"]);
+        assert!(windows(r"x-IC:\include").is_empty());
+    }
+
+    #[test]
+    fn each_entry_of_a_list_is_found_on_windows() {
+        assert_eq!(
+            windows(r"C:\VC\include;D:\SDK\include"),
+            [r"C:\VC\include", r"D:\SDK\include"],
+        );
+        assert_eq!(windows("/LIBPATH:C:/lib"), ["C:/lib"]);
+    }
+
+    #[test]
+    fn a_backslash_separates_names_on_windows() {
+        assert_eq!(windows(r"C:\R\.class"), [r"C:\R\.class"]);
+        assert!(plain(r"/R\.class").is_empty());
+    }
+
+    #[test]
+    fn whitespace_ends_a_run_on_windows_too() {
+        assert_eq!(windows(r"C:\Program Files\VC"), [r"C:\Program"]);
+    }
+
     /// The rule restated as data, so that widening it takes editing this
     /// list and saying why.
     const ROOTING_BYTES: &[u8] = b"\t\n\x0C\r \"',:=[";
@@ -474,28 +580,56 @@ mod tests {
     /// What a shell adds to [`ROOTING_BYTES`].
     const ROOTING_IN_A_SHELL: &[u8] = b"&;<>|";
 
+    /// What Windows adds to [`ROOTING_BYTES`]: its list separator.
+    const ROOTING_ON_WINDOWS: &[u8] = b";";
+
     /// Found by trying each byte rather than by consulting the rule under
     /// test.
-    fn rooting_bytes(kind: SiteKind) -> Vec<u8> {
+    fn rooting_bytes(kind: SiteKind, style: PathStyle) -> Vec<u8> {
+        let path = match style {
+            PathStyle::Unix => "/usr/lib",
+            PathStyle::Windows => r"C:\lib",
+        };
         (0u8..=127)
             .filter(|byte| {
-                let text = format!("x{}/usr/lib", *byte as char);
-                !absolute_paths(&text, kind).is_empty()
+                let text = format!("x{}{path}", *byte as char);
+                !absolute_paths(&text, kind, style).is_empty()
             })
             .collect()
     }
 
+    fn sorted(parts: &[&[u8]]) -> Vec<u8> {
+        let mut bytes = parts.concat();
+        bytes.sort_unstable();
+        bytes
+    }
+
     #[test]
     fn exactly_the_listed_bytes_root_a_path() {
-        assert_eq!(rooting_bytes(SiteKind::Plain), ROOTING_BYTES);
+        assert_eq!(
+            rooting_bytes(SiteKind::Plain, PathStyle::Unix),
+            ROOTING_BYTES,
+        );
     }
 
     #[test]
     fn a_script_adds_its_operators_and_nothing_else() {
-        let mut expected: Vec<u8> =
-            [ROOTING_BYTES, ROOTING_IN_A_SHELL].concat();
-        expected.sort_unstable();
-        assert_eq!(rooting_bytes(SiteKind::Shell), expected);
+        assert_eq!(
+            rooting_bytes(SiteKind::Shell, PathStyle::Unix),
+            sorted(&[ROOTING_BYTES, ROOTING_IN_A_SHELL]),
+        );
+    }
+
+    #[test]
+    fn windows_adds_its_list_separator_and_nothing_else() {
+        assert_eq!(
+            rooting_bytes(SiteKind::Plain, PathStyle::Windows),
+            sorted(&[ROOTING_BYTES, ROOTING_ON_WINDOWS]),
+        );
+        assert_eq!(
+            rooting_bytes(SiteKind::Shell, PathStyle::Windows),
+            sorted(&[ROOTING_BYTES, ROOTING_IN_A_SHELL]),
+        );
     }
 
     #[test]
@@ -521,7 +655,7 @@ mod tests {
         for byte in b" \t\n\"'=:,;|&<>()^$#!" {
             let text = format!("/usr/lib{}x", *byte as char);
             assert_eq!(
-                absolute_paths(&text, SiteKind::Shell),
+                shell(&text),
                 vec!["/usr/lib"],
                 "{text:?} should end the run at the separator",
             );
@@ -587,40 +721,53 @@ mod tests {
     /// The bytes whose interactions decide every rule above.
     const PROBE_ALPHABET: &[u8] = b"/a.\\\"'[]}$<*= ";
 
-    /// Call `check` with every string of `length` bytes over
-    /// [`PROBE_ALPHABET`].
-    fn every_probe_string(length: u32, mut check: impl FnMut(&str)) {
-        let base = PROBE_ALPHABET.len() as u32;
+    /// [`PROBE_ALPHABET`] for Windows, whose `a:` is a drive.
+    const PROBE_ALPHABET_ON_WINDOWS: &[u8] = b"/a.\\\"'[]:*=; ";
+
+    /// Call `check` with every string of `length` bytes over `alphabet`.
+    fn every_probe_string(
+        alphabet: &[u8],
+        length: u32,
+        mut check: impl FnMut(&str),
+    ) {
+        let base = alphabet.len() as u32;
         let mut buffer = Vec::with_capacity(length as usize);
         for mut code in 0..base.pow(length) {
             buffer.clear();
             for _ in 0..length {
-                buffer.push(PROBE_ALPHABET[(code % base) as usize]);
+                buffer.push(alphabet[(code % base) as usize]);
                 code /= base;
             }
             check(std::str::from_utf8(&buffer).expect("ASCII is UTF-8"));
         }
     }
 
-    #[test]
-    fn whatever_is_returned_is_a_rooted_substring_of_the_text() {
+    /// How many probe strings over `alphabet` hold a path in `style`,
+    /// asserting that every path found is a rooted substring of its text.
+    fn probe(style: PathStyle, alphabet: &[u8], length: u32) -> usize {
         let mut with_a_path = 0;
         for kind in [SiteKind::Plain, SiteKind::Shell] {
-            for length in 1..=4 {
-                every_probe_string(length, |text| {
+            for length in 1..=length {
+                every_probe_string(alphabet, length, |text| {
                     let mut cursor = 0;
-                    let found = absolute_paths(text, kind);
+                    let found = absolute_paths(text, kind, style);
                     with_a_path += usize::from(!found.is_empty());
                     for path in found {
-                        assert!(
-                            path.starts_with('/') && path.len() >= 2,
-                            "{path:?} from {text:?} is not rooted",
-                        );
-                        for byte in path.bytes() {
+                        let root = style
+                            .root(path.as_bytes(), 0)
+                            .filter(|&root| path.len() > root)
+                            .unwrap_or_else(|| {
+                                panic!(
+                                    "{path:?} from {text:?} is not rooted"
+                                )
+                            });
+                        for byte in path.bytes().skip(root) {
                             assert!(
                                 continues_path_run(byte)
                                     || byte == b'['
-                                    || byte == b']',
+                                    || byte == b']'
+                                    || byte == b'\\'
+                                        && style == PathStyle::Windows,
                                 "{path:?} from {text:?} holds {byte:?}",
                             );
                         }
@@ -632,14 +779,29 @@ mod tests {
                 });
             }
         }
-        assert_eq!(with_a_path, 1516);
+        with_a_path
+    }
+
+    #[test]
+    fn whatever_is_returned_is_a_rooted_substring_of_the_text() {
+        assert_eq!(probe(PathStyle::Unix, PROBE_ALPHABET, 4), 1516);
+        assert_eq!(
+            probe(PathStyle::Windows, PROBE_ALPHABET_ON_WINDOWS, 5),
+            192,
+        );
     }
 
     #[test]
     fn the_operand_of_a_shell_is_the_script() {
-        for program in
-            ["/bin/bash", "bash", "external/x/bin/sh", "/bin/zsh", "ksh"]
-        {
+        for program in [
+            "/bin/bash",
+            "bash",
+            "external/x/bin/sh",
+            "/bin/zsh",
+            "ksh",
+            "C:/msys64/usr/bin/bash.exe",
+            r"C:\msys64\usr\bin\bash.exe",
+        ] {
             let action =
                 action_with_args("A", 1, &[program, "-c", "echo hi"]);
             assert_eq!(
@@ -955,6 +1117,35 @@ mod tests {
                     .to_owned(),
             },
         );
+    }
+
+    #[test]
+    fn windows_paths_are_found_and_switches_are_not() {
+        let c = container(vec![
+            action_with_args(
+                "CppCompile",
+                1,
+                &["cl.exe", "/nologo", "/Ibazel-out/bin", "/c", "a.c"],
+            ),
+            action_with_env(
+                "CppCompile",
+                1,
+                &[("INCLUDE", r"C:\VC\include;C:\SDK\include")],
+            ),
+        ]);
+        let found = super::check(
+            &ResolvedAction::all(&c, &Library::default()),
+            &crate::checks::target_labels(&c),
+            PathStyle::Windows,
+        );
+        let paths: Vec<&str> = found
+            .iter()
+            .map(|violation| match violation {
+                Violation::AbsolutePath { path, .. } => path.as_str(),
+                other => panic!("{other:?}"),
+            })
+            .collect();
+        assert_eq!(paths, [r"C:\VC\include", r"C:\SDK\include"]);
     }
 
     #[test]

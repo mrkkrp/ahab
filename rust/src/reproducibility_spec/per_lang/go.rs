@@ -8,14 +8,9 @@ fn go_sdk(path: &str) -> ProgramId {
 
 /// The metadata merger shipped by rules_webtesting.
 fn metadata_merger(platform: &str) -> ProgramId {
-    let extension = if platform == "windows_x64" {
-        ".exe"
-    } else {
-        ""
-    };
     ProgramId::module(
         "rules_webtesting",
-        &format!("go/metadata/main/main_{platform}{extension}"),
+        &format!("go/metadata/main/main_{platform}"),
     )
 }
 
