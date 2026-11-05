@@ -23,6 +23,19 @@
   reason. Stamped build info is still reported, by the workspace status
   check.
 
+* clang that links may be given `-resource-dir` instead of
+  `-no-canonical-prefixes`. What a link records from where clang is
+  installed, such as a sanitizer runtime's rpath on macOS, comes from the
+  resource directory, and naming that directory keeps the path relative.
+  An invocation with a source or a header among its arguments still needs
+  `-no-canonical-prefixes`, since headers installed next to clang are named
+  by the path its symlinks resolve to.
+
+* `-ffile-compilation-dir` is accepted, like `-fdebug-compilation-dir`, as
+  what keeps the execution root out of clang's debugging information. It
+  names the compilation directory for coverage mapping too, and a
+  compilation passing it with `-g` was reported for no reason.
+
 ## Ahab 0.4.0
 
 * A reproducibility spec file naming a program outside the build, such as

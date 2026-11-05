@@ -1,0 +1,13 @@
+{
+  "repo": "https://github.com/hermeticbuild/hermetic-llvm",
+  "commit": "6314688712edf3a95f78642d80393868256b4ef2",
+  "label": "//...",
+  "configs": [],
+  "flags": [
+    "--bes_backend=",
+    "--experimental_remote_downloader=",
+    "--remote_cache="
+  ],
+  "workspace": "e2e/rules_cc",
+  "weight": 2
+}
