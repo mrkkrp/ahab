@@ -36,6 +36,13 @@
   names the compilation directory for coverage mapping too, and a
   compilation passing it with `-g` was reported for no reason.
 
+* toolchains_llvm's programs are recognized under Bzlmod, where its
+  extension generates a repository such as
+  `toolchains_llvm++llvm+llvm_toolchain`. They were recognized only in a
+  WORKSPACE repository named `llvm_toolchain`, so with Bzlmod every compile,
+  link and archive step was an unknown program. Its `llvm-strip`,
+  `llvm-dwp` and, on macOS, `libtool` are recognized too.
+
 ## Ahab 0.4.0
 
 * A reproducibility spec file naming a program outside the build, such as

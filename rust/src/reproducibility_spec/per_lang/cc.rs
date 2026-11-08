@@ -7,12 +7,27 @@ fn local_config_cc(path: &str) -> ProgramId {
     ProgramId::extension("rules_cc", "cc_configure_extension", path)
 }
 
-/// A program in the LLVM that `toolchains_llvm` downloads and unpacks.
-/// Unlike the one configuration finds on the machine, this compiler is a
-/// pinned artifact of the build, which is what makes it answerable at all.
+/// A program in the repository toolchains_llvm's `llvm` extension generates
+/// for a toolchain, whatever the toolchain is named.
+fn toolchains_llvm(path: &str) -> ProgramId {
+    ProgramId::extension("toolchains_llvm", "llvm", path)
+}
+
+/// The same program where a WORKSPACE declares that repository under its
+/// conventional name.
 fn llvm_toolchain(path: &str) -> ProgramId {
     ProgramId::module("llvm_toolchain", path)
 }
+
+/// What actions run from toolchains_llvm's `bin/`: its compiler wrapper and
+/// the downloaded LLVM's tools it links there, `libtool` on macOS.
+const TOOLCHAINS_LLVM_TOOLS: [&str; 5] = [
+    "bin/cc_wrapper.sh",
+    "bin/llvm-ar",
+    "bin/llvm-strip",
+    "bin/libtool",
+    "bin/llvm-dwp",
+];
 
 /// A prebuilt tool from the `llvm` module's `llvm_toolchain_minimal`.
 fn minimal_llvm(path: &str) -> ProgramId {
@@ -147,7 +162,7 @@ fn ar_operation(arg: &str) -> String {
 /// Everything Ahab knows about C++ builds, in source order.
 pub(in crate::reproducibility_spec) fn entries() -> Vec<(ProgramId, Entry)>
 {
-    vec![
+    let mut entries = vec![
         // The compiler, one step removed. Its last line execs the `gcc` or
         // `clang` that configuration found, by absolute path.
         (
@@ -168,7 +183,7 @@ pub(in crate::reproducibility_spec) fn entries() -> Vec<(ProgramId, Entry)>
         // was downloaded rather than found, so it is as pinned as any other
         // input and the question becomes what it is asked to do.
         (
-            llvm_toolchain("bin/cc_wrapper.sh"),
+            toolchains_llvm("bin/cc_wrapper.sh"),
             Entry::Spec(
                 ReproducibilitySpec::of(Reproducibility::Sometimes)
                     .with_clauses(clang_clauses(), []),
@@ -176,7 +191,7 @@ pub(in crate::reproducibility_spec) fn entries() -> Vec<(ProgramId, Entry)>
         ),
         (
             minimal_llvm("bin/clang"),
-            Entry::SameAs(llvm_toolchain("bin/cc_wrapper.sh")),
+            Entry::SameAs(toolchains_llvm("bin/cc_wrapper.sh")),
         ),
         (
             minimal_llvm("bin/clang++"),
@@ -232,7 +247,7 @@ pub(in crate::reproducibility_spec) fn entries() -> Vec<(ProgramId, Entry)>
         // group, none of which is a property of the code. `D` zeroes all
         // three; Bazel asks for it as `rcsD`.
         (
-            llvm_toolchain("bin/llvm-ar"),
+            toolchains_llvm("bin/llvm-ar"),
             Entry::Spec(
                 ReproducibilitySpec::new(
                     Reproducibility::Sometimes,
@@ -244,7 +259,7 @@ pub(in crate::reproducibility_spec) fn entries() -> Vec<(ProgramId, Entry)>
         ),
         (
             minimal_llvm("bin/llvm-ar"),
-            Entry::SameAs(llvm_toolchain("bin/llvm-ar")),
+            Entry::SameAs(toolchains_llvm("bin/llvm-ar")),
         ),
         // The archiver for Apple platforms zeroes the same fields unless
         // given -U, which it refuses to combine with -D.
@@ -267,7 +282,25 @@ pub(in crate::reproducibility_spec) fn entries() -> Vec<(ProgramId, Entry)>
             llvm_internal("static-library-validator"),
             Entry::Spec(always()),
         ),
-    ]
+        // toolchains_llvm links the downloaded LLVM's tools into its
+        // `bin/`, the same programs as the llvm module's prebuilt ones.
+        (
+            toolchains_llvm("bin/llvm-strip"),
+            Entry::SameAs(minimal_llvm("bin/llvm-strip")),
+        ),
+        (
+            toolchains_llvm("bin/libtool"),
+            Entry::SameAs(minimal_llvm("bin/llvm-libtool-darwin")),
+        ),
+        (
+            toolchains_llvm("bin/llvm-dwp"),
+            Entry::SameAs(minimal_llvm("bin/llvm-dwp")),
+        ),
+    ];
+    entries.extend(TOOLCHAINS_LLVM_TOOLS.map(|tool| {
+        (llvm_toolchain(tool), Entry::SameAs(toolchains_llvm(tool)))
+    }));
+    entries
 }
 
 #[cfg(test)]
@@ -314,7 +347,7 @@ mod tests {
             flags.extend(["-resource-dir", "rel/res"]);
             flags.extend(invocation.iter());
             assert_eq!(
-                missing(llvm_toolchain("bin/cc_wrapper.sh"), flags)
+                missing(toolchains_llvm("bin/cc_wrapper.sh"), flags)
                     .iter()
                     .map(String::as_str)
                     .collect::<Vec<_>>(),
@@ -353,13 +386,13 @@ mod tests {
     #[test]
     fn a_compilation_must_define_the_date_macros_away() {
         assert_eq!(
-            assess(llvm_toolchain("bin/cc_wrapper.sh"), clang_args()),
+            assess(toolchains_llvm("bin/cc_wrapper.sh"), clang_args()),
             Conformance::Reproducible,
         );
         for macro_name in DATE_MACROS {
             let flags = clang_without(&format!("-D{macro_name}="));
             assert_eq!(
-                missing(llvm_toolchain("bin/cc_wrapper.sh"), flags)
+                missing(toolchains_llvm("bin/cc_wrapper.sh"), flags)
                     .iter()
                     .map(String::as_str)
                     .collect::<Vec<_>>(),
@@ -374,7 +407,7 @@ mod tests {
         let mut flags = clang_without("-D__");
         flags.retain(|arg| *arg != "-c");
         assert_eq!(
-            assess(llvm_toolchain("bin/cc_wrapper.sh"), flags),
+            assess(toolchains_llvm("bin/cc_wrapper.sh"), flags),
             Conformance::Reproducible,
         );
     }
@@ -384,7 +417,7 @@ mod tests {
         let mut flags = clang_args();
         flags.extend(["-g", "-gsplit-dwarf"]);
         assert_eq!(
-            missing(llvm_toolchain("bin/cc_wrapper.sh"), flags),
+            missing(toolchains_llvm("bin/cc_wrapper.sh"), flags),
             remedies(),
         );
 
@@ -397,7 +430,7 @@ mod tests {
             let mut flags = clang_args();
             flags.extend(["-g", remedy]);
             assert_eq!(
-                assess(llvm_toolchain("bin/cc_wrapper.sh"), flags),
+                assess(toolchains_llvm("bin/cc_wrapper.sh"), flags),
                 Conformance::Reproducible,
                 "{remedy}",
             );
@@ -409,14 +442,14 @@ mod tests {
         let mut off = clang_args();
         off.extend(["-g", "-g0"]);
         assert_eq!(
-            assess(llvm_toolchain("bin/cc_wrapper.sh"), off),
+            assess(toolchains_llvm("bin/cc_wrapper.sh"), off),
             Conformance::Reproducible,
         );
 
         let mut on = clang_args();
         on.extend(["-g0", "-g"]);
         assert_eq!(
-            missing(llvm_toolchain("bin/cc_wrapper.sh"), on),
+            missing(toolchains_llvm("bin/cc_wrapper.sh"), on),
             remedies(),
         );
     }
@@ -432,7 +465,7 @@ mod tests {
             "bazel-out/k8-fastbuild/bin/source/exe/libmain.a",
         ];
         assert_eq!(
-            missing(llvm_toolchain("bin/cc_wrapper.sh"), linking.to_vec()),
+            missing(toolchains_llvm("bin/cc_wrapper.sh"), linking.to_vec()),
             canonicalization_remedies(),
         );
         for named in [
@@ -442,7 +475,7 @@ mod tests {
         ] {
             assert_eq!(
                 assess(
-                    llvm_toolchain("bin/cc_wrapper.sh"),
+                    toolchains_llvm("bin/cc_wrapper.sh"),
                     [named, &linking].concat(),
                 ),
                 Conformance::Reproducible,
@@ -466,14 +499,14 @@ mod tests {
         let mut deterministic = vec!["rcsD"];
         deterministic.extend(archive.iter());
         assert_eq!(
-            assess(llvm_toolchain("bin/llvm-ar"), deterministic),
+            assess(toolchains_llvm("bin/llvm-ar"), deterministic),
             Conformance::Reproducible,
         );
 
         let mut plain = vec!["rcs"];
         plain.extend(archive.iter());
         assert_eq!(
-            missing(llvm_toolchain("bin/llvm-ar"), plain)
+            missing(toolchains_llvm("bin/llvm-ar"), plain)
                 .iter()
                 .map(String::as_str)
                 .collect::<Vec<_>>(),
@@ -486,7 +519,7 @@ mod tests {
         for spelling in ["rcsD", "rDcs", "Drcs", "rcsDD"] {
             assert_eq!(
                 assess(
-                    llvm_toolchain("bin/llvm-ar"),
+                    toolchains_llvm("bin/llvm-ar"),
                     vec![spelling, "libx.lo", "y.o"],
                 ),
                 Conformance::Reproducible,
@@ -500,7 +533,7 @@ mod tests {
         assert_eq!(ar_operation("bazel-out/x/D.o"), "bazel-out/x/D.o");
         assert_eq!(
             missing(
-                llvm_toolchain("bin/llvm-ar"),
+                toolchains_llvm("bin/llvm-ar"),
                 vec!["rcs", "bazel-out/x/D.o"],
             )
             .len(),
@@ -639,6 +672,38 @@ mod tests {
         );
     }
 
+    #[test]
+    fn toolchains_llvm_tools_resolve_from_bzlmod_and_workspace_paths() {
+        for repo in [
+            "external/toolchains_llvm++llvm+llvm_toolchain",
+            "external/toolchains_llvm++llvm+current_llvm_toolchain",
+            "external/toolchains_llvm~~llvm~llvm_toolchain",
+            "external/llvm_toolchain",
+        ] {
+            for (tool, args) in [
+                ("bin/cc_wrapper.sh", clang_args()),
+                ("bin/llvm-ar", vec!["rcsD", "libx.a", "x.o"]),
+                ("bin/llvm-strip", vec!["-S", "-o", "out/x", "out/x.u"]),
+                ("bin/libtool", vec!["-static", "-o", "libx.a", "x.o"]),
+                ("bin/llvm-dwp", vec!["x.dwo", "-o", "x.dwp"]),
+            ] {
+                let path = format!("{repo}/{tool}");
+                assert_eq!(
+                    assess(ProgramId::of(&path), args),
+                    Conformance::Reproducible,
+                    "{path}",
+                );
+            }
+        }
+        assert_eq!(
+            missing(
+                ProgramId::of("external/llvm_toolchain/bin/cc_wrapper.sh"),
+                clang_without("-D__DATE__="),
+            ),
+            BTreeSet::from(["-D__DATE__=*".to_owned()]),
+        );
+    }
+
     const LINK_WRAPPER: &str = "bazel-out/darwin_arm64-fastbuild/bin/external/llvm+/tools/internal/link-wrapper-clang++/link-wrapper-clang++";
     const HEADER_PARSER: &str = "bazel-out/k8-fastbuild/bin/external/llvm+/tools/internal/header-parser/header-parser";
 
@@ -672,7 +737,7 @@ mod tests {
             panic!("{found:?}");
         };
         assert_eq!(*program, llvm_internal("header-parser"));
-        assert_eq!(*synonym, Some(llvm_toolchain("bin/cc_wrapper.sh")));
+        assert_eq!(*synonym, Some(toolchains_llvm("bin/cc_wrapper.sh")));
         assert_eq!(unmet.len(), 1);
         assert_eq!(
             unmet[0].any_of,
@@ -708,7 +773,7 @@ mod tests {
             panic!("{found:?}");
         };
         assert_eq!(*program, llvm_internal("link-wrapper-clang++"));
-        assert_eq!(*synonym, Some(llvm_toolchain("bin/cc_wrapper.sh")));
+        assert_eq!(*synonym, Some(toolchains_llvm("bin/cc_wrapper.sh")));
         assert_eq!(unmet[0].any_of, canonicalization_remedies());
     }
 }

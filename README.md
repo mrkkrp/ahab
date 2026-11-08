@@ -442,9 +442,10 @@ unmet, so it should finish the sentence "this is not reproducible because…":
 ```
 reproducibility violation: CppCompile action for target
 //source/common/common:assert_lib runs program
-"@llvm_toolchain//bin/cc_wrapper.sh" non-reproducibly: debugging information
-records the directory it was compiled in, but none of
--fdebug-compilation-dir=* -ffile-prefix-map=* was passed
+"@toolchains_llvm+llvm//bin/cc_wrapper.sh" non-reproducibly: debugging
+information records the directory it was compiled in, which is the
+execution root, but none of -fdebug-compilation-dir=* -fdebug-prefix-map=*
+-ffile-compilation-dir=* -ffile-prefix-map=* was passed
 ```
 
 `required_flags` and `breaking_flags` remain the short way to write the
