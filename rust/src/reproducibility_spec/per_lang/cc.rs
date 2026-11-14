@@ -75,11 +75,12 @@ const SOURCES_AND_HEADERS: &[&str] = &[
 ];
 
 /// The clauses for what clang does. One program compiles, links and
-/// preprocesses, so most are guarded: the date macros on `-c`, the stricter
-/// canonicalization clause on a source or header among the arguments, and
-/// the last on the family of flags that emits debugging information.
+/// preprocesses, so most are guarded: the date macros on the modes whose
+/// output carries their expansion, the stricter canonicalization clause on
+/// a source or header among the arguments, and the last on the family of
+/// flags that emits debugging information.
 fn clang_clauses() -> Vec<Clause> {
-    let compiling = Guard::on(["-c"]);
+    let writes_expansions = Guard::on(["-c", "-S", "-E"]);
     let emits_debug_info = Guard::toggled(
         [
             "-g",
@@ -98,7 +99,7 @@ fn clang_clauses() -> Vec<Clause> {
         .iter()
         .map(|macro_name| {
             Clause::new(
-                Some(compiling.clone()),
+                Some(writes_expansions.clone()),
                 [format!("-D{macro_name}=*")],
                 &format!(
                     "a source mentioning {macro_name} records when it was \
@@ -183,7 +184,9 @@ pub(in crate::reproducibility_spec) fn entries() -> Vec<(ProgramId, Entry)>
             toolchains_llvm("bin/cc_wrapper.sh"),
             Entry::Spec(
                 ReproducibilitySpec::of(Reproducibility::Sometimes)
-                    .with_clauses(clang_clauses(), []),
+                    .with_clauses(clang_clauses(), [])
+                    // To the linker, `-E` exports dynamic symbols.
+                    .with_valued_flags(["-Xlinker"]),
             ),
         ),
         (
@@ -378,31 +381,52 @@ mod tests {
             .collect()
     }
 
+    /// `flags` with `-c` replaced by another mode.
+    fn in_mode(
+        flags: Vec<&'static str>,
+        mode: &'static str,
+    ) -> Vec<&'static str> {
+        flags
+            .into_iter()
+            .map(|arg| if arg == "-c" { mode } else { arg })
+            .collect()
+    }
+
     #[test]
-    fn a_compilation_must_define_the_date_macros_away() {
-        assert_eq!(
-            assess(toolchains_llvm("bin/cc_wrapper.sh"), clang_args()),
-            Conformance::Reproducible,
-        );
-        for macro_name in DATE_MACROS {
-            let flags = clang_without(&format!("-D{macro_name}="));
+    fn the_date_macros_are_asked_of_c_s_and_e() {
+        for mode in ["-c", "-S", "-E"] {
             assert_eq!(
-                missing(toolchains_llvm("bin/cc_wrapper.sh"), flags)
-                    .iter()
-                    .map(String::as_str)
-                    .collect::<Vec<_>>(),
-                vec![format!("-D{macro_name}=*")],
-                "{macro_name}",
+                assess(
+                    toolchains_llvm("bin/cc_wrapper.sh"),
+                    in_mode(clang_args(), mode),
+                ),
+                Conformance::Reproducible,
+                "{mode}",
             );
+            for macro_name in DATE_MACROS {
+                let flags = in_mode(
+                    clang_without(&format!("-D{macro_name}=")),
+                    mode,
+                );
+                assert_eq!(
+                    missing(toolchains_llvm("bin/cc_wrapper.sh"), flags)
+                        .iter()
+                        .map(String::as_str)
+                        .collect::<Vec<_>>(),
+                    vec![format!("-D{macro_name}=*")],
+                    "{mode} {macro_name}",
+                );
+            }
         }
     }
 
     #[test]
-    fn the_date_macros_are_only_asked_of_a_compilation() {
-        let mut flags = clang_without("-D__");
-        flags.retain(|arg| *arg != "-c");
+    fn the_date_macros_are_not_asked_of_a_syntax_check() {
         assert_eq!(
-            assess(toolchains_llvm("bin/cc_wrapper.sh"), flags),
+            assess(
+                toolchains_llvm("bin/cc_wrapper.sh"),
+                in_mode(clang_without("-D__"), "-fsyntax-only"),
+            ),
             Conformance::Reproducible,
         );
     }
