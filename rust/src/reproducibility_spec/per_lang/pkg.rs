@@ -79,9 +79,9 @@ fn bsdtar_spec() -> ReproducibilitySpec {
 /// Everything Ahab knows about packaging, in source order.
 pub(in crate::reproducibility_spec) fn entries() -> Vec<(ProgramId, Entry)>
 {
-    // rules_pkg hands in each entry's time, owner and mode. `--mtime` is
-    // the one with no default: leave it out and the timestamp comes from
-    // whatever the tree said. `--preserve_mtime` asks for the opposite.
+    // rules_pkg hands in each entry's time, owner and mode. Without
+    // `--mtime` the time is zero, and only `--preserve_mtime` lets the
+    // files' own through.
     //
     // Not stated here: `--stamp_from`, which is a dependency rather than a
     // flag and which the workspace status check already reads off the
@@ -92,7 +92,7 @@ pub(in crate::reproducibility_spec) fn entries() -> Vec<(ProgramId, Entry)>
     let tar = Entry::Spec(
         ReproducibilitySpec::new(
             Reproducibility::Sometimes,
-            ["--mtime=*"],
+            [] as [&str; 0],
             ["--preserve_mtime"],
         )
         .with_valued_flags(TAR_PATH_FLAGS)
@@ -186,15 +186,12 @@ mod tests {
     }
 
     #[test]
-    fn a_tar_with_no_mtime_is_reported() {
+    fn a_tar_told_no_mtime_gets_zero_and_is_reproducible() {
         let flags: Vec<&str> = tar_args()
             .into_iter()
             .filter(|arg| !arg.starts_with("--mtime="))
             .collect();
-        assert_eq!(
-            missing(build_tar(), flags).iter().collect::<Vec<_>>(),
-            vec!["--mtime=*"],
-        );
+        assert_eq!(assess(build_tar(), flags), Conformance::Reproducible);
     }
 
     #[test]
