@@ -310,6 +310,10 @@ fn absolute_paths(
                 word_begins = true;
                 continue;
             }
+            // `$'…'` and `$"…"` are quotes too.
+            b'$' if shell
+                && unquoted
+                && matches!(bytes.get(at + 1), Some(b'\'' | b'"')) => {}
             b'\'' | b'"' => {
                 may_start = match quote {
                     Some(open) if open == byte => {
@@ -709,6 +713,8 @@ mod tests {
         assert!(shell("cp ${pwd}\"/external/x\" .").is_empty());
         assert_eq!(shell("cp \"/opt/x\" ."), vec!["/opt/x"]);
         assert_eq!(shell("cc -DX=\"/opt/x\" x.c"), vec!["/opt/x"]);
+        assert_eq!(shell("echo $'/opt/x'"), vec!["/opt/x"]);
+        assert!(shell("echo x$'/opt/x'").is_empty());
     }
 
     #[test]
@@ -997,7 +1003,7 @@ mod tests {
 
     #[test]
     fn whatever_is_returned_is_a_rooted_substring_of_the_text() {
-        assert_eq!(probe(PathStyle::Unix, PROBE_ALPHABET, 4), 792);
+        assert_eq!(probe(PathStyle::Unix, PROBE_ALPHABET, 4), 794);
         assert_eq!(
             probe(PathStyle::Windows, PROBE_ALPHABET_ON_WINDOWS, 5),
             100,
