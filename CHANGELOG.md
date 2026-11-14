@@ -67,6 +67,13 @@
   and `-ggdb0` turns it off as `-g0` does. `-gz`, `-gsplit-dwarf` and
   `-gdwarf-aranges` no longer count, since on their own they emit none.
 
+* The `bazel aquery` Ahab runs uses the project's own output user root when
+  the output base is set explicitly, by `--output-base` or by a `startup
+  --output_base` in an rc file. It took the output base's parent instead,
+  which differs from the project's root except in Bazel's default layout,
+  so it restarted the project's Bazel server and put a fresh install base
+  and repository cache next to the output base.
+
 ## Ahab 0.4.0
 
 * A reproducibility spec file naming a program outside the build, such as
