@@ -82,6 +82,17 @@
   reported is `--preserve_mtime`, as before, and an `--invalidation_mode`
   of `timestamp` or `TIMESTAMP`.
 
+* A genrule's `cmd`, and any other script given to a shell with `-c`, is
+  read more as the shell reads it. A heredoc's body is text rather than
+  script, so markup in it, as in an `Info.plist` written with `cat <<EOF`,
+  is not taken for redirections and reported as `/key` or `/dict`. A `\`
+  makes the next character data, comments are skipped, and `(`, `$(` and
+  backticks begin a word, so `x=$(/bin/date)` is reported. A quote glued
+  onto a word, as in `${pwd}"/external/x"`, no longer begins a path.
+
+* A run holding no letter or digit after its root, such as `/.-` in the
+  regex class `[/.-]`, is no longer reported as an absolute path.
+
 ## Ahab 0.4.0
 
 * A reproducibility spec file naming a program outside the build, such as
