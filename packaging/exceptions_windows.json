@@ -10,6 +10,11 @@
       "kind": "absolute_path",
       "mnemonic": "Cpp*",
       "location": "env_var"
+    },
+    {
+      "reason": "the MSVC toolchain puts the machine's Visual Studio and Windows SDK directories on its actions' PATH",
+      "kind": "bad_path",
+      "mnemonic": "Cpp*"
     }
   ]
 }
