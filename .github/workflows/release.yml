@@ -47,7 +47,7 @@ jobs:
         with:
           ref: ${{ inputs.tag || github.ref_name }}
       - name: Set up Bazel
-        uses: bazel-contrib/setup-bazel@0.19.1
+        uses: bazel-contrib/setup-bazel@0.19.2
         with:
           bazelisk-cache: true
           disk-cache: ${{ github.workflow }}-${{ matrix.platform }}
@@ -108,7 +108,7 @@ jobs:
             runner: windows-2025
     steps:
       - name: Set up Bazel
-        uses: bazel-contrib/setup-bazel@0.19.1
+        uses: bazel-contrib/setup-bazel@0.19.2
         with:
           bazelisk-cache: true
       - name: Consume the release the way a consumer would
