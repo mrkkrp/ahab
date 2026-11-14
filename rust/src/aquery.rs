@@ -32,15 +32,16 @@ fn workspace_dir() -> Option<std::ffi::OsString> {
 
 /// Run `bazel info` with the *unmodified* environment and parse its `key:
 /// value` lines, learning the paths the project normally uses.
-fn bazel_info() -> Result<std::collections::HashMap<String, String>> {
+fn bazel_info(
+    output_base: Option<&str>,
+) -> Result<std::collections::HashMap<String, String>> {
     let mut command = Command::new("bazel");
-    command.arg("info");
-
-    // `bazel info` resolves `--platforms` without the main repository's
-    // mapping, so rc files pointing it at an external module
-    // (`--platforms=@myrepo//foo`) make it fail where a build would not.
-    // No key we read depends on the target platform.
-    command.arg("--platforms=@platforms//host");
+    if let Some(output_base) = output_base {
+        command.arg(format!("--output_base={output_base}"));
+    }
+    // Named, these keys need no build configuration, which would resolve
+    // the rc files' `--platforms` and fetch through their downloaders.
+    command.args(["info", "output_base", "install_base"]);
 
     if let Some(dir) = workspace_dir() {
         command.current_dir(dir);
@@ -78,8 +79,8 @@ fn bazel_info() -> Result<std::collections::HashMap<String, String>> {
 /// naively would send the nested `bazel` to a different server than the
 /// project uses and stall on the workspace lock. Both are therefore
 /// discovered with the unmodified environment and pinned as startup flags,
-/// so only the actions' environment changes. `output_base` overrides that
-/// discovery.
+/// so only the actions' environment changes. A given `output_base` is what
+/// the discovery starts from, and Bazel reports it back made absolute.
 pub fn run_aquery(
     configs: &[String],
     compilation_mode: Option<&str>,
@@ -88,26 +89,22 @@ pub fn run_aquery(
     env: &[(&str, &str)],
     output_base: Option<&str>,
 ) -> Result<ActionGraphContainer> {
-    let discovered;
-    let output_base = match output_base {
-        Some(given) => given,
-        None => {
-            discovered = bazel_info()?
-                .get("output_base")
-                .context(
-                    "`bazel info` did not report an \"output_base\" key",
-                )?
-                .clone();
-            &discovered
-        }
+    let info = bazel_info(output_base)?;
+    let reported = |key: &str| {
+        info.get(key).with_context(|| {
+            format!("`bazel info` did not report an {key:?} key")
+        })
     };
+    let output_base = reported("output_base")?;
 
-    // `bazel info` doesn't expose output_user_root, but it is the parent of
-    // output_base (the `_bazel_$USER` directory).
-    let output_user_root = std::path::Path::new(output_base)
+    // `bazel info` doesn't expose output_user_root, but it holds the
+    // install base as `install/<md5>`.
+    let install_base = reported("install_base")?;
+    let output_user_root = std::path::Path::new(install_base)
         .parent()
+        .and_then(std::path::Path::parent)
         .with_context(|| {
-            format!("output_base {output_base:?} has no parent directory")
+            format!("install_base {install_base:?} has no grandparent")
         })?
         .display();
 
