@@ -28,13 +28,61 @@ pub(crate) use templates::Templates;
 const CANONICAL_PATH_ENTRIES: [&str; 3] =
     ["/bin", "/usr/bin", "/usr/local/bin"];
 
-/// The absolute entries of `path` outside [`CANONICAL_PATH_ENTRIES`].
-fn ad_hoc_path_entries(path: &str) -> Vec<&str> {
-    path.split(':')
-        .filter(|e| {
-            e.starts_with('/') && !CANONICAL_PATH_ENTRIES.contains(e)
-        })
-        .collect()
+/// The directories under `%SystemRoot%`'s drive that Bazel's default `PATH`
+/// holds on Windows after its shell's, lowercased.
+const CANONICAL_WINDOWS_PATH_ENTRIES: [&str; 3] = [
+    r"windows",
+    r"windows\system32",
+    r"windows\system32\windowspowershell\v1.0",
+];
+
+/// The absolute entries of `path` that Bazel's default `PATH` does not
+/// hold.
+fn ad_hoc_path_entries(path: &str, style: PathStyle) -> Vec<&str> {
+    match style {
+        PathStyle::Unix => path
+            .split(':')
+            .filter(|e| {
+                e.starts_with('/') && !CANONICAL_PATH_ENTRIES.contains(e)
+            })
+            .collect(),
+        PathStyle::Windows => {
+            let entries: Vec<&str> = path.split(';').collect();
+            let shell = match entries[..] {
+                [first, second, ..] if is_shell_pair(first, second) => 2,
+                _ => 0,
+            };
+            entries[shell..]
+                .iter()
+                .copied()
+                .filter(|e| {
+                    let e = windows_case(e);
+                    style.root(e.as_bytes(), 0).is_some_and(|root| {
+                        !CANONICAL_WINDOWS_PATH_ENTRIES
+                            .contains(&&e[root..])
+                    })
+                })
+                .collect()
+        }
+    }
+}
+
+/// A Windows path in the one case and with the one separator it may be
+/// compared in.
+fn windows_case(path: &str) -> String {
+    path.replace('/', r"\").to_ascii_lowercase()
+}
+
+/// Whether two entries are the `usr\bin` and `bin` of one root, in either
+/// order, as Bazel puts its shell's directories at the head of `PATH`.
+fn is_shell_pair(first: &str, second: &str) -> bool {
+    let (first, second) = (windows_case(first), windows_case(second));
+    let pair = |usr: &str, bin: &str| {
+        usr.strip_suffix(r"\usr\bin")
+            .zip(bin.strip_suffix(r"\bin"))
+            .is_some_and(|(usr, bin)| usr == bin)
+    };
+    pair(&first, &second) || pair(&second, &first)
 }
 
 /// The action responsible for a violation.
@@ -254,8 +302,8 @@ pub(crate) enum Violation {
         sentinel: String,
         site: LeakSite,
     },
-    /// An action put an absolute directory outside [`CANONICAL_PATH_ENTRIES`]
-    /// on `PATH`.
+    /// An action's `PATH` holds an absolute directory that Bazel's default
+    /// `PATH` does not.
     BadPath { action: ActionRef, actual: String },
     /// An action declares it cannot run like an ordinary hermetic one.
     ExecutionRequirement {
@@ -637,7 +685,7 @@ pub(crate) fn check_all(
 
     let mut violations =
         check_environment_leaks(&resolved, &targets, user, hostname);
-    violations.extend(check_path(container, &targets));
+    violations.extend(check_path(container, &targets, style));
     violations.extend(absolute_paths::check(&resolved, &targets, style));
     violations.extend(check_execution_requirements(container, &targets));
     violations.extend(check_workspace_status(container, &targets));
@@ -906,18 +954,19 @@ fn check_environment_leaks(
     violations
 }
 
-/// One [`Violation`] per action whose `PATH` has an absolute entry outside
-/// [`CANONICAL_PATH_ENTRIES`].
+/// One [`Violation`] per action whose `PATH` has an
+/// [ad hoc entry](ad_hoc_path_entries).
 fn check_path(
     container: &ActionGraphContainer,
     targets: &HashMap<u32, &str>,
+    style: PathStyle,
 ) -> Vec<Violation> {
     let mut violations = Vec::new();
 
     for action in &container.actions {
         for kv in &action.environment_variables {
             if kv.key == "PATH"
-                && !ad_hoc_path_entries(&kv.value).is_empty()
+                && !ad_hoc_path_entries(&kv.value, style).is_empty()
             {
                 violations.push(Violation::BadPath {
                     action: ActionRef::of(action, targets),
@@ -1018,7 +1067,21 @@ pub(crate) mod tests {
     }
 
     fn check_path(container: &ActionGraphContainer) -> Vec<Violation> {
-        super::check_path(container, &target_labels(container))
+        super::check_path(
+            container,
+            &target_labels(container),
+            PathStyle::Unix,
+        )
+    }
+
+    fn check_windows_path(
+        container: &ActionGraphContainer,
+    ) -> Vec<Violation> {
+        super::check_path(
+            container,
+            &target_labels(container),
+            PathStyle::Windows,
+        )
     }
 
     fn check_execution_requirements(
@@ -1761,6 +1824,40 @@ pub(crate) mod tests {
             &[("HOME", "/home/nobody"), ("LANG", "C")],
         )]);
         assert!(check_path(&c).is_empty());
+    }
+
+    /// The `PATH` Bazel gives an action on Windows under a strict action
+    /// environment, its shell being MSYS2's bash.
+    const WINDOWS_DEFAULT_PATH: &str = r"C:\msys64\usr\bin;C:\msys64\bin;C:\WINDOWS;C:\WINDOWS\System32;C:\WINDOWS\System32\WindowsPowerShell\v1.0";
+
+    #[test]
+    fn bazels_default_path_on_windows_passes() {
+        for path in [
+            WINDOWS_DEFAULT_PATH,
+            r"C:\Program Files\Git\bin;C:\Program Files\Git\usr\bin;D:\Windows",
+            "C:/msys64/usr/bin;C:/msys64/bin;C:/Windows/System32",
+            r"bazel-out\x64_windows-fastbuild\bin\tools;C:\Windows",
+        ] {
+            let c =
+                container(vec![action_with_env("A", 1, &[("PATH", path)])]);
+            assert!(check_windows_path(&c).is_empty(), "{path}");
+        }
+    }
+
+    #[test]
+    fn ad_hoc_entries_on_windows_are_violations() {
+        for path in [
+            format!(r"{WINDOWS_DEFAULT_PATH};C:\Users\runner\bin"),
+            r"C:\Program Files\Microsoft Visual Studio\2022\Enterprise\VC\Tools\MSVC\14.44.35207\bin\HostX64\x64;C:\WINDOWS\system32".to_owned(),
+            r"C:\WINDOWS;C:\msys64\usr\bin;C:\msys64\bin".to_owned(),
+            r"C:\tools\usr\bin;C:\other\bin".to_owned(),
+        ] {
+            let c =
+                container(vec![action_with_env("A", 1, &[("PATH", &path)])]);
+            let found = check_windows_path(&c);
+            assert_eq!(found.len(), 1, "{path}");
+            assert_bad_path(&found[0], "A", 1, &path);
+        }
     }
 
     /// Assert that `v` is a [`Violation::UnknownProgram`] for the given action

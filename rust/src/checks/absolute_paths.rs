@@ -28,7 +28,7 @@ impl PathStyle {
 
     /// The length of the root beginning at `at`, if one does. A drive may
     /// be followed by several separators, as the escaped `C:\\` is.
-    fn root(self, bytes: &[u8], at: usize) -> Option<usize> {
+    pub(super) fn root(self, bytes: &[u8], at: usize) -> Option<usize> {
         match self {
             PathStyle::Unix => (bytes[at] == b'/').then_some(1),
             PathStyle::Windows => {
