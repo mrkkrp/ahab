@@ -54,6 +54,13 @@
   object does. An `-E` that `-Xlinker` hands to the linker, where it
   exports dynamic symbols, is not taken for clang's own.
 
+* clang compiling with `-fcoverage-mapping`, as `bazel coverage` does with
+  an LLVM toolchain, is asked to keep the execution root out of the
+  coverage mapping with `-fcoverage-compilation-dir`,
+  `-fcoverage-prefix-map`, `-ffile-compilation-dir` or `-ffile-prefix-map`.
+  The mapping records the directory it was compiled in, which nothing
+  checked, and `-fdebug-compilation-dir` does not reach it.
+
 ## Ahab 0.4.0
 
 * A reproducibility spec file naming a program outside the build, such as
