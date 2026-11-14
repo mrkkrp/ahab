@@ -43,6 +43,11 @@
   link and archive step was an unknown program. Its `llvm-strip`,
   `llvm-dwp` and, on macOS, `libtool` are recognized too.
 
+* `llvm-ar` is no longer required to be given the `D` modifier, which is
+  its default, so `rcs` was reported for no reason. What is reported is a
+  `U` that no later `D` overrides: `rcsDU` keeps each member's timestamp,
+  user and group, and passed because the order of the two was lost.
+
 ## Ahab 0.4.0
 
 * A reproducibility spec file naming a program outside the build, such as

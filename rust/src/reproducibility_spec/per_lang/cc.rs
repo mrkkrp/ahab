@@ -145,18 +145,15 @@ fn clang_clauses() -> Vec<Clause> {
 /// The letters `ar` accepts as its operation and modifiers.
 const AR_MODIFIERS: &str = "abcDdfhiLlNOoPpqrSsTtUuVvxX";
 
-/// Normalize how `ar`'s operation is spelled. Its letters may come in any
-/// order, so folding them to a sorted token under a name of its own lets a
-/// pattern require one without also matching a file that contains it.
-fn ar_operation(arg: &str) -> String {
-    if !arg.is_empty() && arg.chars().all(|c| AR_MODIFIERS.contains(c)) {
-        let mut letters: Vec<char> = arg.chars().collect();
-        letters.sort_unstable();
-        letters.dedup();
-        let letters: String = letters.into_iter().collect();
-        return format!("modifiers:{letters}");
+/// Read `ar`'s operation as the last of its `D` and `U` modifiers, which is
+/// the one that decides whether members keep their metadata.
+fn ar_mode(arg: &str) -> String {
+    match arg.chars().rfind(|c| matches!(c, 'D' | 'U')) {
+        Some(mode) if arg.chars().all(|c| AR_MODIFIERS.contains(c)) => {
+            mode.to_string()
+        }
+        _ => arg.to_owned(),
     }
-    arg.to_owned()
 }
 
 /// Everything Ahab knows about C++ builds, in source order.
@@ -243,18 +240,16 @@ pub(in crate::reproducibility_spec) fn entries() -> Vec<(ProgramId, Entry)>
                     .with_recognizer(strip_mode),
             ),
         ),
-        // An archiver stores each member's modification time, user and
-        // group, none of which is a property of the code. `D` zeroes all
-        // three; Bazel asks for it as `rcsD`.
+        // So does llvm-ar, with U and D among its operation's modifiers.
         (
             toolchains_llvm("bin/llvm-ar"),
             Entry::Spec(
-                ReproducibilitySpec::new(
-                    Reproducibility::Sometimes,
-                    ["modifiers:*D*"],
-                    [] as [&str; 0],
-                )
-                .with_recognizer(ar_operation),
+                ReproducibilitySpec::of(Reproducibility::Sometimes)
+                    .with_clauses(
+                        [],
+                        [Clause::new(None, ["U"], ARCHIVE_METADATA)],
+                    )
+                    .with_recognizer(ar_mode),
             ),
         ),
         (
@@ -493,52 +488,29 @@ mod tests {
     }
 
     #[test]
-    fn ar_is_reproducible_only_in_deterministic_mode() {
-        let archive = ["bazel-out/k8-fastbuild/bin/x/libx.lo", "y.o"];
-
-        let mut deterministic = vec!["rcsD"];
-        deterministic.extend(archive.iter());
-        assert_eq!(
-            assess(toolchains_llvm("bin/llvm-ar"), deterministic),
-            Conformance::Reproducible,
-        );
-
-        let mut plain = vec!["rcs"];
-        plain.extend(archive.iter());
-        assert_eq!(
-            missing(toolchains_llvm("bin/llvm-ar"), plain)
-                .iter()
-                .map(String::as_str)
-                .collect::<Vec<_>>(),
-            vec!["modifiers:*D*"],
-        );
-    }
-
-    #[test]
-    fn the_order_of_ars_modifiers_does_not_matter() {
-        for spelling in ["rcsD", "rDcs", "Drcs", "rcsDD"] {
+    fn ar_defaults_to_deterministic_archives_and_the_last_modifier_wins() {
+        let archive = ["bazel-out/k8-fastbuild/bin/x/libU.lo", "x/U.o"];
+        for operation in ["rcs", "rcsD", "rcsUD", "UrcsD"] {
             assert_eq!(
                 assess(
                     toolchains_llvm("bin/llvm-ar"),
-                    vec![spelling, "libx.lo", "y.o"],
+                    [&[operation][..], &archive].concat(),
                 ),
                 Conformance::Reproducible,
-                "{spelling}",
+                "{operation}",
             );
         }
-    }
-
-    #[test]
-    fn a_file_name_is_not_mistaken_for_ars_modifiers() {
-        assert_eq!(ar_operation("bazel-out/x/D.o"), "bazel-out/x/D.o");
-        assert_eq!(
-            missing(
-                toolchains_llvm("bin/llvm-ar"),
-                vec!["rcs", "bazel-out/x/D.o"],
-            )
-            .len(),
-            1,
-        );
+        for operation in ["rcsU", "rcsDU", "DrcsU"] {
+            assert_eq!(
+                assess(
+                    toolchains_llvm("bin/llvm-ar"),
+                    [&[operation][..], &archive].concat(),
+                )
+                .present_breaking(),
+                BTreeSet::from(["U".to_owned()]),
+                "{operation}",
+            );
+        }
     }
 
     #[test]
@@ -663,12 +635,12 @@ mod tests {
             );
         }
         assert_eq!(
-            missing(
+            assess(
                 ProgramId::of(&format!("{minimal}/bin/llvm-ar")),
-                vec!["rcs", "libx.a", "x.o"],
+                vec!["rcsU", "libx.a", "x.o"],
             )
-            .len(),
-            1,
+            .present_breaking(),
+            BTreeSet::from(["U".to_owned()]),
         );
     }
 
