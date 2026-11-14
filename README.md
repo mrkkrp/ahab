@@ -406,7 +406,7 @@ attached, and a sentence explaining themselves:
     },
     {
       "because": "debugging information records the directory it was compiled in",
-      "when": {"family": ["-g", "-gsplit-dwarf"], "off": ["-g0"]},
+      "when": {"family": ["-g", "-gline-tables-only"], "off": ["-g0"]},
       "any_of": ["-ffile-prefix-map=*", "-fdebug-compilation-dir=*"]
     }
   ]

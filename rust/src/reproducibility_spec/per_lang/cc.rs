@@ -81,18 +81,33 @@ const SOURCES_AND_HEADERS: &[&str] = &[
 /// that emit debugging information and coverage mapping.
 fn clang_clauses() -> Vec<Clause> {
     let writes_expansions = Guard::on(["-c", "-S", "-E"]);
+    // `-gz`, `-gsplit-dwarf` and `-gdwarf-aranges` only shape debugging
+    // information that another flag has to ask for.
     let emits_debug_info = Guard::toggled(
         [
             "-g",
             "-g1",
             "-g2",
             "-g3",
-            "-gdwarf*",
+            "-ggdb",
+            "-ggdb1",
+            "-ggdb2",
+            "-ggdb3",
+            "-glldb",
+            "-gsce",
+            "-gdbx",
+            "-gdwarf",
+            "-gdwarf-?",
+            "-gdwarf32",
+            "-gdwarf64",
             "-gline-tables-only",
-            "-gsplit-dwarf",
-            "-gz*",
+            "-gmlt",
+            "-gline-directives-only",
+            "-gmodules",
+            "-gfull",
+            "-gused",
         ],
-        ["-g0"],
+        ["-g0", "-ggdb0"],
     );
 
     let mut clauses: Vec<Clause> = DATE_MACROS
@@ -469,6 +484,47 @@ mod tests {
                 assess(toolchains_llvm("bin/cc_wrapper.sh"), flags),
                 Conformance::Reproducible,
                 "{remedy}",
+            );
+        }
+    }
+
+    #[test]
+    fn debugging_information_is_known_by_the_flags_that_emit_it() {
+        for on in [
+            "-g2",
+            "-ggdb",
+            "-ggdb3",
+            "-glldb",
+            "-gsce",
+            "-gdbx",
+            "-gdwarf-4",
+            "-gdwarf64",
+            "-gmlt",
+            "-gline-directives-only",
+            "-gmodules",
+            "-gused",
+        ] {
+            let mut flags = clang_args();
+            flags.push(on);
+            assert_eq!(
+                missing(toolchains_llvm("bin/cc_wrapper.sh"), flags),
+                remedies(),
+                "{on}",
+            );
+        }
+        for off in [
+            &["-gz"][..],
+            &["-gz=zlib"],
+            &["-gsplit-dwarf"],
+            &["-gdwarf-aranges"],
+            &["-ggdb3", "-ggdb0"],
+        ] {
+            let mut flags = clang_args();
+            flags.extend(off);
+            assert_eq!(
+                assess(toolchains_llvm("bin/cc_wrapper.sh"), flags),
+                Conformance::Reproducible,
+                "{off:?}",
             );
         }
     }

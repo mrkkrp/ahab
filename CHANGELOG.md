@@ -61,6 +61,12 @@
   The mapping records the directory it was compiled in, which nothing
   checked, and `-fdebug-compilation-dir` does not reach it.
 
+* clang's debugging information is recognized from the flags that emit
+  it: `-ggdb`, `-ggdb1` to `-ggdb3`, `-glldb`, `-gsce`, `-gdbx`, `-gmlt`,
+  `-gline-directives-only`, `-gmodules`, `-gfull` and `-gused` among them,
+  and `-ggdb0` turns it off as `-g0` does. `-gz`, `-gsplit-dwarf` and
+  `-gdwarf-aranges` no longer count, since on their own they emit none.
+
 ## Ahab 0.4.0
 
 * A reproducibility spec file naming a program outside the build, such as
