@@ -77,8 +77,8 @@ const SOURCES_AND_HEADERS: &[&str] = &[
 /// The clauses for what clang does. One program compiles, links and
 /// preprocesses, so most are guarded: the date macros on the modes whose
 /// output carries their expansion, the stricter canonicalization clause on
-/// a source or header among the arguments, and the last on the family of
-/// flags that emits debugging information.
+/// a source or header among the arguments, and the last two on the flags
+/// that emit debugging information and coverage mapping.
 fn clang_clauses() -> Vec<Clause> {
     let writes_expansions = Guard::on(["-c", "-S", "-E"]);
     let emits_debug_info = Guard::toggled(
@@ -138,6 +138,23 @@ fn clang_clauses() -> Vec<Clause> {
         ],
         "debugging information records the directory it was compiled in, \
          which is the execution root",
+    ));
+
+    // Coverage mapping records the same directory, out of reach of the
+    // `-fdebug-` options.
+    clauses.push(Clause::new(
+        Some(Guard::toggled(
+            ["-fcoverage-mapping"],
+            ["-fno-coverage-mapping"],
+        )),
+        [
+            "-ffile-prefix-map=*",
+            "-fcoverage-prefix-map=*",
+            "-fcoverage-compilation-dir=*",
+            "-ffile-compilation-dir=*",
+        ],
+        "coverage mapping records the directory it was compiled in, which \
+         is the execution root",
     ));
 
     clauses
@@ -448,6 +465,46 @@ mod tests {
         ] {
             let mut flags = clang_args();
             flags.extend(["-g", remedy]);
+            assert_eq!(
+                assess(toolchains_llvm("bin/cc_wrapper.sh"), flags),
+                Conformance::Reproducible,
+                "{remedy}",
+            );
+        }
+    }
+
+    #[test]
+    fn coverage_mapping_must_have_its_compilation_directory_named() {
+        let coverage_remedies: BTreeSet<String> = [
+            "-fcoverage-compilation-dir=*",
+            "-fcoverage-prefix-map=*",
+            "-ffile-compilation-dir=*",
+            "-ffile-prefix-map=*",
+        ]
+        .into_iter()
+        .map(str::to_owned)
+        .collect();
+        for unremedied in [&[][..], &["-fdebug-compilation-dir=."]] {
+            let mut flags = clang_args();
+            flags
+                .extend(["-fprofile-instr-generate", "-fcoverage-mapping"]);
+            flags.extend(unremedied);
+            assert_eq!(
+                missing(toolchains_llvm("bin/cc_wrapper.sh"), flags),
+                coverage_remedies,
+                "{unremedied:?}",
+            );
+        }
+
+        for remedy in [
+            "-fcoverage-compilation-dir=.",
+            "-fcoverage-prefix-map=/execroot=.",
+            "-ffile-compilation-dir=.",
+            "-ffile-prefix-map=/execroot=.",
+            "-fno-coverage-mapping",
+        ] {
+            let mut flags = clang_args();
+            flags.extend(["-fcoverage-mapping", remedy]);
             assert_eq!(
                 assess(toolchains_llvm("bin/cc_wrapper.sh"), flags),
                 Conformance::Reproducible,
