@@ -74,6 +74,14 @@
   so it restarted the project's Bazel server and put a fresh install base
   and repository cache next to the output base.
 
+* rules_pkg's tar tool is no longer required to be given `--mtime`, and
+  rules_python's precompiler is no longer required to be given an
+  `--invalidation_mode` matching `*hash*`. Without them the one writes a
+  time of zero and the other checks a hash, so such invocations were
+  reported for no reason, as was the precompiler's `CHECKED_HASH`. What is
+  reported is `--preserve_mtime`, as before, and an `--invalidation_mode`
+  of `timestamp` or `TIMESTAMP`.
+
 ## Ahab 0.4.0
 
 * A reproducibility spec file naming a program outside the build, such as

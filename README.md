@@ -354,7 +354,7 @@ requiring.
 
 `takes_value` names the flags whose value arrives as a separate argument. A
 pattern sees one argument at a time, so `--mtime=portable` is within reach
-and `--invalidation_mode unchecked_hash` is not—the value is simply a
+and `--invalidation_mode timestamp` is not—the value is simply a
 different word. Naming the flag folds the pair together with an `=` before
 anything looks at it:
 
@@ -362,7 +362,7 @@ anything looks at it:
 {
   "reproducibility": "sometimes",
   "takes_value": ["--invalidation_mode"],
-  "required_flags": ["--invalidation_mode=*hash*"]
+  "breaking_flags": ["--invalidation_mode=timestamp"]
 }
 ```
 

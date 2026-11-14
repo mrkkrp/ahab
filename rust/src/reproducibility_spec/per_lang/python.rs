@@ -19,17 +19,20 @@ pub(in crate::reproducibility_spec) fn entries() -> Vec<(ProgramId, Entry)>
             rules_python("python/private/python3"),
             Entry::Wraps(Transition::FirstArgument),
         ),
-        // In `timestamp` mode—Python's default—a `.pyc` stores the source's
-        // modification time and size. The two hash modes store a digest
-        // instead, and either will do, hence the pattern on the word. The
+        // In `timestamp` mode a `.pyc` stores the source's modification
+        // time and size. The precompiler defaults to `checked_hash`, which
+        // stores a digest instead, and upper-cases the mode it is given. The
         // mode is a separate argument, so the flag is declared as valued.
         (
             rules_python("tools/precompiler/precompiler"),
             Entry::Spec(
                 ReproducibilitySpec::new(
                     Reproducibility::Sometimes,
-                    ["--invalidation_mode=*hash*"],
                     [] as [&str; 0],
+                    [
+                        "--invalidation_mode=timestamp",
+                        "--invalidation_mode=TIMESTAMP",
+                    ],
                 )
                 .with_valued_flags(["--invalidation_mode"]),
             ),
@@ -106,13 +109,20 @@ mod tests {
             flags.extend(["--src", "x.py", "--pyc", "x.pyc"]);
             assess(precompiler.clone(), flags)
         };
-        for good in ["unchecked_hash", "checked_hash"] {
+        for good in [
+            "unchecked_hash",
+            "checked_hash",
+            "UNCHECKED_HASH",
+            "CHECKED_HASH",
+        ] {
             assert_eq!(mode(good), Conformance::Reproducible, "{good}");
         }
-        assert!(matches!(
-            mode("timestamp"),
-            Conformance::Conditional { .. }
-        ));
+        for bad in ["timestamp", "TIMESTAMP"] {
+            assert!(
+                matches!(mode(bad), Conformance::Conditional { .. }),
+                "{bad}",
+            );
+        }
     }
 
     #[test]
@@ -144,7 +154,7 @@ mod tests {
     }
 
     #[test]
-    fn precompiling_without_choosing_a_mode_is_reported() {
+    fn precompiling_without_choosing_a_mode_checks_a_hash() {
         let flags: Vec<&str> = pycompile()
             .into_iter()
             .skip(1)
@@ -152,9 +162,9 @@ mod tests {
                 *arg != "--invalidation_mode" && *arg != "unchecked_hash"
             })
             .collect();
-        assert!(matches!(
+        assert_eq!(
             assess(rules_python("tools/precompiler/precompiler"), flags),
-            Conformance::Conditional { .. }
-        ));
+            Conformance::Reproducible,
+        );
     }
 }
