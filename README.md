@@ -401,7 +401,7 @@ attached, and a sentence explaining themselves:
   "requirements": [
     {
       "because": "a source mentioning __DATE__ records when it was compiled",
-      "when": {"family": ["-c"]},
+      "when": {"family": ["-c", "-S", "-E"]},
       "any_of": ["-D__DATE__=*"]
     },
     {

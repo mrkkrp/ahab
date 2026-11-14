@@ -48,6 +48,12 @@
   `U` that no later `D` overrides: `rcsDU` keeps each member's timestamp,
   user and group, and passed because the order of the two was lost.
 
+* clang is asked to define `__DATE__`, `__TIME__` and `__TIMESTAMP__` away
+  when it writes assembly with `-S` or preprocessed source with `-E`, not
+  only an object with `-c`. Both carry the expansion of the macros as an
+  object does. An `-E` that `-Xlinker` hands to the linker, where it
+  exports dynamic symbols, is not taken for clang's own.
+
 ## Ahab 0.4.0
 
 * A reproducibility spec file naming a program outside the build, such as
