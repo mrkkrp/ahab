@@ -141,6 +141,71 @@ fn path_run(bytes: &[u8], start: usize, style: PathStyle) -> (usize, bool) {
     (at, true)
 }
 
+/// Whether a value may begin after `byte` in text read as it stands.
+fn opens_a_value(byte: u8, style: PathStyle) -> bool {
+    matches!(byte, b'\'' | b'"' | b'=' | b':' | b',' | b'[')
+        || byte.is_ascii_whitespace()
+        || byte == b';' && style == PathStyle::Windows
+}
+
+/// Whether a script's `\` within `quote` escapes the byte after it: any
+/// byte outside quotes, within double quotes only those they interpret.
+fn shell_escapes(quote: Option<u8>, next: Option<&u8>) -> bool {
+    match quote {
+        None => true,
+        Some(b'"') => {
+            matches!(next, Some(b'"' | b'\\' | b'$' | b'`' | b'\n'))
+        }
+        Some(_) => false,
+    }
+}
+
+/// The end marker of the heredoc whose `<<` ends just before `at`, whether
+/// its lines lose their leading tabs, and where the marker ends. Quoting
+/// the marker only keeps the body from being expanded.
+fn heredoc_marker(bytes: &[u8], mut at: usize) -> (Vec<u8>, bool, usize) {
+    let strip_tabs = bytes.get(at) == Some(&b'-');
+    at += usize::from(strip_tabs);
+    while matches!(bytes.get(at), Some(b' ' | b'\t')) {
+        at += 1;
+    }
+    let mut marker = Vec::new();
+    while let Some(&byte) = bytes.get(at) {
+        if byte.is_ascii_whitespace() || b";&|<>()".contains(&byte) {
+            break;
+        }
+        if !matches!(byte, b'\'' | b'"' | b'\\') {
+            marker.push(byte);
+        }
+        at += 1;
+    }
+    (marker, strip_tabs, at)
+}
+
+/// The body of a heredoc beginning at `at`, up to the line holding only
+/// `marker`, and where the line after that begins. With no such line it
+/// runs to the end of `text`.
+fn heredoc_body<'a>(
+    text: &'a str,
+    at: usize,
+    marker: &[u8],
+    strip_tabs: bool,
+) -> (&'a str, usize) {
+    let mut line = at;
+    while line < text.len() {
+        let end = text[line..].find('\n').map_or(text.len(), |n| line + n);
+        let mut content = &text[line..end];
+        if strip_tabs {
+            content = content.trim_start_matches('\t');
+        }
+        if content.as_bytes() == marker {
+            return (&text[at..line], (end + 1).min(text.len()));
+        }
+        line = end + 1;
+    }
+    (&text[at..], text.len())
+}
+
 /// Extract every absolute path in `text`, read as a `kind` of site written
 /// in `style`.
 ///
@@ -148,21 +213,34 @@ fn path_run(bytes: &[u8], start: usize, style: PathStyle) -> (usize, bool) {
 /// quote, `=`, `:`, `,`, `[`, a shell operator, and on Windows the `;` that
 /// separates a list—or glued onto a [`GLUED_FLAG_PREFIXES`] flag. That the
 /// list is closed is what leaves globs, regexes, expansions and markup
-/// alone.
+/// alone. A script's quotes join the parts of a word instead, `(`, `$(` and
+/// backticks begin one, `\` escapes, comments are skipped, and a heredoc's
+/// body is read as plain text.
 fn absolute_paths(
     text: &str,
     kind: SiteKind,
     style: PathStyle,
 ) -> Vec<String> {
     let bytes = text.as_bytes();
+    let shell = kind == SiteKind::Shell;
     let mut paths = Vec::new();
 
     let mut quote: Option<u8> = None;
     let mut may_start = true;
+    // Only a script's: whether a word begins here, so that `#` opens a
+    // comment, whether a `\` escapes this byte, whether a backtick is open,
+    // and the heredocs whose bodies begin on the next line.
+    let mut word_begins = true;
+    let mut escape = false;
+    let mut backtick = false;
+    let mut heredocs: Vec<(Vec<u8>, bool)> = Vec::new();
     let mut at = 0;
 
     while at < bytes.len() {
         let byte = bytes[at];
+        let begins_word = std::mem::replace(&mut word_begins, false);
+        let escaped = std::mem::replace(&mut escape, false);
+        let unquoted = quote.is_none();
 
         // A second `/` is not a name, so the label `//foo:bar` roots nothing.
         if let Some(root) = style.root(bytes, at)
@@ -172,7 +250,12 @@ fn absolute_paths(
             && (may_start || glued_onto_flag(bytes, at))
         {
             let (end, is_path) = path_run(bytes, at + root, style);
-            if is_path {
+            // A run naming nothing, as `/.-` in `[/.-]`, is a pattern's.
+            if is_path
+                && bytes[at + root..end]
+                    .iter()
+                    .any(|&b| b.is_ascii_alphanumeric() || !b.is_ascii())
+            {
                 paths.push(text[at..end].to_owned());
             }
             at = end;
@@ -181,9 +264,52 @@ fn absolute_paths(
         }
 
         match byte {
+            // An escaped byte is data, so `\/x` still roots a path, but `\<`
+            // redirects nothing and `\"` closes nothing, though like any
+            // byte it may begin a value in what the script writes.
+            b'\n' if escaped => {}
+            _ if escaped => may_start = opens_a_value(byte, style),
+            b'\\' if shell && shell_escapes(quote, bytes.get(at + 1)) => {
+                escape = true;
+            }
             // Transparent, so `\"` opens a value as `"` does: the shell
             // these strings are written for will take the escape off.
             b'\\' => {}
+            b'#' if shell && begins_word => {
+                at = text[at..].find('\n').map_or(bytes.len(), |n| at + n);
+                continue;
+            }
+            b'<' if shell
+                && unquoted
+                && bytes.get(at + 1) == Some(&b'<')
+                && bytes.get(at + 2) != Some(&b'<')
+                && (at == 0 || bytes[at - 1] != b'<') =>
+            {
+                let (marker, strip_tabs, end) =
+                    heredoc_marker(bytes, at + 2);
+                if !marker.is_empty() {
+                    heredocs.push((marker, strip_tabs));
+                }
+                at = end;
+                may_start = false;
+                continue;
+            }
+            b'\n' if shell && unquoted && !heredocs.is_empty() => {
+                at += 1;
+                for (marker, strip_tabs) in heredocs.drain(..) {
+                    let (body, next) =
+                        heredoc_body(text, at, &marker, strip_tabs);
+                    paths.extend(absolute_paths(
+                        body,
+                        SiteKind::Plain,
+                        style,
+                    ));
+                    at = next;
+                }
+                may_start = true;
+                word_begins = true;
+                continue;
+            }
             b'\'' | b'"' => {
                 may_start = match quote {
                     Some(open) if open == byte => {
@@ -193,19 +319,33 @@ fn absolute_paths(
                     Some(_) => false,
                     None => {
                         quote = Some(byte);
-                        true
+                        may_start || !shell
                     }
                 };
             }
-            b'=' | b':' | b',' | b'[' => may_start = true,
-            b';' if style == PathStyle::Windows => may_start = true,
-            byte if byte.is_ascii_whitespace() => may_start = true,
-            b'<' | b'>' | b'|' | b';' | b'&'
-                if kind == SiteKind::Shell && quote.is_none() =>
+            b'`' if shell && quote != Some(b'\'') => {
+                backtick = !backtick;
+                may_start = backtick;
+                word_begins = backtick;
+            }
+            b'(' if shell
+                && (unquoted
+                    || quote == Some(b'"')
+                        && at > 0
+                        && bytes[at - 1] == b'$') =>
             {
                 may_start = true;
+                word_begins = true;
             }
-            _ => may_start = false,
+            b'<' | b'>' | b'|' | b';' | b'&' if shell && unquoted => {
+                may_start = true;
+                word_begins = true;
+            }
+            byte => {
+                may_start = opens_a_value(byte, style);
+                word_begins =
+                    shell && unquoted && byte.is_ascii_whitespace();
+            }
         }
 
         at += 1;
@@ -523,6 +663,62 @@ mod tests {
     }
 
     #[test]
+    fn a_heredoc_body_is_read_as_plain_text() {
+        assert!(
+            shell(
+                "cat > out/Info.plist <<EOF\n<plist version=\"1.0\"><dict>\
+                 <key>Name</key></dict></plist>\nEOF\n"
+            )
+            .is_empty()
+        );
+        assert_eq!(
+            shell("cat <<-'EOF' >/opt/out\n\t</a>\n\tEOF\ncat x |/opt/y\n"),
+            vec!["/opt/out", "/opt/y"],
+        );
+        assert_eq!(
+            shell("cat <<A - <<B\n</a>\nA\n</b> /opt/b\nB\n"),
+            vec!["/opt/b"],
+        );
+        assert_eq!(shell("cat <<<'</a>' >/opt/x"), vec!["/opt/x"]);
+    }
+
+    #[test]
+    fn a_comment_is_skipped_and_its_quotes_with_it() {
+        assert!(shell("# copied from /opt/x\ntrue").is_empty());
+        assert!(shell("true # it's\necho '</a>' >$@").is_empty());
+        assert_eq!(shell("echo $# x#/opt/y /opt/z"), vec!["/opt/z"]);
+    }
+
+    #[test]
+    fn a_backslash_makes_the_next_byte_data_in_a_script() {
+        assert!(shell(r#"echo "a\"b </c>""#).is_empty());
+        assert!(shell(r"echo \</dict\>").is_empty());
+        assert_eq!(shell(r"cp \/opt/x ."), vec!["/opt/x"]);
+    }
+
+    #[test]
+    fn a_command_substitution_begins_a_word() {
+        assert_eq!(shell("x=$(/bin/date)"), vec!["/bin/date"]);
+        assert_eq!(shell("echo \"$(/bin/date)\""), vec!["/bin/date"]);
+        assert_eq!(shell("x=`/bin/date`"), vec!["/bin/date"]);
+        assert!(shell("x=`dirname y`/keytool").is_empty());
+    }
+
+    #[test]
+    fn a_quote_in_a_script_begins_a_path_only_where_a_word_may() {
+        assert!(shell("cp ${pwd}\"/external/x\" .").is_empty());
+        assert_eq!(shell("cp \"/opt/x\" ."), vec!["/opt/x"]);
+        assert_eq!(shell("cc -DX=\"/opt/x\" x.c"), vec!["/opt/x"]);
+    }
+
+    #[test]
+    fn a_run_naming_nothing_is_not_a_path() {
+        assert!(shell("sed 's/[/.-]/_/g' x").is_empty());
+        assert!(plain("[/.-]").is_empty());
+        assert_eq!(plain("[/.x-]"), vec!["/.x-"]);
+    }
+
+    #[test]
     fn a_drive_roots_a_path_on_windows() {
         assert_eq!(windows(r"C:\Users\me\x.h"), [r"C:\Users\me\x.h"]);
         assert_eq!(windows("d:/tools/bin"), ["d:/tools/bin"]);
@@ -577,8 +773,25 @@ mod tests {
     /// list and saying why.
     const ROOTING_BYTES: &[u8] = b"\t\n\x0C\r \"',:=[";
 
-    /// What a shell adds to [`ROOTING_BYTES`].
-    const ROOTING_IN_A_SHELL: &[u8] = b"&;<>|";
+    /// What a shell adds to [`ROOTING_BYTES`]: its operators and what
+    /// begins a command.
+    const ROOTING_IN_A_SHELL: &[u8] = b"&(;<>`|";
+
+    /// What a shell takes from [`ROOTING_BYTES`]: the quotes, which join
+    /// the parts of a word there rather than begin a value.
+    const JOINING_IN_A_SHELL: &[u8] = b"\"'";
+
+    /// [`ROOTING_BYTES`] as a script has them.
+    fn rooting_in_a_script() -> Vec<u8> {
+        let mut bytes: Vec<u8> = ROOTING_BYTES
+            .iter()
+            .copied()
+            .filter(|byte| !JOINING_IN_A_SHELL.contains(byte))
+            .collect();
+        bytes.extend(ROOTING_IN_A_SHELL);
+        bytes.sort_unstable();
+        bytes
+    }
 
     /// What Windows adds to [`ROOTING_BYTES`]: its list separator.
     const ROOTING_ON_WINDOWS: &[u8] = b";";
@@ -613,10 +826,10 @@ mod tests {
     }
 
     #[test]
-    fn a_script_adds_its_operators_and_nothing_else() {
+    fn a_script_adds_its_operators_and_takes_its_quotes() {
         assert_eq!(
             rooting_bytes(SiteKind::Shell, PathStyle::Unix),
-            sorted(&[ROOTING_BYTES, ROOTING_IN_A_SHELL]),
+            rooting_in_a_script(),
         );
     }
 
@@ -628,7 +841,7 @@ mod tests {
         );
         assert_eq!(
             rooting_bytes(SiteKind::Shell, PathStyle::Windows),
-            sorted(&[ROOTING_BYTES, ROOTING_IN_A_SHELL]),
+            rooting_in_a_script(),
         );
     }
 
@@ -784,10 +997,10 @@ mod tests {
 
     #[test]
     fn whatever_is_returned_is_a_rooted_substring_of_the_text() {
-        assert_eq!(probe(PathStyle::Unix, PROBE_ALPHABET, 4), 1516);
+        assert_eq!(probe(PathStyle::Unix, PROBE_ALPHABET, 4), 792);
         assert_eq!(
             probe(PathStyle::Windows, PROBE_ALPHABET_ON_WINDOWS, 5),
-            192,
+            100,
         );
     }
 
