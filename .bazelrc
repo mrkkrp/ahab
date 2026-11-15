@@ -4,6 +4,9 @@ common:windows --host_platform=@rules_rs//rs/platforms:x86_64-pc-windows-gnullvm
 common:windows --extra_toolchains=@rust_toolchains//:all
 
 build --experimental_convenience_symlinks=ignore
+build --compilation_mode=opt
+build:linux --platforms=//tools:linux_musl
+build:linux --use_target_platform_for_tests
 build --@protobuf//bazel/toolchains:prefer_prebuilt_protoc
 
 build --@rules_rust//rust/settings:rustfmt.toml=//:.rustfmt.toml

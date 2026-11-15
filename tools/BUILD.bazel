@@ -24,3 +24,13 @@ buildifier(
     lint_mode = "fix",
     mode = "fix",
 )
+
+platform(
+    name = "linux_musl",
+    constraint_values = [
+        "@llvm//constraints/libc:musl",
+        "@llvm//constraints/pie:off",
+        "@rules_rs//rs/platforms/constraints:musl",
+    ],
+    parents = ["@platforms//host"],
+)
