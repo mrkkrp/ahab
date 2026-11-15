@@ -1851,6 +1851,7 @@ pub(crate) mod tests {
             r"C:\Program Files\Microsoft Visual Studio\2022\Enterprise\VC\Tools\MSVC\14.44.35207\bin\HostX64\x64;C:\WINDOWS\system32".to_owned(),
             r"C:\WINDOWS;C:\msys64\usr\bin;C:\msys64\bin".to_owned(),
             r"C:\tools\usr\bin;C:\other\bin".to_owned(),
+            r"C:\WINDOWS;\\server\tools\bin".to_owned(),
         ] {
             let c =
                 container(vec![action_with_env("A", 1, &[("PATH", &path)])]);
