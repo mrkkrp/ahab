@@ -102,29 +102,28 @@ rm "$table"
 "$HERE/source_archive.sh" "$PREFIX" "$ARCHIVE"
 
 # Unpack the archive and run the packaging module from inside the unpacked
-# copy, against the binary this release built for the platform we are on. A
-# file left out of source_archive.sh's list, or a binary archive whose
-# layout does not match what the repository rule expects, fails here—before
-# anything is uploaded—rather than in somebody's build afterwards.
+# copy as a consumer gets it: through the recorded digests, the BUILD file
+# generated for each archive and the per-platform `select`, with --distdir
+# handing over the archives in this directory. It hands over only an
+# archive whose digest matches, and the release URLs to fall back on do
+# not exist yet. Querying every dependency fetches every platform's
+# archive, though only this platform's binary runs. A file left out of
+# source_archive.sh's list, an archive name or digest that does not match
+# the record, or this platform's archive in a layout the repository rules
+# do not expect, fails here—before anything is uploaded—rather than in
+# somebody's build afterwards.
 #
 # Everything but the release notes goes to stderr: this script's stdout is
 # pre-pended to the release notes.
-case "$(uname -m)" in
-  x86_64) host_platform="linux_x86_64" ;;
-  aarch64 | arm64) host_platform="linux_arm64" ;;
-  *) fail "no binary for $(uname -m) to verify the archive with" ;;
-esac
-
 verify_root="$(mktemp -d)"
-binary_dir="$verify_root/binary"
-mkdir "$binary_dir"
-tar -xzf "ahab-$VERSION-$host_platform.tar.gz" -C "$binary_dir"
 tar -xzf "$ARCHIVE" -C "$verify_root"
+distdir="$PWD"
 (
   cd "$verify_root/$PREFIX/packaging"
-  export AHAB_PREBUILT_LOCAL="$binary_dir"
-  bazel build //:ahab.report //:ahab.check //:ahab.update //:ahab.explain
-  bazel run //:ahab.check
+  bazel build --distdir="$distdir" \
+    //:ahab.report //:ahab.check //:ahab.update //:ahab.explain
+  bazel run --distdir="$distdir" //:ahab.check
+  bazel query --distdir="$distdir" 'deps(//...)' > /dev/null
   bazel shutdown
 ) >&2
 rm -rf "$verify_root"

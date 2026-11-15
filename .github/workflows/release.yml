@@ -28,19 +28,14 @@ jobs:
         include:
           - platform: linux_x86_64
             runner: ubuntu-24.04
-            bazel_platform: "@rules_rs//rs/platforms:x86_64-unknown-linux-musl"
           - platform: linux_arm64
             runner: ubuntu-24.04-arm
-            bazel_platform: "@rules_rs//rs/platforms:aarch64-unknown-linux-musl"
           - platform: darwin_arm64
             runner: macos-15
-            bazel_platform: ""
           - platform: darwin_x86_64
             runner: macos-15-intel
-            bazel_platform: ""
           - platform: windows_x86_64
             runner: windows-2025
-            bazel_platform: ""
     steps:
       - name: Check out the repository
         uses: actions/checkout@v7
@@ -55,15 +50,10 @@ jobs:
       - name: Build the binary
         env:
           TAG: ${{ inputs.tag || github.ref_name }}
-          BAZEL_PLATFORM: ${{ matrix.bazel_platform }}
           PLATFORM: ${{ matrix.platform }}
         run: |
           set -o errexit -o nounset -o pipefail
-          flags=(--compilation_mode=opt)
-          if [ -n "$BAZEL_PLATFORM" ]; then
-            flags+=("--platforms=$BAZEL_PLATFORM")
-          fi
-          .github/workflows/build_ahab.sh dist "${flags[@]}"
+          .github/workflows/build_ahab.sh dist
           binary="$(ls dist)"
           reported="$("dist/$binary" --version)"
           if [ "$reported" != "ahab ${TAG#v}" ]; then
