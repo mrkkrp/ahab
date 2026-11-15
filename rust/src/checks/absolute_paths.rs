@@ -228,11 +228,15 @@ fn absolute_paths(
     let mut quote: Option<u8> = None;
     let mut may_start = true;
     // Only a script's: whether a word begins here, so that `#` opens a
-    // comment, whether a `\` escapes this byte, whether a backtick is open,
-    // and the heredocs whose bodies begin on the next line.
+    // comment, whether a `\` escapes this byte, whether an unescaped `$`
+    // came before it, whether a backtick is open, how deep the parentheses
+    // of an arithmetic `((…))` go, as `<<` shifts there, and the heredocs
+    // whose bodies begin on the next line.
     let mut word_begins = true;
     let mut escape = false;
+    let mut dollar = false;
     let mut backtick = false;
+    let mut arithmetic = 0usize;
     let mut heredocs: Vec<(Vec<u8>, bool)> = Vec::new();
     let mut at = 0;
 
@@ -240,6 +244,7 @@ fn absolute_paths(
         let byte = bytes[at];
         let begins_word = std::mem::replace(&mut word_begins, false);
         let escaped = std::mem::replace(&mut escape, false);
+        let after_dollar = std::mem::replace(&mut dollar, false);
         let unquoted = quote.is_none();
 
         // A second `/` is not a name, so the label `//foo:bar` roots nothing.
@@ -281,6 +286,7 @@ fn absolute_paths(
             }
             b'<' if shell
                 && unquoted
+                && arithmetic == 0
                 && bytes.get(at + 1) == Some(&b'<')
                 && bytes.get(at + 2) != Some(&b'<')
                 && (at == 0 || bytes[at - 1] != b'<') =>
@@ -333,13 +339,19 @@ fn absolute_paths(
                 word_begins = backtick;
             }
             b'(' if shell
-                && (unquoted
-                    || quote == Some(b'"')
-                        && at > 0
-                        && bytes[at - 1] == b'$') =>
+                && (unquoted || quote == Some(b'"') && after_dollar) =>
             {
+                if unquoted
+                    && (arithmetic > 0 || bytes.get(at + 1) == Some(&b'('))
+                {
+                    arithmetic += 1;
+                }
                 may_start = true;
                 word_begins = true;
+            }
+            b')' if shell && unquoted && arithmetic > 0 => {
+                arithmetic -= 1;
+                may_start = false;
             }
             b'<' | b'>' | b'|' | b';' | b'&' if shell && unquoted => {
                 may_start = true;
@@ -349,6 +361,7 @@ fn absolute_paths(
                 may_start = opens_a_value(byte, style);
                 word_begins =
                     shell && unquoted && byte.is_ascii_whitespace();
+                dollar = byte == b'$';
             }
         }
 
@@ -687,10 +700,51 @@ mod tests {
     }
 
     #[test]
+    fn a_heredoc_ends_only_at_its_marker_alone_on_a_line() {
+        for script in [
+            "cat << \"EOF\"\n</a>\nEOF\ncat x |/opt/y\n",
+            "cat <<\\EOF\n</a>\nEOF\ncat x |/opt/y\n",
+            "cat <<E'O'F\n</a>\nEOF\ncat x |/opt/y\n",
+            "cat <<EOF\n EOF\nEOF2\n</a>\nEOF\ncat x |/opt/y\n",
+            "cat <<EOF\n</a>\nEOF\n# /opt/x\ncat x |/opt/y\n",
+        ] {
+            assert_eq!(shell(script), vec!["/opt/y"], "{script:?}");
+        }
+    }
+
+    #[test]
+    fn a_heredoc_begins_after_the_line_its_command_is_on() {
+        assert_eq!(
+            shell("cat <<EOF \\\n>/opt/x\n</a>\nEOF\n"),
+            vec!["/opt/x"],
+        );
+        assert_eq!(
+            shell("echo \"<<EOF\"\ncat x |/opt/y\n"),
+            vec!["/opt/y"],
+        );
+        assert!(shell("cat <<").is_empty());
+        assert!(shell("cat <<EOF").is_empty());
+    }
+
+    #[test]
+    fn a_shift_in_arithmetic_opens_no_heredoc() {
+        for arithmetic in
+            ["x=$((1<<2))", "((n <<= 1))", "x=$(( (1+2) << 3 ))"]
+        {
+            let script = format!("{arithmetic}\ncat x |/opt/y\n");
+            assert_eq!(shell(&script), vec!["/opt/y"], "{script:?}");
+        }
+        assert!(shell("x=$((1<<2)); cat <<EOF\n</a>\nEOF\n").is_empty());
+    }
+
+    #[test]
     fn a_comment_is_skipped_and_its_quotes_with_it() {
         assert!(shell("# copied from /opt/x\ntrue").is_empty());
         assert!(shell("true # it's\necho '</a>' >$@").is_empty());
         assert_eq!(shell("echo $# x#/opt/y /opt/z"), vec!["/opt/z"]);
+        assert!(shell("true;# /opt/x").is_empty());
+        assert_eq!(shell("echo '# x' /opt/y"), vec!["/opt/y"]);
+        assert_eq!(shell("# cat <<EOF\ncat x |/opt/y"), vec!["/opt/y"]);
     }
 
     #[test]
@@ -698,6 +752,10 @@ mod tests {
         assert!(shell(r#"echo "a\"b </c>""#).is_empty());
         assert!(shell(r"echo \</dict\>").is_empty());
         assert_eq!(shell(r"cp \/opt/x ."), vec!["/opt/x"]);
+        assert!(shell(r"echo 'a\' '</b>'").is_empty());
+        assert!(shell(r#"echo \\"/opt/x""#).is_empty());
+        assert!(shell(r#"echo "\$(/opt/x)""#).is_empty());
+        assert!(shell("echo \\").is_empty());
     }
 
     #[test]
@@ -706,6 +764,7 @@ mod tests {
         assert_eq!(shell("echo \"$(/bin/date)\""), vec!["/bin/date"]);
         assert_eq!(shell("x=`/bin/date`"), vec!["/bin/date"]);
         assert!(shell("x=`dirname y`/keytool").is_empty());
+        assert_eq!(shell("(/opt/tool)"), vec!["/opt/tool"]);
     }
 
     #[test]
@@ -715,6 +774,7 @@ mod tests {
         assert_eq!(shell("cc -DX=\"/opt/x\" x.c"), vec!["/opt/x"]);
         assert_eq!(shell("echo $'/opt/x'"), vec!["/opt/x"]);
         assert!(shell("echo x$'/opt/x'").is_empty());
+        assert!(shell("cp \"$x\"/opt/y .").is_empty());
     }
 
     #[test]
@@ -943,6 +1003,10 @@ mod tests {
     /// [`PROBE_ALPHABET`] for Windows, whose `a:` is a drive.
     const PROBE_ALPHABET_ON_WINDOWS: &[u8] = b"/a.\\\"'[]:*=; ";
 
+    /// The bytes that drive a script's comments, heredocs, substitutions
+    /// and arithmetic, which [`PROBE_ALPHABET`] leaves alone.
+    const PROBE_ALPHABET_FOR_SCRIPTS: &[u8] = b"/a<#()\n'\\`$";
+
     /// Call `check` with every string of `length` bytes over `alphabet`.
     fn every_probe_string(
         alphabet: &[u8],
@@ -1008,6 +1072,28 @@ mod tests {
             probe(PathStyle::Windows, PROBE_ALPHABET_ON_WINDOWS, 5),
             100,
         );
+        assert_eq!(
+            probe(PathStyle::Unix, PROBE_ALPHABET_FOR_SCRIPTS, 5),
+            5419,
+        );
+    }
+
+    #[test]
+    fn a_heredoc_body_yields_what_plain_text_would() {
+        every_probe_string(PROBE_ALPHABET, 4, |body| {
+            assert_eq!(
+                shell(&format!("cat <<EOF >x\n{body}\nEOF\n")),
+                plain(body),
+                "{body:?}",
+            );
+        });
+    }
+
+    #[test]
+    fn a_comment_yields_nothing_whatever_it_holds() {
+        every_probe_string(PROBE_ALPHABET, 4, |text| {
+            assert!(shell(&format!("# {text}")).is_empty(), "{text:?}");
+        });
     }
 
     #[test]
