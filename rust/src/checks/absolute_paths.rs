@@ -27,10 +27,25 @@ impl PathStyle {
     };
 
     /// The length of the root beginning at `at`, if one does. A drive may
-    /// be followed by several separators, as the escaped `C:\\` is.
+    /// be followed by several separators, as the escaped `C:\\` is, and a
+    /// UNC root has to name a server and then a share, so that `\\n` is
+    /// not one.
     pub(super) fn root(self, bytes: &[u8], at: usize) -> Option<usize> {
         match self {
             PathStyle::Unix => (bytes[at] == b'/').then_some(1),
+            PathStyle::Windows if bytes[at..].starts_with(br"\\") => {
+                let server = bytes[at + 2..]
+                    .iter()
+                    .take_while(|&&byte| starts_path_run(byte))
+                    .count();
+                let share = at + 3 + server;
+                (server > 0
+                    && bytes.get(share - 1) == Some(&b'\\')
+                    && bytes
+                        .get(share)
+                        .is_some_and(|&b| starts_path_run(b)))
+                .then_some(2)
+            }
             PathStyle::Windows => {
                 let [drive, b':', rest @ ..] = &bytes[at..] else {
                     return None;
@@ -92,12 +107,20 @@ fn escapes_a_metacharacter(byte: u8) -> bool {
 const GLUED_FLAG_PREFIXES: &[&str] =
     &["-I", "-L", "-isystem", "-iquote", "-idirafter"];
 
+/// MSVC's, as Bazel's Windows toolchain writes them. A drive follows them.
+const GLUED_FLAG_PREFIXES_ON_WINDOWS: &[&str] =
+    &["/I", "/FI", "/external:I"];
+
 /// Whether the root at `root` is glued onto one of the
 /// [`GLUED_FLAG_PREFIXES`] that itself begins at a boundary, which tells
 /// `-I/usr/include` from `-Irelative/include` and from a `-I` inside a
 /// longer word.
-fn glued_onto_flag(bytes: &[u8], root: usize) -> bool {
-    GLUED_FLAG_PREFIXES.iter().any(|flag| {
+fn glued_onto_flag(bytes: &[u8], root: usize, style: PathStyle) -> bool {
+    let windows = match style {
+        PathStyle::Unix => &[][..],
+        PathStyle::Windows => GLUED_FLAG_PREFIXES_ON_WINDOWS,
+    };
+    GLUED_FLAG_PREFIXES.iter().chain(windows).any(|flag| {
         let flag = flag.as_bytes();
         root >= flag.len()
             && &bytes[root - flag.len()..root] == flag
@@ -116,12 +139,26 @@ enum SiteKind {
 }
 
 /// The end of the run whose root ends at `start`, and whether it is a path.
-fn path_run(bytes: &[u8], start: usize, style: PathStyle) -> (usize, bool) {
+///
+/// Given `value_ends`, the bytes that end the value the run is in, the run
+/// may hold spaces and parentheses, as `C:\Program Files (x86)` does,
+/// provided it reaches one of them or the end of the text; otherwise the
+/// first of them ends it.
+fn path_run(
+    bytes: &[u8],
+    start: usize,
+    style: PathStyle,
+    value_ends: Option<&[u8]>,
+) -> (usize, bool) {
     let mut at = start;
     let mut depth = 0usize;
+    let mut spaced = None;
 
     while at < bytes.len() {
         match bytes[at] {
+            b' ' | b'(' | b')' if value_ends.is_some() => {
+                spaced.get_or_insert(at);
+            }
             b'[' => depth += 1,
             b']' if depth > 0 => depth -= 1,
             b']' => break,
@@ -138,7 +175,34 @@ fn path_run(bytes: &[u8], start: usize, style: PathStyle) -> (usize, bool) {
         at += 1;
     }
 
+    let ended = bytes
+        .get(at)
+        .is_none_or(|byte| value_ends.unwrap_or_default().contains(byte));
+    if let Some(first) = spaced
+        && !ended
+    {
+        at = first;
+    }
+    while at > start && bytes[at - 1] == b' ' {
+        at -= 1;
+    }
     (at, true)
+}
+
+/// The root beginning at `at` and the style of the path it begins. A
+/// script on Windows runs under MSYS2, which roots paths at `/` as well.
+fn root_at(
+    bytes: &[u8],
+    at: usize,
+    kind: SiteKind,
+    style: PathStyle,
+) -> Option<(usize, PathStyle)> {
+    style.root(bytes, at).map(|root| (root, style)).or_else(|| {
+        (kind == SiteKind::Shell && style == PathStyle::Windows)
+            .then(|| PathStyle::Unix.root(bytes, at))
+            .flatten()
+            .map(|root| (root, PathStyle::Unix))
+    })
 }
 
 /// Whether a value may begin after `byte` in text read as it stands.
@@ -248,13 +312,23 @@ fn absolute_paths(
         let unquoted = quote.is_none();
 
         // A second `/` is not a name, so the label `//foo:bar` roots nothing.
-        if let Some(root) = style.root(bytes, at)
+        if let Some((root, run_style)) = root_at(bytes, at, kind, style)
             && bytes
                 .get(at + root)
                 .is_some_and(|&next| starts_path_run(next))
-            && (may_start || glued_onto_flag(bytes, at))
+            && (may_start || glued_onto_flag(bytes, at, style))
         {
-            let (end, is_path) = path_run(bytes, at + root, style);
+            // A Windows value runs to a `;` or its closing quote, and a
+            // script's unquoted space ends a word.
+            let value_ends: Option<&[u8]> = match (run_style, quote) {
+                (PathStyle::Unix, _) => None,
+                (_, Some(b'"')) => Some(b";\""),
+                (_, Some(_)) => Some(b";'"),
+                (_, None) if shell => None,
+                (_, None) => Some(b";"),
+            };
+            let (end, is_path) =
+                path_run(bytes, at + root, run_style, value_ends);
             // A run naming nothing, as `/.-` in `[/.-]`, is a pattern's.
             if is_path
                 && bytes[at + root..end]
@@ -515,6 +589,10 @@ mod tests {
 
     fn windows(text: &str) -> Vec<String> {
         absolute_paths(text, SiteKind::Plain, PathStyle::Windows)
+    }
+
+    fn windows_script(text: &str) -> Vec<String> {
+        absolute_paths(text, SiteKind::Shell, PathStyle::Windows)
     }
 
     #[test]
@@ -831,8 +909,63 @@ mod tests {
     }
 
     #[test]
-    fn whitespace_ends_a_run_on_windows_too() {
-        assert_eq!(windows(r"C:\Program Files\VC"), [r"C:\Program"]);
+    fn a_windows_path_holds_spaces_up_to_the_end_of_its_value() {
+        assert_eq!(
+            windows(r"C:\Program Files\VC"),
+            [r"C:\Program Files\VC"]
+        );
+        assert_eq!(
+            windows(
+                r"C:\Program Files\VC\include;\
+                  C:\Program Files (x86)\Windows Kits\10\include"
+            ),
+            [
+                r"C:\Program Files\VC\include",
+                r"C:\Program Files (x86)\Windows Kits\10\include",
+            ],
+        );
+        assert_eq!(windows(r"C:\a ;C:\b"), [r"C:\a", r"C:\b"]);
+        assert_eq!(
+            windows(r#"-DX="C:\Program Files\x""#),
+            [r"C:\Program Files\x"],
+        );
+        assert_eq!(windows(r"copying C:\x to D:\y"), [r"C:\x", r"D:\y"]);
+        assert_eq!(windows_script(r"cp C:\a b"), [r"C:\a"]);
+        assert_eq!(
+            windows_script(r#"cp "C:\Program Files\x" out"#),
+            [r"C:\Program Files\x"],
+        );
+    }
+
+    #[test]
+    fn msvc_flags_take_a_path_glued_on() {
+        for flag in GLUED_FLAG_PREFIXES_ON_WINDOWS {
+            let text = format!(r"{flag}C:\VC\include");
+            assert_eq!(windows(&text), [r"C:\VC\include"], "{text:?}");
+            let buried = format!(r"x{flag}C:\VC\include");
+            assert!(windows(&buried).is_empty(), "{buried:?}");
+        }
+        assert_eq!(plain("/I/usr/include"), ["/I/usr/include"]);
+    }
+
+    #[test]
+    fn a_script_on_windows_roots_paths_at_slash_too() {
+        assert_eq!(windows_script("cat /etc/passwd"), ["/etc/passwd"]);
+        assert_eq!(
+            windows_script(r"cp /c/Users/me/x.h C:\out"),
+            ["/c/Users/me/x.h", r"C:\out"],
+        );
+        assert!(windows("cl /nologo /c x.c").is_empty());
+    }
+
+    #[test]
+    fn a_unc_root_names_a_server_and_a_share() {
+        assert_eq!(windows(r"\\server\share\x"), [r"\\server\share\x"]);
+        assert_eq!(windows(r"--out=\\server\share"), [r"\\server\share"],);
+        assert!(windows(r#""\\n""#).is_empty());
+        assert!(windows(r"--regex=\\d+").is_empty());
+        assert!(windows(r"\\server").is_empty());
+        assert!(windows(r"\\server\").is_empty());
     }
 
     /// The rule restated as data, so that widening it takes editing this
@@ -1036,24 +1169,31 @@ mod tests {
                     let found = absolute_paths(text, kind, style);
                     with_a_path += usize::from(!found.is_empty());
                     for path in found {
-                        let root = style
-                            .root(path.as_bytes(), 0)
-                            .filter(|&root| path.len() > root)
-                            .unwrap_or_else(|| {
-                                panic!(
-                                    "{path:?} from {text:?} is not rooted"
-                                )
-                            });
+                        let (root, _) = root_at(
+                            path.as_bytes(),
+                            0,
+                            kind,
+                            style,
+                        )
+                        .filter(|&(root, _)| path.len() > root)
+                        .unwrap_or_else(|| {
+                            panic!("{path:?} from {text:?} is not rooted")
+                        });
+                        let windows = style == PathStyle::Windows;
                         for byte in path.bytes().skip(root) {
                             assert!(
                                 continues_path_run(byte)
                                     || byte == b'['
                                     || byte == b']'
-                                    || byte == b'\\'
-                                        && style == PathStyle::Windows,
+                                    || windows
+                                        && matches!(
+                                            byte,
+                                            b'\\' | b' ' | b'(' | b')'
+                                        ),
                                 "{path:?} from {text:?} holds {byte:?}",
                             );
                         }
+                        assert!(!path.ends_with(' '), "{path:?}");
                         let at = text[cursor..].find(&path).unwrap_or_else(
                             || panic!("{path:?} is not in {text:?}"),
                         );
@@ -1070,7 +1210,7 @@ mod tests {
         assert_eq!(probe(PathStyle::Unix, PROBE_ALPHABET, 4), 794);
         assert_eq!(
             probe(PathStyle::Windows, PROBE_ALPHABET_ON_WINDOWS, 5),
-            100,
+            6470,
         );
         assert_eq!(
             probe(PathStyle::Unix, PROBE_ALPHABET_FOR_SCRIPTS, 5),
