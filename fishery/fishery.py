@@ -122,7 +122,7 @@ def ensure_expectation(name):
         )
     return recorded
 
-def analysis_dir(name):
+def workspace_dir(name):
     """Where the analysis runs.
 
     `work/` itself, unless the target names a workspace nested inside it.
@@ -131,7 +131,17 @@ def analysis_dir(name):
     `MODULE.bazel`. Analyzing the root then reports on the tool rather than
     on what the tool does, which is rarely the interesting half.
     """
-    return require_work(name) / read_spec(name).get("workspace", ".")
+    return work_dir(name) / read_spec(name).get("workspace", ".")
+
+def analysis_dir(name):
+    """The workspace, which a failed fetch or a misspelt `workspace` leaves
+    missing.
+    """
+    require_work(name)
+    workspace = workspace_dir(name)
+    if not workspace.is_dir():
+        fail(f"{workspace.relative_to(AHAB)} does not exist")
+    return workspace
 
 def output_base(name):
     """Where a target's Bazel state goes, chosen rather than discovered.
@@ -282,12 +292,15 @@ def cmd_clean(name):
     if not work.exists():
         print(f"fishery: {name} has nothing to clean")
         return 0
-    run(
-        ["bazel", f"--output_base={output_base(name)}", "clean", "--expunge"],
-        cwd=analysis_dir(name),
-        check=False,
-        env=bazel_env(name),
-    )
+    # A failed fetch leaves no workspace, and no Bazel state of its own.
+    if workspace_dir(name).is_dir():
+        run(
+            ["bazel", f"--output_base={output_base(name)}", "clean",
+             "--expunge"],
+            cwd=analysis_dir(name),
+            check=False,
+            env=bazel_env(name),
+        )
     shutil.rmtree(work, ignore_errors=True)
     if work.exists():
         shutil.rmtree(work)
