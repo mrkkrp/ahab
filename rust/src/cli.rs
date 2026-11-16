@@ -479,7 +479,7 @@ mod tests {
     use crate::reproducibility_spec::Reproducibility;
     use crate::reproducibility_spec::library::Transition;
     use crate::reproducibility_spec::program_id::ProgramId;
-    use crate::reproducibility_spec::{Conformance, Unmet};
+    use crate::reproducibility_spec::{Conformance, Switch, Unmet};
 
     fn report_violations(
         violations: &BTreeMap<Violation, usize>,
@@ -670,14 +670,14 @@ mod tests {
                      "requirements": [
                        {
                          "because": "a source mentioning __DATE__",
-                         "when": {"family": ["-c"]},
+                         "when": "-c",
                          "any_of": ["-D__DATE__=*"]
                        },
                        {
                          "because": "debugging information records a path",
                          "when": {
-                           "family": ["-g", "-gsplit-dwarf"],
-                           "off": ["-g0"]
+                           "on": ["-g", "-gsplit-dwarf"],
+                           "off": "-g0"
                          },
                          "any_of": [
                            "-ffile-prefix-map=*",
@@ -719,6 +719,123 @@ mod tests {
             ]),
             Conformance::Reproducible,
         );
+    }
+
+    #[test]
+    fn a_file_may_switch_what_satisfies_a_clause_off_again() {
+        let specs = specs_from(
+            "switches.json",
+            r#"{"programs": {
+                 "@acme//bin/zig": {
+                   "spec": {
+                     "reproducibility": "sometimes",
+                     "takes_value": ["-O"],
+                     "requirements": [
+                       {
+                         "because": "Debug is not reproducible",
+                         "any_of": [
+                           {"on": "-fllvm", "off": "-fno-llvm"},
+                           {
+                             "on": ["-O=ReleaseFast", "-O=ReleaseSmall"],
+                             "off": "-O=*"
+                           }
+                         ]
+                       }
+                     ],
+                     "prohibitions": [
+                       {
+                         "because": "a uuid is random",
+                         "when": "build-exe",
+                         "any_of": ["--build-id=uuid"]
+                       }
+                     ]
+                   }
+                 }
+               }}"#,
+        )
+        .expect("should load");
+
+        let Entry::Spec(spec) = &specs[0].1 else {
+            panic!("expected a spec");
+        };
+
+        for args in [
+            &["build-exe", "-fllvm"][..],
+            &["build-exe", "-O", "ReleaseFast"],
+            &["build-exe", "-O", "Debug", "-O", "ReleaseSmall"],
+            &["-fllvm", "--build-id=uuid"],
+        ] {
+            assert_eq!(
+                spec.assess(args.iter().copied()),
+                Conformance::Reproducible,
+                "{args:?}",
+            );
+        }
+        for args in [
+            &["build-exe", "-fllvm", "-fno-llvm"][..],
+            &["build-exe", "-O", "ReleaseFast", "-O", "Debug"],
+            &["build-exe", "-fllvm", "--build-id=uuid"],
+        ] {
+            assert!(
+                matches!(
+                    spec.assess(args.iter().copied()),
+                    Conformance::Conditional { .. }
+                ),
+                "{args:?}",
+            );
+        }
+    }
+
+    #[test]
+    fn a_condition_written_for_0_4_0_still_loads() {
+        let specs = specs_from(
+            "family.json",
+            r#"{"programs": {
+                 "@acme//bin/cc": {
+                   "spec": {
+                     "reproducibility": "sometimes",
+                     "requirements": [
+                       {
+                         "because": "debugging information records a path",
+                         "when": {"family": ["-g"], "off": ["-g0"]},
+                         "any_of": ["-fdebug-compilation-dir=*"]
+                       }
+                     ]
+                   }
+                 }
+               }}"#,
+        )
+        .expect("should load");
+
+        let Entry::Spec(spec) = &specs[0].1 else {
+            panic!("expected a spec");
+        };
+        assert_eq!(spec.assess(["-g", "-g0"]), Conformance::Reproducible);
+        assert!(matches!(
+            spec.assess(["-g0", "-g"]),
+            Conformance::Conditional { .. }
+        ));
+    }
+
+    #[test]
+    fn a_misspelt_switch_is_refused() {
+        let specs = specs_from(
+            "misspelt.json",
+            r#"{"programs": {
+                 "@acme//bin/zig": {
+                   "spec": {
+                     "reproducibility": "sometimes",
+                     "requirements": [
+                       {
+                         "because": "Debug is not reproducible",
+                         "any_of": [{"on": "-fllvm", "of": "-fno-llvm"}]
+                       }
+                     ]
+                   }
+                 }
+               }}"#,
+        );
+        assert!(specs.is_err(), "{specs:?}");
     }
 
     #[test]
@@ -782,11 +899,9 @@ mod tests {
             panic!("expected a spec, got {entry:?}");
         };
         assert_eq!(spec.reproducibility, Reproducibility::Sometimes);
-        assert!(
-            spec.requirements
-                .iter()
-                .any(|clause| clause.any_of.contains("--deterministic"))
-        );
+        assert!(spec.requirements.iter().any(|clause| {
+            clause.any_of.contains(&Switch::from("--deterministic"))
+        }));
         assert_eq!(spec.recognize("-O2"), "-O".to_owned());
     }
 

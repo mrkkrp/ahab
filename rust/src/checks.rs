@@ -643,7 +643,7 @@ impl Violation {
                         };
                         let evidence = if clause.present.is_empty() {
                             format!(
-                                "but none of {} was passed",
+                                "but none of {} was in effect",
                                 names(&clause.any_of)
                             )
                         } else {
@@ -2508,7 +2508,7 @@ pub(crate) mod tests {
         assert!(r.contains(r#"program "gcc""#), "{r}");
         assert!(r.contains("it needs an option it was not given"), "{r}");
         assert!(
-            r.contains("but none of --deterministic was passed"),
+            r.contains("but none of --deterministic was in effect"),
             "{r}"
         );
         assert!(r.contains("it was given an option that breaks it"), "{r}");
@@ -2533,7 +2533,7 @@ pub(crate) mod tests {
         };
         let r = v.render(Palette::plain());
         assert!(r.contains("it needs an option it was not given"), "{r}");
-        assert!(r.contains("but none of --sorted was passed"), "{r}");
+        assert!(r.contains("but none of --sorted was in effect"), "{r}");
         assert!(!r.contains('['), "{r}");
         assert!(!r.contains(r#"""--sorted"#), "{r}");
         assert!(!r.contains("breaks it"), "{r}");
