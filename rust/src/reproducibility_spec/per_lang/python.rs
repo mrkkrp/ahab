@@ -1,6 +1,6 @@
 use super::super::library::{Entry, Transition, always};
 use super::super::program_id::ProgramId;
-use super::super::{Reproducibility, ReproducibilitySpec};
+use super::super::{Clause, Reproducibility, ReproducibilitySpec, Switch};
 
 /// A program rules_python builds or downloads.
 fn rules_python(path: &str) -> ProgramId {
@@ -21,20 +21,29 @@ pub(in crate::reproducibility_spec) fn entries() -> Vec<(ProgramId, Entry)>
         ),
         // In `timestamp` mode a `.pyc` stores the source's modification
         // time and size. The precompiler defaults to `checked_hash`, which
-        // stores a digest instead, and upper-cases the mode it is given. The
-        // mode is a separate argument, so the flag is declared as valued.
+        // stores a digest instead, upper-cases the mode it is given and
+        // heeds the last one. The mode is a separate argument, so the flag
+        // is declared as valued.
         (
             rules_python("tools/precompiler/precompiler"),
             Entry::Spec(
-                ReproducibilitySpec::new(
-                    Reproducibility::Sometimes,
-                    [] as [&str; 0],
-                    [
-                        "--invalidation_mode=timestamp",
-                        "--invalidation_mode=TIMESTAMP",
-                    ],
-                )
-                .with_valued_flags(["--invalidation_mode"]),
+                ReproducibilitySpec::of(Reproducibility::Sometimes)
+                    .with_valued_flags(["--invalidation_mode"])
+                    .with_clauses(
+                        [] as [Clause; 0],
+                        [Clause::new(
+                            None,
+                            [Switch::new(
+                                [
+                                    "--invalidation_mode=timestamp",
+                                    "--invalidation_mode=TIMESTAMP",
+                                ],
+                                ["--invalidation_mode=*"],
+                            )],
+                            "a .pyc in timestamp mode stores the source's \
+                             modification time and size",
+                        )],
+                    ),
             ),
         ),
         // The same precompiler under the name a later rules_python gives it.
@@ -123,6 +132,30 @@ mod tests {
                 "{bad}",
             );
         }
+    }
+
+    #[test]
+    fn the_last_mode_given_is_the_one_used() {
+        let precompiler = rules_python("tools/precompiler/precompiler");
+        let modes = |first: &'static str, last: &'static str| {
+            let flags = vec![
+                "--invalidation_mode",
+                first,
+                "--invalidation_mode",
+                last,
+                "--src",
+                "x.py",
+            ];
+            assess(precompiler.clone(), flags)
+        };
+        assert_eq!(
+            modes("timestamp", "checked_hash"),
+            Conformance::Reproducible
+        );
+        assert!(matches!(
+            modes("CHECKED_HASH", "TIMESTAMP"),
+            Conformance::Conditional { .. }
+        ));
     }
 
     #[test]

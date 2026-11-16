@@ -14,9 +14,18 @@ fn zig() -> ProgramId {
 /// (`zig test … -femit-docs=… -fno-emit-bin`) and `zig translate-c` produce
 /// no object code and are unaffected—measured on 0.16.0, a documentation
 /// directory built from two working directories came out byte-identical.
+/// `test-obj` compiles a test into an object for a later link, and a
+/// `-femit-bin=` after `-fno-emit-bin` asks for the binary again.
 fn emits_machine_code() -> Switch {
     Switch::new(
-        ["build-exe", "build-lib", "build-obj", "test"],
+        [
+            "build-exe",
+            "build-lib",
+            "build-obj",
+            "test",
+            "test-obj",
+            "-femit-bin=*",
+        ],
         ["-fno-emit-bin"],
     )
 }
@@ -37,15 +46,19 @@ fn emits_machine_code() -> Switch {
 /// Debugging information is unconditional: Zig records the compilation
 /// directory and has no `--remap-path-prefix`, so the only invocation that
 /// does not carry it is one that keeps no debugging information at all.
+///
+/// Zig heeds the last of each pair, and the last `-O`, so `-fno-llvm`,
+/// `-fno-strip` and `-O Debug` take back what came before them.
 fn zig_requirements() -> Vec<Clause> {
     vec![
         Clause::new(
             Some(emits_machine_code()),
             [
-                "-fllvm",
-                "-O=ReleaseFast",
-                "-O=ReleaseSafe",
-                "-O=ReleaseSmall",
+                Switch::new(["-fllvm"], ["-fno-llvm"]),
+                Switch::new(
+                    ["-O=ReleaseFast", "-O=ReleaseSafe", "-O=ReleaseSmall"],
+                    ["-O=*"],
+                ),
             ],
             "Zig promises a reproducible build in its release modes and \
              disclaims one in Debug, whose code generator emits from every \
@@ -53,7 +66,7 @@ fn zig_requirements() -> Vec<Clause> {
         ),
         Clause::new(
             Some(emits_machine_code()),
-            ["-fstrip"],
+            [Switch::new(["-fstrip"], ["-fno-strip"])],
             "debugging information records the directory the compilation \
              ran in, which Zig has no option to rewrite",
         ),
@@ -75,18 +88,27 @@ fn zig_requirements() -> Vec<Clause> {
 ///
 /// Nothing is said about `-fincremental`: 0.16.0 refuses to link one at
 /// all—`TODO implement saving linker state`.
+///
+/// A later `-femit-bin=` or `-fno-emit-bin`, and a later `--build-id`,
+/// override what came before.
 fn zig_prohibitions() -> Vec<Clause> {
     vec![
         Clause::new(
             None,
-            ["-femit-bin=*.a", "-femit-bin=*.lib"],
+            [Switch::new(
+                ["-femit-bin=*.a", "-femit-bin=*.lib"],
+                ["-femit-bin=*", "-fno-emit-bin"],
+            )],
             "a static archive stores the name of the temporary directory \
              its object was assembled in, which is drawn afresh for every \
              invocation",
         ),
         Clause::new(
             None,
-            ["--build-id=uuid"],
+            [Switch::new(
+                ["--build-id=uuid"],
+                ["--build-id", "--build-id=*"],
+            )],
             "a uuid build id is a random number rather than a function of \
              the code",
         ),
@@ -251,6 +273,19 @@ mod tests {
     }
 
     #[test]
+    fn a_test_compiled_into_an_object_is_held_to_them() {
+        let args = vec![
+            "test-obj",
+            "--test-no-exec",
+            "-O",
+            "Debug",
+            "-fstrip",
+            "-Mbazel_Ubuiltin_Ctest=bazel_builtin/test.zig",
+        ];
+        assert_eq!(missing(zig(), args), remedies());
+    }
+
+    #[test]
     fn a_static_archive_breaks_it_whatever_else_was_asked_for() {
         let by_mode: Vec<&str> = build_exe_args()
             .into_iter()
@@ -293,5 +328,81 @@ mod tests {
         let mut hashed = with_llvm();
         hashed.push("--build-id=tree");
         assert_eq!(assess(zig(), hashed), Conformance::Reproducible);
+    }
+
+    /// `base` and then `extra`.
+    fn with(
+        base: &[&'static str],
+        extra: &[&'static str],
+    ) -> Vec<&'static str> {
+        [base, extra].concat()
+    }
+
+    #[test]
+    fn zig_heeds_the_last_of_each_pair_and_of_each_option() {
+        let released: Vec<&str> = build_exe_args()
+            .into_iter()
+            .map(|arg| if arg == "Debug" { "ReleaseFast" } else { arg })
+            .collect();
+
+        assert_eq!(
+            missing(zig(), with(&with_llvm(), &["-fno-strip"])),
+            ["-fstrip"].map(str::to_owned).into_iter().collect(),
+        );
+        assert_eq!(
+            missing(zig(), with(&with_llvm(), &["-fno-llvm"])),
+            remedies(),
+        );
+        assert_eq!(
+            assess(zig(), with(&released, &["-fllvm", "-fno-llvm"])),
+            Conformance::Reproducible,
+        );
+        assert_eq!(
+            missing(zig(), with(&released, &["-O", "Debug"])),
+            remedies(),
+        );
+        assert_eq!(
+            assess(zig(), with(&build_exe_args(), &["-O", "ReleaseFast"])),
+            Conformance::Reproducible,
+        );
+        assert_eq!(
+            assess(
+                zig(),
+                with(&with_llvm(), &["--build-id=uuid", "--build-id=tree"]),
+            ),
+            Conformance::Reproducible,
+        );
+        assert_eq!(
+            assess(
+                zig(),
+                with(&with_llvm(), &["--build-id=tree", "--build-id=uuid"]),
+            )
+            .present_breaking(),
+            ["--build-id=uuid"].map(str::to_owned).into_iter().collect(),
+        );
+    }
+
+    #[test]
+    fn only_the_last_emit_bin_says_what_is_written() {
+        let archive = "-femit-bin=bazel-out/k8-opt/bin/c/liblibrary.a";
+        assert_eq!(
+            assess(
+                zig(),
+                with(&with_llvm(), &[archive, "-femit-bin=out/library.o"]),
+            ),
+            Conformance::Reproducible,
+        );
+        let debug = with(&build_exe_args(), &[archive, "-fno-emit-bin"]);
+        assert_eq!(assess(zig(), debug), Conformance::Reproducible);
+
+        let documentation = vec![
+            "test",
+            "-O",
+            "Debug",
+            "-fstrip",
+            "-fno-emit-bin",
+            "-femit-bin=bazel-out/k8-fastbuild/bin/bazel_builtin/test",
+        ];
+        assert_eq!(missing(zig(), documentation), remedies());
     }
 }

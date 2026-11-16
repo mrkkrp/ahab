@@ -103,6 +103,18 @@
   effect rather than passed. What `when` called `family` is now `on`, and
   `family` is still accepted.
 
+* A required flag that a later one takes back is reported: clang's
+  `-no-canonical-prefixes` after a later `-canonical-prefixes`, and Zig's
+  `-fllvm`, `-fstrip` and release `-O` after a later `-fno-llvm`,
+  `-fno-strip` or `-O Debug`. A prohibited one that a later one overrides
+  no longer is: Zig's `--build-id=uuid` and an archive's `-femit-bin`,
+  followed by another `--build-id`, `-femit-bin` or `-fno-emit-bin`, and
+  rules_python's precompiler given `--invalidation_mode timestamp` before
+  another mode. A Zig compilation whose `-fno-emit-bin` a later
+  `-femit-bin` overrides is held to the rules for machine code again, and
+  so is `zig test-obj`, which compiles a test into an object for a later
+  link and was not held to them at all.
+
 ## Ahab 0.4.0
 
 * A reproducibility spec file naming a program outside the build, such as

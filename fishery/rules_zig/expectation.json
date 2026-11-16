@@ -2695,6 +2695,70 @@
         "kind": "conditional_reproducibility",
         "action": {
           "mnemonic": "ZigBuildTest",
+          "target": "//configure-use_cc_common_link/shared-library:test"
+        },
+        "program": {
+          "origin": {
+            "module": {
+              "name": "rules_zig",
+              "extension": "zig"
+            }
+          },
+          "path": "zig"
+        },
+        "wrappers": [],
+        "synonym": null,
+        "unmet": [
+          {
+            "because": "Zig promises a reproducible build in its release modes and disclaims one in Debug, whose code generator emits from every core at once and writes out whichever thread finished first",
+            "any_of": [
+              "-O=ReleaseFast",
+              "-O=ReleaseSafe",
+              "-O=ReleaseSmall",
+              "-fllvm"
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "count": 1,
+      "violation": {
+        "kind": "conditional_reproducibility",
+        "action": {
+          "mnemonic": "ZigBuildTest",
+          "target": "//configure-use_cc_common_link/static-library:test"
+        },
+        "program": {
+          "origin": {
+            "module": {
+              "name": "rules_zig",
+              "extension": "zig"
+            }
+          },
+          "path": "zig"
+        },
+        "wrappers": [],
+        "synonym": null,
+        "unmet": [
+          {
+            "because": "Zig promises a reproducible build in its release modes and disclaims one in Debug, whose code generator emits from every core at once and writes out whichever thread finished first",
+            "any_of": [
+              "-O=ReleaseFast",
+              "-O=ReleaseSafe",
+              "-O=ReleaseSmall",
+              "-fllvm"
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "count": 1,
+      "violation": {
+        "kind": "conditional_reproducibility",
+        "action": {
+          "mnemonic": "ZigBuildTest",
           "target": "//configure-version:zig_test_0.15.2_manual"
         },
         "program": {
@@ -3106,7 +3170,7 @@
       }
     },
     {
-      "count": 1,
+      "count": 2,
       "violation": {
         "kind": "conditional_reproducibility",
         "action": {
