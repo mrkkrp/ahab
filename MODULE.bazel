@@ -1,6 +1,6 @@
 module(
     name = "ahab",
-    version = "0.5.0-rc1",
+    version = "0.5.0",
     bazel_compatibility = [">=8.0.0"],
 )
 
