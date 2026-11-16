@@ -1,4 +1,4 @@
-## Unreleased
+## Ahab 0.5.0
 
 * Windows is supported, on x86-64. Releases publish a binary for it, the
   targets the macros define run through a batch file there, and the checks
