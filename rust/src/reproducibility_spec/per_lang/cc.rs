@@ -125,18 +125,25 @@ fn clang_clauses() -> Vec<Clause> {
         })
         .collect();
 
-    // With the resource directory named, what a link still resolves through
-    // clang's location only finds the linker, its plugin and library
-    // directories, none of which the output records.
+    // A later `-canonical-prefixes` takes it back. With the resource
+    // directory named, what a link still resolves through clang's location
+    // only finds the linker, its plugin and library directories, none of
+    // which the output records.
+    let no_canonical_prefixes =
+        Switch::new(["-no-canonical-prefixes"], ["-canonical-prefixes"]);
     clauses.push(Clause::new(
         None,
-        ["-no-canonical-prefixes", "-resource-dir", "-resource-dir=*"],
+        [
+            no_canonical_prefixes.clone(),
+            "-resource-dir".into(),
+            "-resource-dir=*".into(),
+        ],
         "paths clang derives from its own location, such as a sanitizer \
          runtime's rpath, are absolute",
     ));
     clauses.push(Clause::new(
         Some(Switch::on(SOURCES_AND_HEADERS)),
-        ["-no-canonical-prefixes"],
+        [no_canonical_prefixes],
         "headers found next to the compiler are named by the absolute path \
          its symlinks resolve to",
     ));
@@ -615,6 +622,32 @@ mod tests {
                 "{named:?}",
             );
         }
+    }
+
+    #[test]
+    fn a_later_canonical_prefixes_undoes_no_canonical_prefixes() {
+        let cc_wrapper = toolchains_llvm("bin/cc_wrapper.sh");
+        let mut undone = clang_args();
+        undone.push("-canonical-prefixes");
+        assert_eq!(
+            missing(cc_wrapper.clone(), undone),
+            canonicalization_remedies(),
+        );
+        let mut redone = clang_args();
+        redone.insert(0, "-canonical-prefixes");
+        assert_eq!(
+            assess(cc_wrapper.clone(), redone),
+            Conformance::Reproducible,
+        );
+        let linking = vec![
+            "-o",
+            "out/x",
+            "out/x.o",
+            "-no-canonical-prefixes",
+            "-canonical-prefixes",
+            "-resource-dir=rel/res",
+        ];
+        assert_eq!(assess(cc_wrapper, linking), Conformance::Reproducible);
     }
 
     #[test]
