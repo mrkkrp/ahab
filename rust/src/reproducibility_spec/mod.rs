@@ -46,88 +46,106 @@ where
         .collect()
 }
 
-/// A condition on an invocation, by which a [`Clause`] applies or does not:
-/// a family of flags that turn something on, and those that turn it off.
-#[derive(Debug, Clone, PartialEq, Eq)]
-pub struct Guard {
-    /// Flags that turn the condition on.
-    pub family: BTreeSet<Glob>,
-    /// Flags of the same family that turn it off again.
+/// Something an invocation turns on with one of `on` and back off with one
+/// of `off`, decided by the last argument that speaks to it: compilers read
+/// their flags last-wins, so `-g -g0` leaves debugging off and `-g0 -g`
+/// leaves it on.
+#[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord)]
+pub struct Switch {
+    /// Flags that turn it on.
+    pub on: BTreeSet<Glob>,
+    /// Flags that turn it off again.
     pub off: BTreeSet<Glob>,
 }
 
-impl Guard {
-    /// A condition nothing turns off again.
-    pub fn on<F>(family: F) -> Guard
+impl Switch {
+    /// A switch one of `on` turns on and one of `off` turns back off.
+    pub fn new<P, O>(on: P, off: O) -> Switch
     where
-        F: IntoIterator,
-        F::Item: AsRef<str>,
-    {
-        Guard {
-            family: globs(family),
-            off: BTreeSet::new(),
-        }
-    }
-
-    /// A condition `off` turns back off.
-    pub fn toggled<F, O>(family: F, off: O) -> Guard
-    where
-        F: IntoIterator,
-        F::Item: AsRef<str>,
+        P: IntoIterator,
+        P::Item: AsRef<str>,
         O: IntoIterator,
         O::Item: AsRef<str>,
     {
-        Guard {
-            family: globs(family),
+        Switch {
+            on: globs(on),
             off: globs(off),
         }
     }
+
+    /// A switch nothing turns off again.
+    pub fn on<P>(on: P) -> Switch
+    where
+        P: IntoIterator,
+        P::Item: AsRef<str>,
+    {
+        Switch::new(on, [] as [&str; 0])
+    }
+
+    /// The arguments that leave it on: every one of `on` after the last of
+    /// `off`. An argument matching both turns it on, so `off` may name the
+    /// whole family, as `-O=*` does for the last `-O` deciding.
+    fn setters<'a>(
+        &self,
+        args: &'a [String],
+    ) -> impl Iterator<Item = &'a String> {
+        let matches = |globs: &BTreeSet<Glob>, arg: &String| {
+            globs.iter().any(|glob| glob.matches(arg))
+        };
+        let after_off = args
+            .iter()
+            .rposition(|arg| {
+                matches(&self.off, arg) && !matches(&self.on, arg)
+            })
+            .map_or(0, |at| at + 1);
+        args[after_off..]
+            .iter()
+            .filter(move |arg| matches(&self.on, arg))
+    }
+
+    /// Whether the invocation leaves it on.
+    fn holds(&self, args: &[String]) -> bool {
+        self.setters(args).next().is_some()
+    }
 }
 
-impl Guard {
-    /// Whether the condition holds, decided by the last argument that
-    /// speaks to it: compilers read their flags last-wins, so `-g -g0`
-    /// leaves debugging off and `-g0 -g` leaves it on.
-    fn holds(&self, args: &[String]) -> bool {
-        args.iter()
-            .rev()
-            .find_map(|arg| {
-                if self.off.iter().any(|glob| glob.matches(arg)) {
-                    Some(false)
-                } else if self.family.iter().any(|glob| glob.matches(arg)) {
-                    Some(true)
-                } else {
-                    None
-                }
-            })
-            .unwrap_or(false)
+/// A switch that only a match for `pattern` turns on.
+impl From<&str> for Switch {
+    fn from(pattern: &str) -> Switch {
+        Switch::on([pattern])
+    }
+}
+
+impl From<String> for Switch {
+    fn from(pattern: String) -> Switch {
+        Switch::on([pattern])
     }
 }
 
 /// One thing that has to be true of an invocation, and why. A requirement
-/// is met and a prohibition breached when any one of `any_of` matches, and
-/// either way only when the guard holds.
+/// is met and a prohibition breached when any one of `any_of` is on, and
+/// either way only when `when` is.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Clause {
     /// The condition under which this clause applies. `None` is always.
-    pub when: Option<Guard>,
-    /// The patterns, any one of which satisfies the clause.
-    pub any_of: BTreeSet<Glob>,
+    pub when: Option<Switch>,
+    /// The switches, any one of which satisfies the clause.
+    pub any_of: BTreeSet<Switch>,
     /// What the clause is about, in words, for the report to quote.
     pub because: String,
 }
 
 impl Clause {
     /// A clause satisfied by any one of `any_of`, applying only where
-    /// `when` holds.
-    pub fn new<P>(when: Option<Guard>, any_of: P, because: &str) -> Clause
+    /// `when` is on.
+    pub fn new<S>(when: Option<Switch>, any_of: S, because: &str) -> Clause
     where
-        P: IntoIterator,
-        P::Item: AsRef<str>,
+        S: IntoIterator,
+        S::Item: Into<Switch>,
     {
         Clause {
             when,
-            any_of: globs(any_of),
+            any_of: any_of.into_iter().map(Into::into).collect(),
             because: because.to_owned(),
         }
     }
@@ -139,20 +157,26 @@ impl Clause {
 
     /// Whether the clause has anything to say about these arguments.
     fn applies(&self, args: &[String]) -> bool {
-        self.when.as_ref().is_none_or(|guard| guard.holds(args))
+        self.when.as_ref().is_none_or(|when| when.holds(args))
     }
 
-    /// The arguments matching any of the clause's patterns.
+    /// The arguments that leave any of the clause's switches on.
     fn matched(&self, args: &[String]) -> BTreeSet<String> {
-        args.iter()
-            .filter(|arg| self.any_of.iter().any(|glob| glob.matches(arg)))
+        self.any_of
+            .iter()
+            .flat_map(|switch| switch.setters(args))
             .cloned()
             .collect()
     }
 
-    /// The patterns themselves, for a report that has no argument to name.
+    /// What turns the switches on, for a report that has no argument to
+    /// name.
     fn patterns(&self) -> BTreeSet<String> {
-        self.any_of.iter().map(ToString::to_string).collect()
+        self.any_of
+            .iter()
+            .flat_map(|switch| &switch.on)
+            .map(ToString::to_string)
+            .collect()
     }
 }
 
@@ -349,7 +373,8 @@ impl ReproducibilitySpec {
     }
 
     /// Add clauses that say more than a bare flag can: the ones carrying a
-    /// condition or a choice. Counterpart to [`Self::new`]'s flag lists.
+    /// condition, a choice or a switch that can be turned off. Counterpart
+    /// to [`Self::new`]'s flag lists.
     pub fn with_clauses<R, P>(
         mut self,
         requirements: R,
@@ -404,7 +429,7 @@ impl ReproducibilitySpec {
             Reproducibility::Never => Conformance::NeverReproducible,
             Reproducibility::HostDerived => Conformance::HostDerived,
             Reproducibility::Sometimes => {
-                // In order and with duplicates: a guard decides by the
+                // In order and with duplicates: a switch decides by the
                 // last argument that speaks to it. Values are folded onto
                 // their flags so every pattern sees whole options; a spec
                 // declaring none keeps the shorter path, this running over
@@ -541,10 +566,91 @@ mod tests {
         assert!(patterns.contains("--deterministic"));
         assert!(patterns.contains("-frandom-seed"));
         assert_eq!(patterns.len(), 2);
-        assert!(
-            spec.prohibitions
-                .iter()
-                .any(|clause| clause.any_of.contains("--timestamp"))
+        assert!(spec.prohibitions.iter().any(|clause| {
+            clause.any_of.contains(&Switch::from("--timestamp"))
+        }));
+    }
+
+    fn args(list: &[&str]) -> Vec<String> {
+        list.iter().map(ToString::to_string).collect()
+    }
+
+    #[test]
+    fn a_switch_is_set_by_the_last_flag_that_speaks_to_it() {
+        let strip = Switch::new(["-fstrip"], ["-fno-strip"]);
+        assert!(!strip.holds(&args(&[])));
+        assert!(strip.holds(&args(&["-fstrip"])));
+        assert!(!strip.holds(&args(&["-fstrip", "-fno-strip"])));
+        assert!(strip.holds(&args(&["-fno-strip", "x", "-fstrip"])));
+
+        let release = Switch::new(["-O=Release*"], ["-O=*"]);
+        assert!(release.holds(&args(&["-O=Debug", "-O=ReleaseFast"])));
+        assert!(!release.holds(&args(&["-O=ReleaseFast", "-O=Debug"])));
+        assert_eq!(
+            release
+                .setters(&args(&[
+                    "-O=ReleaseSmall",
+                    "-O=Debug",
+                    "-O=ReleaseFast",
+                    "-O=ReleaseSafe",
+                ]))
+                .collect::<Vec<_>>(),
+            ["-O=ReleaseFast", "-O=ReleaseSafe"],
+        );
+    }
+
+    #[test]
+    fn a_pattern_is_a_switch_nothing_turns_off() {
+        assert_eq!(
+            Switch::from("--timestamp*"),
+            Switch::new(["--timestamp*"], [] as [&str; 0]),
+        );
+        let spec = ReproducibilitySpec::new(
+            Reproducibility::Sometimes,
+            ["-c"],
+            ["--timestamp*"],
+        );
+        assert_conditional(
+            spec.assess(["--timestamp=1", "-c", "--timestamp=2"]),
+            set(&[]),
+            set(&["--timestamp=1", "--timestamp=2"]),
+        );
+        assert_conditional(spec.assess(["x"]), set(&["-c"]), set(&[]));
+    }
+
+    #[test]
+    fn a_clause_counts_only_the_switches_left_on() {
+        let spec = ReproducibilitySpec::of(Reproducibility::Sometimes)
+            .with_clauses(
+                [Clause::new(
+                    None,
+                    [Switch::new(["-fstrip"], ["-fno-strip"])],
+                    "debugging information records a path",
+                )],
+                [Clause::new(
+                    None,
+                    [Switch::new(["--build-id=uuid"], ["--build-id=*"])],
+                    "a uuid is random",
+                )],
+            );
+
+        assert_conditional(
+            spec.assess(["-fstrip", "x", "-fno-strip"]),
+            set(&["-fstrip"]),
+            set(&[]),
+        );
+        assert_eq!(
+            spec.assess(["-fno-strip", "x", "-fstrip"]),
+            Conformance::Reproducible,
+        );
+        assert_eq!(
+            spec.assess(["-fstrip", "--build-id=uuid", "--build-id=tree"]),
+            Conformance::Reproducible,
+        );
+        assert_conditional(
+            spec.assess(["-fstrip", "--build-id=tree", "--build-id=uuid"]),
+            set(&[]),
+            set(&["--build-id=uuid"]),
         );
     }
 

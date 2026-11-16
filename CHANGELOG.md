@@ -93,6 +93,16 @@
 * A run holding no letter or digit after its root, such as `/.-` in the
   regex class `[/.-]`, is no longer reported as an absolute path.
 
+* A clause's condition and each of its alternatives in a reproducibility
+  specification are switches: patterns that turn something `on` and,
+  optionally, patterns that turn it back `off`, decided by the last
+  argument that speaks to them. A switch is written as its pattern alone or
+  as `{"on": …, "off": …}`, each holding one pattern or a list. In `any_of`
+  this lets what satisfies a clause be undone, as `-fno-strip` undoes
+  `-fstrip`, so an unmet requirement now says none of its patterns was in
+  effect rather than passed. What `when` called `family` is now `on`, and
+  `family` is still accepted.
+
 ## Ahab 0.4.0
 
 * A reproducibility spec file naming a program outside the build, such as

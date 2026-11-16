@@ -1,6 +1,6 @@
 use super::super::library::{Entry, always, aspect_bazel_lib, bazel_lib};
 use super::super::program_id::ProgramId;
-use super::super::{Clause, Guard, Reproducibility, ReproducibilitySpec};
+use super::super::{Clause, Reproducibility, ReproducibilitySpec, Switch};
 
 /// The flags of rules_pkg's tar tool whose values are paths in the archive.
 const TAR_PATH_FLAGS: [&str; 4] =
@@ -26,13 +26,13 @@ fn bsdtar(module: &str) -> ProgramId {
     ProgramId::extension(module, "toolchains", "tar")
 }
 
-/// A guard that holds when any of `flags` is on the command line.
-fn given<F>(flags: F) -> Option<Guard>
+/// A switch that any of `flags` turns on.
+fn given<F>(flags: F) -> Option<Switch>
 where
     F: IntoIterator,
     F::Item: AsRef<str>,
 {
-    Some(Guard::on(flags))
+    Some(Switch::on(flags))
 }
 
 /// What libarchive's tar does with time, which is the only thing about it

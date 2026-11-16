@@ -1,6 +1,6 @@
 use super::super::library::{Entry, always, host_derived};
 use super::super::program_id::ProgramId;
-use super::super::{Clause, Guard, Reproducibility, ReproducibilitySpec};
+use super::super::{Clause, Reproducibility, ReproducibilitySpec, Switch};
 
 /// A program in the repository `cc_configure` generates from the host.
 fn local_config_cc(path: &str) -> ProgramId {
@@ -75,15 +75,16 @@ const SOURCES_AND_HEADERS: &[&str] = &[
 ];
 
 /// The clauses for what clang does. One program compiles, links and
-/// preprocesses, so most are guarded: the date macros on the modes whose
-/// output carries their expansion, the stricter canonicalization clause on
-/// a source or header among the arguments, and the last two on the flags
-/// that emit debugging information and coverage mapping.
+/// preprocesses, so most apply only when a switch is on: the date macros on
+/// the modes whose output carries their expansion, the stricter
+/// canonicalization clause on a source or header among the arguments, and
+/// the last two on the flags that emit debugging information and coverage
+/// mapping.
 fn clang_clauses() -> Vec<Clause> {
-    let writes_expansions = Guard::on(["-c", "-S", "-E"]);
+    let writes_expansions = Switch::on(["-c", "-S", "-E"]);
     // `-gz`, `-gsplit-dwarf` and `-gdwarf-aranges` only shape debugging
     // information that another flag has to ask for.
-    let emits_debug_info = Guard::toggled(
+    let emits_debug_info = Switch::new(
         [
             "-g",
             "-g1",
@@ -134,7 +135,7 @@ fn clang_clauses() -> Vec<Clause> {
          runtime's rpath, are absolute",
     ));
     clauses.push(Clause::new(
-        Some(Guard::on(SOURCES_AND_HEADERS)),
+        Some(Switch::on(SOURCES_AND_HEADERS)),
         ["-no-canonical-prefixes"],
         "headers found next to the compiler are named by the absolute path \
          its symlinks resolve to",
@@ -158,7 +159,7 @@ fn clang_clauses() -> Vec<Clause> {
     // Coverage mapping records the same directory, out of reach of the
     // `-fdebug-` options.
     clauses.push(Clause::new(
-        Some(Guard::toggled(
+        Some(Switch::new(
             ["-fcoverage-mapping"],
             ["-fno-coverage-mapping"],
         )),
@@ -253,7 +254,7 @@ pub(in crate::reproducibility_spec) fn entries() -> Vec<(ProgramId, Entry)>
                     .with_clauses(
                         [],
                         [Clause::new(
-                            Some(Guard::toggled(
+                            Some(Switch::new(
                                 ["--disable-deterministic-archives"],
                                 ["--enable-deterministic-archives"],
                             )),
@@ -570,7 +571,7 @@ mod tests {
     }
 
     #[test]
-    fn a_guard_is_decided_by_the_last_flag_that_speaks_to_it() {
+    fn a_switch_is_decided_by_the_last_flag_that_speaks_to_it() {
         let mut off = clang_args();
         off.extend(["-g", "-g0"]);
         assert_eq!(

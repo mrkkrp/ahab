@@ -1,6 +1,6 @@
 use super::super::library::Entry;
 use super::super::program_id::ProgramId;
-use super::super::{Clause, Guard, Reproducibility, ReproducibilitySpec};
+use super::super::{Clause, Reproducibility, ReproducibilitySpec, Switch};
 
 /// The Zig compiler, as rules_zig's `zig` extension lays it out. The
 /// release and the platform are in the repository name, which normalization
@@ -14,8 +14,8 @@ fn zig() -> ProgramId {
 /// (`zig test … -femit-docs=… -fno-emit-bin`) and `zig translate-c` produce
 /// no object code and are unaffected—measured on 0.16.0, a documentation
 /// directory built from two working directories came out byte-identical.
-fn emits_machine_code() -> Guard {
-    Guard::toggled(
+fn emits_machine_code() -> Switch {
+    Switch::new(
         ["build-exe", "build-lib", "build-obj", "test"],
         ["-fno-emit-bin"],
     )

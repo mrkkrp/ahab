@@ -401,12 +401,12 @@ attached, and a sentence explaining themselves:
   "requirements": [
     {
       "because": "a source mentioning __DATE__ records when it was compiled",
-      "when": {"family": ["-c", "-S", "-E"]},
+      "when": {"on": ["-c", "-S", "-E"]},
       "any_of": ["-D__DATE__=*"]
     },
     {
       "because": "debugging information records the directory it was compiled in",
-      "when": {"family": ["-g", "-gline-tables-only"], "off": ["-g0"]},
+      "when": {"on": ["-g", "-gline-tables-only"], "off": "-g0"},
       "any_of": ["-ffile-prefix-map=*", "-fdebug-compilation-dir=*"]
     }
   ]
@@ -416,25 +416,34 @@ attached, and a sentence explaining themselves:
 | field     |          | meaning                                        |
 | --------- | -------- | ---------------------------------------------- |
 | `because` | required | what the rule is about, quoted in the report   |
-| `any_of`  | required | patterns, any one of which satisfies it        |
-| `when`    | optional | the condition; absent means always             |
+| `any_of`  | required | switches, any one of which satisfies it        |
+| `when`    | optional | a switch, the condition; absent means always   |
 
 The two clauses show the two things a flat list cannot say.
 
-**A condition.** `when` names a `family` of flags that turn something on and
-the `off` flags of the same family that turn it back off. It is decided by
-the *last* argument that speaks to it, because that is how compilers read
-their own flags: `-g -g0` leaves debugging information off, and `-g0 -g`
-leaves it on. A rule that only asked whether `-g0` appeared anywhere would
-get the second one wrong. With no `off` flags the question is simply whether
-the family appears, which is all the first clause needs.
+**A condition.** `when` is a switch: the flags that turn something `on` and
+those that turn it back `off`. It is decided by the *last* argument that
+speaks to it, because that is how compilers read their own flags: `-g -g0`
+leaves debugging information off, and `-g0 -g` leaves it on. A rule that
+only asked whether `-g0` appeared anywhere would get the second one wrong.
+With no `off` flags the question is simply whether one of `on` appears,
+which is all the first clause needs. `on` and `off` each take one pattern or
+a list, and a switch nothing turns off may be written as its pattern alone.
 
-**Alternatives.** `any_of` is satisfied by any one of its patterns, not all
+**Alternatives.** `any_of` is satisfied by any one of its entries, not all
 of them. There is more than one way to keep the execution root out of the
 DWARF—`-ffile-prefix-map` covers it, and naming the compilation directory
 outright addresses the same field from the other end. A specification that
 demanded a particular one would report a build that had done the job
 differently. For the conjunction, write more clauses.
+
+**Switches in `any_of`.** What satisfies a clause is a switch as well, and
+the plain patterns above are switches nothing turns off. Written out, one
+can be undone: `{"on": "-fstrip", "off": "-fno-strip"}` meets a requirement
+for `-fstrip` unless a later `-fno-strip` takes it back, and a prohibition
+reports only what is still on. An argument matching both turns a switch on,
+so `off` may name the whole family: `{"on": "-O=Release*", "off": "-O=*"}`
+is on exactly when the last `-O` is a release mode.
 
 `because` is not decoration. It is what the report says when the clause is
 unmet, so it should finish the sentence "this is not reproducible because…":
@@ -445,7 +454,7 @@ reproducibility violation: CppCompile action for target
 "@toolchains_llvm+llvm//bin/cc_wrapper.sh" non-reproducibly: debugging
 information records the directory it was compiled in, which is the
 execution root, but none of -fdebug-compilation-dir=* -fdebug-prefix-map=*
--ffile-compilation-dir=* -ffile-prefix-map=* was passed
+-ffile-compilation-dir=* -ffile-prefix-map=* was in effect
 ```
 
 `required_flags` and `breaking_flags` remain the short way to write the

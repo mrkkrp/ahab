@@ -6,7 +6,7 @@ use std::collections::{BTreeMap, BTreeSet, HashMap};
 use serde::Deserialize;
 
 use super::program_id::{Origin, ProgramId};
-use super::{Clause, Guard, Reproducibility, ReproducibilitySpec};
+use super::{Clause, Reproducibility, ReproducibilitySpec, Switch};
 use crate::glob::Glob;
 
 /// What the library knows about one program: either the answer, or where to
@@ -542,7 +542,7 @@ struct SpecFields {
     /// way.
     #[serde(default)]
     breaking_flags: BTreeSet<String>,
-    /// Clauses an invocation must satisfy, each of which may be guarded and
+    /// Clauses an invocation must satisfy, each of which may be conditional and
     /// may offer alternatives. The long form of `required_flags`.
     #[serde(default)]
     requirements: Vec<ClauseFields>,
@@ -569,33 +569,69 @@ struct SpecFields {
 struct ClauseFields {
     /// What the clause is about, quoted back in the report.
     because: String,
-    /// The patterns, any one of which satisfies it.
-    any_of: BTreeSet<String>,
+    /// The switches, any one of which satisfies it.
+    any_of: Vec<SwitchFields>,
     /// The condition under which it applies. Absent is always.
     #[serde(default)]
-    when: Option<GuardFields>,
-}
-
-/// The JSON form of a [`Guard`].
-#[derive(Debug, Deserialize)]
-#[serde(deny_unknown_fields)]
-struct GuardFields {
-    /// Flags that turn the condition on.
-    family: BTreeSet<String>,
-    /// Flags of the same family that turn it off again.
-    #[serde(default)]
-    off: BTreeSet<String>,
+    when: Option<SwitchFields>,
 }
 
 impl From<ClauseFields> for Clause {
     fn from(fields: ClauseFields) -> Clause {
         Clause::new(
-            fields
-                .when
-                .map(|guard| Guard::toggled(guard.family, guard.off)),
+            fields.when.map(Switch::from),
             fields.any_of,
             &fields.because,
         )
+    }
+}
+
+/// The JSON form of a [`Switch`]: the pattern that turns it on, or what
+/// turns it `on` and `off`. `family` is what `on` was called before.
+#[derive(Debug, Deserialize)]
+#[serde(untagged, deny_unknown_fields)]
+enum SwitchFields {
+    Pattern(String),
+    OnOff {
+        #[serde(alias = "family")]
+        on: Patterns,
+        #[serde(default)]
+        off: Patterns,
+    },
+}
+
+/// One pattern or a list of them.
+#[derive(Debug, Deserialize)]
+#[serde(untagged)]
+enum Patterns {
+    One(String),
+    Many(BTreeSet<String>),
+}
+
+impl Default for Patterns {
+    fn default() -> Patterns {
+        Patterns::Many(BTreeSet::new())
+    }
+}
+
+impl From<Patterns> for BTreeSet<String> {
+    fn from(patterns: Patterns) -> BTreeSet<String> {
+        match patterns {
+            Patterns::One(pattern) => BTreeSet::from([pattern]),
+            Patterns::Many(patterns) => patterns,
+        }
+    }
+}
+
+impl From<SwitchFields> for Switch {
+    fn from(fields: SwitchFields) -> Switch {
+        match fields {
+            SwitchFields::Pattern(pattern) => Switch::from(pattern),
+            SwitchFields::OnOff { on, off } => Switch::new(
+                BTreeSet::<String>::from(on),
+                BTreeSet::<String>::from(off),
+            ),
+        }
     }
 }
 
@@ -687,6 +723,58 @@ pub fn parse_entries(
 mod tests {
     use super::*;
     use crate::reproducibility_spec::program_id::Origin;
+
+    /// The switch `json` describes, or why it describes none.
+    fn switch(json: &str) -> Result<Switch, String> {
+        serde_json::from_str::<SwitchFields>(json)
+            .map(Switch::from)
+            .map_err(|why| why.to_string())
+    }
+
+    #[test]
+    fn a_switch_is_a_pattern_or_what_turns_it_on_and_off() {
+        let x = Switch::on(["x"]);
+        let x_or_y = Switch::on(["x", "y"]);
+        let x_until_z = Switch::new(["x"], ["z"]);
+        let x_or_y_until_z_or_w = Switch::new(["x", "y"], ["z", "w"]);
+        for (json, expected) in [
+            (r#""x""#, &x),
+            (r#"{"on": "x"}"#, &x),
+            (r#"{"on": ["x"]}"#, &x),
+            (r#"{"on": ["x"], "off": []}"#, &x),
+            (r#"{"on": ["x", "y"]}"#, &x_or_y),
+            (r#"{"on": "x", "off": "z"}"#, &x_until_z),
+            (r#"{"on": ["x"], "off": ["z"]}"#, &x_until_z),
+            (r#"{"family": ["x"], "off": "z"}"#, &x_until_z),
+            (
+                r#"{"on": ["y", "x"], "off": ["w", "z"]}"#,
+                &x_or_y_until_z_or_w,
+            ),
+        ] {
+            assert_eq!(switch(json).as_ref(), Ok(expected), "{json}");
+        }
+    }
+
+    #[test]
+    fn anything_else_is_refused_as_a_switch() {
+        for json in [
+            "{}",
+            r#"{"off": "z"}"#,
+            r#"{"on": "x", "of": "z"}"#,
+            r#"{"on": "x", "family": "y"}"#,
+            r#"{"on": 5}"#,
+            r#"{"on": ["x", 5]}"#,
+            r#"["x"]"#,
+            "5",
+            "null",
+        ] {
+            assert!(
+                switch(json).is_err(),
+                "{json} gave {:?}",
+                switch(json)
+            );
+        }
+    }
 
     #[test]
     fn the_zip_tool_is_vouched_for_however_it_is_asked_to_pack() {
