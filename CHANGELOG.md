@@ -1,40 +1,20 @@
 ## Unreleased
 
-* Windows is supported, on x86-64. Releases publish a binary for it, and the
-  targets the macros define run through a batch file there rather than
-  through bash.
+* Windows is supported, on x86-64. Releases publish a binary for it, the
+  targets the macros define run through a batch file there, and the checks
+  read what Windows writes: paths rooted at a drive or a network share,
+  `;`-separated lists such as `INCLUDE` and `PATH`, MSVC's flags, and
+  program names ending in `.exe`.
+  [Issue 13](https://github.com/mrkkrp/ahab/issues/13),
+  [issue 45](https://github.com/mrkkrp/ahab/issues/45),
+  [issue 48](https://github.com/mrkkrp/ahab/issues/48).
 
-* On Windows, an absolute path is one rooted at a drive, `C:\` or `C:/`,
-  and a `/`-rooted run is not one: there it begins a switch, as in
-  `/nologo`. Entries of a `;`-separated list, such as `INCLUDE`, are found
-  one by one.
-
-* A program named by a path on a Windows drive, such as
-  `C:/Program Files/…/cl.exe`, is a system program.
-
-* A program in the build is named without the `.exe` it has on Windows, so
-  `process_wrapper.exe` is `@rules_rust//util/process_wrapper/process_wrapper`
-  as it is elsewhere and the same specs apply to it.
-
-* `singlejar` is no longer required to be passed `--exclude_build_data`.
-  The `build-data.properties` it writes otherwise holds only what its
-  command line and build info files say, so an unstamped deploy jar, which
-  rules_java builds with Bazel's redacted build info, was reported for no
-  reason. Stamped build info is still reported, by the workspace status
-  check.
-
-* clang that links may be given `-resource-dir` instead of
-  `-no-canonical-prefixes`. What a link records from where clang is
-  installed, such as a sanitizer runtime's rpath on macOS, comes from the
-  resource directory, and naming that directory keeps the path relative.
-  An invocation with a source or a header among its arguments still needs
-  `-no-canonical-prefixes`, since headers installed next to clang are named
-  by the path its symlinks resolve to.
-
-* `-ffile-compilation-dir` is accepted, like `-fdebug-compilation-dir`, as
-  what keeps the execution root out of clang's debugging information. It
-  names the compilation directory for coverage mapping too, and a
-  compilation passing it with `-g` was reported for no reason.
+* The C and C++ toolchain of the `llvm` module, hermetic-llvm, is
+  recognized: the prebuilt clang, clang++, `llvm-ar`, `llvm-strip`,
+  `llvm-libtool-darwin` and `llvm-dwp` of its `llvm_toolchain_minimal`
+  extension, and the link wrapper, header parser and static library
+  validator it builds. They were all unknown programs.
+  [PR 35](https://github.com/mrkkrp/ahab/pull/35).
 
 * toolchains_llvm's programs are recognized under Bzlmod, where its
   extension generates a repository such as
@@ -42,30 +22,7 @@
   WORKSPACE repository named `llvm_toolchain`, so with Bzlmod every compile,
   link and archive step was an unknown program. Its `llvm-strip`,
   `llvm-dwp` and, on macOS, `libtool` are recognized too.
-
-* `llvm-ar` is no longer required to be given the `D` modifier, which is
-  its default, so `rcs` was reported for no reason. What is reported is a
-  `U` that no later `D` overrides: `rcsDU` keeps each member's timestamp,
-  user and group, and passed because the order of the two was lost.
-
-* clang is asked to define `__DATE__`, `__TIME__` and `__TIMESTAMP__` away
-  when it writes assembly with `-S` or preprocessed source with `-E`, not
-  only an object with `-c`. Both carry the expansion of the macros as an
-  object does. An `-E` that `-Xlinker` hands to the linker, where it
-  exports dynamic symbols, is not taken for clang's own.
-
-* clang compiling with `-fcoverage-mapping`, as `bazel coverage` does with
-  an LLVM toolchain, is asked to keep the execution root out of the
-  coverage mapping with `-fcoverage-compilation-dir`,
-  `-fcoverage-prefix-map`, `-ffile-compilation-dir` or `-ffile-prefix-map`.
-  The mapping records the directory it was compiled in, which nothing
-  checked, and `-fdebug-compilation-dir` does not reach it.
-
-* clang's debugging information is recognized from the flags that emit
-  it: `-ggdb`, `-ggdb1` to `-ggdb3`, `-glldb`, `-gsce`, `-gdbx`, `-gmlt`,
-  `-gline-directives-only`, `-gmodules`, `-gfull` and `-gused` among them,
-  and `-ggdb0` turns it off as `-g0` does. `-gz`, `-gsplit-dwarf` and
-  `-gdwarf-aranges` no longer count, since on their own they emit none.
+  [Issue 44](https://github.com/mrkkrp/ahab/issues/44).
 
 * The `bazel aquery` Ahab runs uses the project's own output user root when
   the output base is set explicitly, by `--output-base` or by a `startup
@@ -73,14 +30,7 @@
   which differs from the project's root except in Bazel's default layout,
   so it restarted the project's Bazel server and put a fresh install base
   and repository cache next to the output base.
-
-* rules_pkg's tar tool is no longer required to be given `--mtime`, and
-  rules_python's precompiler is no longer required to be given an
-  `--invalidation_mode` matching `*hash*`. Without them the one writes a
-  time of zero and the other checks a hash, so such invocations were
-  reported for no reason, as was the precompiler's `CHECKED_HASH`. What is
-  reported is `--preserve_mtime`, as before, and an `--invalidation_mode`
-  of `timestamp` or `TIMESTAMP`.
+  [Issue 46](https://github.com/mrkkrp/ahab/issues/46).
 
 * A genrule's `cmd`, and any other script given to a shell with `-c`, is
   read more as the shell reads it. A heredoc's body is text rather than
@@ -89,9 +39,7 @@
   makes the next character data, comments are skipped, and `(`, `$(` and
   backticks begin a word, so `x=$(/bin/date)` is reported. A quote glued
   onto a word, as in `${pwd}"/external/x"`, no longer begins a path.
-
-* A run holding no letter or digit after its root, such as `/.-` in the
-  regex class `[/.-]`, is no longer reported as an absolute path.
+  [Issue 47](https://github.com/mrkkrp/ahab/issues/47).
 
 * A clause's condition and each of its alternatives in a reproducibility
   specification are switches: patterns that turn something `on` and,
@@ -102,6 +50,7 @@
   `-fstrip`, so an unmet requirement now says none of its patterns was in
   effect rather than passed. What `when` called `family` is now `on`, and
   `family` is still accepted.
+  [PR 70](https://github.com/mrkkrp/ahab/pull/70).
 
 * A required flag that a later one takes back is reported: clang's
   `-no-canonical-prefixes` after a later `-canonical-prefixes`, and Zig's
@@ -114,45 +63,119 @@
   `-femit-bin` overrides is held to the rules for machine code again, and
   so is `zig test-obj`, which compiles a test into an object for a later
   link and was not held to them at all.
+  [Issue 53](https://github.com/mrkkrp/ahab/issues/53).
+
+* clang compiling with `-fcoverage-mapping`, as `bazel coverage` does with
+  an LLVM toolchain, is asked to keep the execution root out of the
+  coverage mapping with `-fcoverage-compilation-dir`,
+  `-fcoverage-prefix-map`, `-ffile-compilation-dir` or `-ffile-prefix-map`.
+  The mapping records the directory it was compiled in, which nothing
+  checked, and `-fdebug-compilation-dir` does not reach it.
+  [Issue 41](https://github.com/mrkkrp/ahab/issues/41).
+
+* clang is asked to define `__DATE__`, `__TIME__` and `__TIMESTAMP__` away
+  when it writes assembly with `-S` or preprocessed source with `-E`, not
+  only an object with `-c`. Both carry the expansion of the macros as an
+  object does. An `-E` that `-Xlinker` hands to the linker, where it
+  exports dynamic symbols, is not taken for clang's own.
+  [Issue 40](https://github.com/mrkkrp/ahab/issues/40).
+
+* clang's debugging information is recognized from the flags that emit
+  it: `-ggdb`, `-ggdb1` to `-ggdb3`, `-glldb`, `-gsce`, `-gdbx`, `-gmlt`,
+  `-gline-directives-only`, `-gmodules`, `-gfull` and `-gused` among them,
+  and `-ggdb0` turns it off as `-g0` does. `-gz`, `-gsplit-dwarf` and
+  `-gdwarf-aranges` no longer count, since on their own they emit none.
+  [Issue 42](https://github.com/mrkkrp/ahab/issues/42).
+
+* `singlejar` is no longer required to be passed `--exclude_build_data`.
+  The `build-data.properties` it writes otherwise holds only what its
+  command line and build info files say, so an unstamped deploy jar, which
+  rules_java builds with Bazel's redacted build info, was reported for no
+  reason. Stamped build info is still reported, by the workspace status
+  check. [PR 33](https://github.com/mrkkrp/ahab/pull/33).
+
+* rules_pkg's tar tool is no longer required to be given `--mtime`, and
+  rules_python's precompiler is no longer required to be given an
+  `--invalidation_mode` matching `*hash*`. Without them the one writes a
+  time of zero and the other checks a hash, so such invocations were
+  reported for no reason, as was the precompiler's `CHECKED_HASH`. What is
+  reported is `--preserve_mtime`, as before, and an `--invalidation_mode`
+  of `timestamp` or `TIMESTAMP`.
+  [Issue 49](https://github.com/mrkkrp/ahab/issues/49).
+
+* `llvm-ar` is no longer required to be given the `D` modifier, which is
+  its default, so `rcs` was reported for no reason. What is reported is a
+  `U` that no later `D` overrides: `rcsDU` keeps each member's timestamp,
+  user and group, and passed because the order of the two was lost.
+  [Issue 39](https://github.com/mrkkrp/ahab/issues/39).
+
+* clang that links may be given `-resource-dir` instead of
+  `-no-canonical-prefixes`. What a link records from where clang is
+  installed, such as a sanitizer runtime's rpath on macOS, comes from the
+  resource directory, and naming that directory keeps the path relative.
+  An invocation with a source or a header among its arguments still needs
+  `-no-canonical-prefixes`, since headers installed next to clang are named
+  by the path its symlinks resolve to.
+  [PR 35](https://github.com/mrkkrp/ahab/pull/35).
+
+* `-ffile-compilation-dir` is accepted, like `-fdebug-compilation-dir`, as
+  what keeps the execution root out of clang's debugging information. It
+  names the compilation directory for coverage mapping too, and a
+  compilation passing it with `-g` was reported for no reason.
+  [PR 35](https://github.com/mrkkrp/ahab/pull/35).
+
+* A run holding no letter or digit after its root, such as `/.-` in the
+  regex class `[/.-]`, is no longer reported as an absolute path.
+  [Issue 47](https://github.com/mrkkrp/ahab/issues/47).
+
+* J2CL's test-suite tool is recognized, and reproducible however it is
+  invoked. [PR 30](https://github.com/mrkkrp/ahab/pull/30).
 
 ## Ahab 0.4.0
 
 * A reproducibility spec file naming a program outside the build, such as
   `/usr/bin/gcc` or `gcc`, is refused. Such a program is always reported as
   a system program, so the spec used to be silently ignored.
+  [PR 27](https://github.com/mrkkrp/ahab/pull/27).
 
 * A `PATH` is no longer required to be exactly
   `/bin:/usr/bin:/usr/local/bin`. Any combination of these three
   directories and relative entries is accepted, and only an absolute entry
   outside of them is reported.
+  [PR 23](https://github.com/mrkkrp/ahab/pull/23).
 
 * Added the new `--module-name` option which allows us to specify the name
   of the published module we are analyzing, so that its programs are looked
   up in the library of reproducibility specs accordingly, rather than as
   programs in the main repository. This is mainly relevant for the fishery,
   not for the end users.
+  [Issue 18](https://github.com/mrkkrp/ahab/issues/18).
 
 * The built-in library no longer names programs by a main-repository path.
   This eliminates the latent bug where if you had a program in your main
   repository at the same path as one of the 14 entries that defined a
   main-repository synonym Ahab would assume that your program has the same
   reproducibility spec as the one its library described.
+  [Issue 18](https://github.com/mrkkrp/ahab/issues/18).
 
 * The TypeScript compiler and `rules_ts`'s options validator are named by
   the module whose extension builds them, `@aspect_rules_ts+typescript//`.
   They were named as an extension of the main repository, which is how they
   appear only when `rules_ts` itself is the workspace under analysis, so a
   project merely *using* `rules_ts` matched neither.
+  [Issue 18](https://github.com/mrkkrp/ahab/issues/18).
 
 * The package directory given to `rules_pkg`'s tar and zip tools, and the
   paths `pkg_tar`'s `modes`, `owners` and `ownernames` are keyed by, are no
   longer reported as absolute paths. They name places inside the archive,
   e.g. `package_dir = "/usr/bin"`, not anything on the build machine.
+  [PR 24](https://github.com/mrkkrp/ahab/pull/24).
 
 * A reference to an empty param file is no longer spliced away. `bazel
   aquery --include_param_files` reports such a file on some runs and leaves
   it out on others, so the verdict on the action changed from one run to
   the next—notably for `tar` from `tar.bzl` packing an empty archive.
+  [PR 24](https://github.com/mrkkrp/ahab/pull/24).
 
 * A script the build expands from a template is identified by that template
   when the library has an entry for it. The first such entry is
@@ -160,6 +183,7 @@
   it is no longer an unknown program, and the image's working directory,
   `--workdir`, is no longer reported as an absolute path. The scripts behind
   `oci_image_index` and `oci_load` are vouched for the same way.
+  [PR 24](https://github.com/mrkkrp/ahab/pull/24).
 
 * A new class of wrappers: a template whose expansion runs a program that
   was substituted into it. Such a template is declared with the new `wraps`
@@ -172,6 +196,7 @@
   location `substitution`. The first built-in entry of this kind is
   `@aspect_rules_js//js/private/js_binary.sh.tpl`, the launcher of every
   `js_binary`, which is now judged by its entry point.
+  [Issue 19](https://github.com/mrkkrp/ahab/issues/19).
 
 ## Ahab 0.3.0
 
@@ -183,6 +208,7 @@
   character before the `/` merely looked like a separator—and almost every
   character that is not a filename character looks like one, so it answered
   yes to text that was not a path.
+  [Issue 12](https://github.com/mrkkrp/ahab/issues/12).
 
 * No expansion roots a path. `${pwd}/proto` was already understood, from a
   list of three names that rules_rust substitutes; but whatever an expansion
@@ -193,16 +219,18 @@
   wherever in a value they sit. A path rooted at a host-dependent variable,
   as `${HOME}/lib` is, stops being reported with them; it deserves a finding
   that names the variable rather than one that prints `/lib`.
+  [Issue 12](https://github.com/mrkkrp/ahab/issues/12).
 
 * A run holding a backslash before a regular expression's metacharacter is
   not a path: `/R\.class,/BR\.class` names no directory called `R`. A
   backslash before anything else belongs to the text around the path rather
   than to a pattern, so `echo \"/opt/toolchain/bin/cc\"` and `printf
   "prefix=/opt/x\n"` still report the path they hold.
+  [Issue 12](https://github.com/mrkkrp/ahab/issues/12).
 
 * A genrule's `cmd` is read as the shell script it is, which is what tells
   the `<` of a quoted `'</manifest>'` from the one redirecting `cat
-  </etc/passwd`.
+  </etc/passwd`. [Issue 12](https://github.com/mrkkrp/ahab/issues/12).
 
 * The `#!/bin/bash` of a script a genrule generates is no longer reported.
   A shebang is a thing a *file* begins with, and what Ahab reads is an
@@ -210,22 +238,26 @@
   there is two characters and not a prefix a path hangs off. Nothing is lost
   by it: the `/bin/bash` such a genrule runs is reported as a program from
   outside the build, which is the same host dependency said once.
+  [Issue 12](https://github.com/mrkkrp/ahab/issues/12).
 
 * A path is reported as it is written. `/usr/lib/*` used to come out as
   `/usr/lib/` and `/opt/café/bin` as `/opt/caf`—in both cases a path nothing
   has. A glob character belongs to the pattern it is part of, and a filename
   is in whatever language its author wrote it in.
+  [Issue 12](https://github.com/mrkkrp/ahab/issues/12).
 
 * Ahab knows the Apple toolchain, and the answer is the same for all of it:
   an Apple build works from the Xcode installed on the machine, so its tools
-  are host-derived.
+  are host-derived. [PR 16](https://github.com/mrkkrp/ahab/pull/16).
 
 * Bazel's `zipper` is recognized under the path it is built at,
   `@bazel_tools//third_party/ijar/zipper`, and not only as the
   `//tools/zip:zipper` alias for it—which is the name an action records.
+  [PR 16](https://github.com/mrkkrp/ahab/pull/16).
 
 * The macros take `bazel_flags`, and the binary a `--bazel-flag` that may be
   repeated, each value handed to `bazel aquery` as it stands.
+  [PR 16](https://github.com/mrkkrp/ahab/pull/16).
 
 * Two placeholders that well-known rule sets write into their actions on
   purpose no longer count as absolute paths. `/PLACEHOLDER_DEVELOPER_DIR` is
@@ -234,7 +266,7 @@
   is installed. `/bazel_rules_apple/fakepath` is the `--binary-file`
   argument `rules_apple` hands to `appintentsmetadataprocessor`, which
   insists on the flag having a value even when compile-time extraction reads
-  no binary.
+  no binary. [Issue 11](https://github.com/mrkkrp/ahab/issues/11).
 
 * A `bazel query` run by a module that depends on Ahab works again.
   `//:ahab_bin` used to choose between the built binary and the downloaded
@@ -243,11 +275,13 @@
   and is not meant to have. The choice is now made while BUILD files load,
   from whether Ahab is the root module. The `--//:from_source` flag is gone
   with the `select()` that read it.
+  [PR 21](https://github.com/mrkkrp/ahab/pull/21).
 
 ## Ahab 0.2.1
 
 * Add reproducibility specs for Closure and J2CL build tools, the metadata
   merger shipped by `rules_webtesting`, and Brotli compression.
+  [PR 7](https://github.com/mrkkrp/ahab/pull/7).
 
 * Ahab now knows the Zig compiler as `rules_zig` registers it. A
   compilation that emits machine code is reported unless it asked for one
@@ -263,6 +297,7 @@
   name of a temporary directory drawn afresh for every invocation.
   Documentation builds and `translate-c` are held to none of this, having
   no code generator to answer for.
+  [PR 10](https://github.com/mrkkrp/ahab/pull/10).
 
 * Ahab now asks for the host platform when it runs `bazel info` to find the
   output base. `bazel info` resolves `--platforms` without the main
@@ -271,6 +306,7 @@
   even though the same flag builds fine. None of the keys Ahab reads depend
   on the target platform, and the aquery still runs under whatever platform
   the project configured. Thanks to Kaylie for reporting and for the fix.
+  [Issue 6](https://github.com/mrkkrp/ahab/issues/6).
 
 ## Ahab 0.2.0
 
@@ -288,10 +324,12 @@
   than from a registry no longer works, because the binaries a release
   publishes are recorded by that release; `AHAB_PREBUILT_LOCAL` names a
   directory holding a binary to use instead.
+  [Issue 3](https://github.com/mrkkrp/ahab/issues/3).
 
 * The binary a consumer runs is now `@ahab//:ahab_bin` rather than
   `@ahab//:ahab`, which is the Rust target and has moved to
   `@ahab//rust:ahab`. The macros are unaffected.
+  [Issue 3](https://github.com/mrkkrp/ahab/issues/3).
 
 * The path in a program's name may now be a pattern, with the same `*` and
   `?` that exceptions use, as in `@rules_rs+toolchains//*/bin/rustc`. This
@@ -300,6 +338,7 @@
   had to state both and would have stopped matching at the next bump of
   either. Naming a program outright beats a pattern that covers it, and
   between two patterns the one written later wins.
+  [Issue 3](https://github.com/mrkkrp/ahab/issues/3).
 
 * A `[…]` group in a path is read as part of the path around it, so a
   directory whose name contains brackets no longer looks like the end of
@@ -308,7 +347,7 @@
   `/usr/lib/[abi]/libfoo.so` was reported as `/usr/lib/`. A bracket that
   opens a list still starts a path, so `--paths=[/usr/lib,/opt/lib]` yields
   both. Thanks to Aidan Grant for reporting the phantom path and for the
-  first fix.
+  first fix. [PR 5](https://github.com/mrkkrp/ahab/pull/5).
 
 ## Ahab 0.1.0
 
